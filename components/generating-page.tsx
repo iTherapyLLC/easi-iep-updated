@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useIEP } from "@/lib/iep-context"
 import { Card } from "@/components/ui/card"
 import { Check, Loader2 } from "lucide-react"
-import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 interface GeneratingStep {
@@ -27,16 +26,12 @@ export function GeneratingPage() {
     const generateDraft = async () => {
       addSessionLog("Draft generation started")
 
-      // Process steps with realistic timing
       for (let i = 0; i < steps.length; i++) {
         setSteps((prev) => prev.map((step, idx) => (idx === i ? { ...step, status: "processing" } : step)))
-
         await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 800))
-
         setSteps((prev) => prev.map((step, idx) => (idx === i ? { ...step, status: "complete" } : step)))
       }
 
-      // Generate mock draft (in production, this would come from the Lambda)
       const mockDraft = {
         studentInfo: extractedData?.studentInfo || {
           name: "Sample Student",
@@ -143,8 +138,6 @@ export function GeneratingPage() {
 
       setDraft(mockDraft)
       addSessionLog("Draft generation completed - Compliance Score: 87%")
-
-      // Small delay before transition
       await new Promise((resolve) => setTimeout(resolve, 500))
       setCurrentStep("draft-review")
     }
@@ -156,41 +149,31 @@ export function GeneratingPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12">
       <div className="w-full max-w-xl mx-auto">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+        <div className="text-center mb-8 animate-fade-in">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">Creating your IEP draft...</h1>
           <p className="text-muted-foreground">Checking against compliance requirements</p>
-        </motion.div>
+        </div>
 
         {/* Progress Card */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="p-6 md:p-8">
+        <div className="animate-slide-up">
+          <Card className="p-6 md:p-8 transition-all hover:shadow-lg">
             <p className="text-sm font-medium text-muted-foreground mb-4">Checking against:</p>
             <div className="space-y-4">
               {steps.map((step, index) => (
-                <motion.div
+                <div
                   key={step.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center gap-4"
+                  className="flex items-center gap-4 animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div
                     className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
-                      step.status === "complete" && "bg-primary text-primary-foreground",
-                      step.status === "processing" && "bg-primary/20",
+                      step.status === "complete" && "bg-primary text-primary-foreground scale-110",
+                      step.status === "processing" && "bg-primary/20 animate-pulse",
                       step.status === "pending" && "bg-muted",
                     )}
                   >
-                    {step.status === "complete" && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      >
-                        <Check className="w-4 h-4" />
-                      </motion.div>
-                    )}
+                    {step.status === "complete" && <Check className="w-4 h-4" />}
                     {step.status === "processing" && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
                     {step.status === "pending" && <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />}
                   </div>
@@ -204,32 +187,22 @@ export function GeneratingPage() {
                   >
                     {step.label}
                   </span>
-                </motion.div>
+                </div>
               ))}
             </div>
           </Card>
-        </motion.div>
+        </div>
 
-        {/* Animated dots */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="flex justify-center gap-2 mt-8"
-        >
+        {/* Loading dots */}
+        <div className="flex justify-center gap-2 mt-8">
           {[0, 1, 2].map((i) => (
-            <motion.div
+            <div
               key={i}
-              className="w-2 h-2 rounded-full bg-primary"
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{
-                duration: 1.5,
-                repeat: Number.POSITIVE_INFINITY,
-                delay: i * 0.2,
-              }}
+              className="w-2 h-2 rounded-full bg-primary animate-bounce"
+              style={{ animationDelay: `${i * 150}ms` }}
             />
           ))}
-        </motion.div>
+        </div>
       </div>
     </div>
   )
