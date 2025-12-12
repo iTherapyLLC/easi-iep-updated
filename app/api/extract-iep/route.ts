@@ -62,48 +62,8 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json()
 
-    if (result.status === "processing" && result.resultUrl) {
-      let attempts = 0
-      const maxAttempts = 30 // 90 seconds max (30 attempts * 3 seconds)
-      const pollInterval = result.pollInterval || 3000
-
-      while (attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, pollInterval))
-
-        try {
-          const pollResponse = await fetch(result.resultUrl)
-          if (pollResponse.ok) {
-            const pollResult = await pollResponse.json()
-            console.log("[v0] Raw poll result:", JSON.stringify(pollResult, null, 2))
-            if (pollResult.status === "complete") {
-              return NextResponse.json({
-                ...transformExtractedData(pollResult),
-                _debug_raw: pollResult,
-              })
-            }
-            if (pollResult.status === "error") {
-              return NextResponse.json(
-                { success: false, error: pollResult.error || "Processing failed" },
-                { status: 500 },
-              )
-            }
-          }
-        } catch (pollError) {
-          console.error("Polling error:", pollError)
-          // Continue polling even if one request fails
-        }
-
-        attempts++
-      }
-
-      return NextResponse.json({ success: false, error: "Processing timed out" }, { status: 504 })
-    }
-
-    console.log("[v0] Raw direct result:", JSON.stringify(result, null, 2))
-    return NextResponse.json({
-      ...transformExtractedData(result),
-      _debug_raw: result,
-    })
+    // If Lambda returns processing status, client will handle polling
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Extract IEP error:", error)
     return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useIEP } from "@/lib/iep-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -23,6 +23,18 @@ interface ExtractedInfo {
   goalCount: number
 }
 
+function transformExtractedData(data: Record<string, unknown>) {
+  return {
+    success: true,
+    studentInfo: data.studentInfo || data.student_info || {},
+    eligibility: data.eligibility || {},
+    goals: data.goals || [],
+    services: data.services || [],
+    presentLevels: data.presentLevels || data.present_levels || {},
+    compliance: data.compliance || {},
+  }
+}
+
 export function ProcessingPage() {
   const { uploadedFile, setExtractedData, setCurrentStep, addSessionLog } = useIEP()
   const [steps, setSteps] = useState<ProcessingStep[]>([
@@ -36,6 +48,49 @@ export function ProcessingPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedInfo, setEditedInfo] = useState<ExtractedInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [pollingStatus, setPollingStatus] = useState<string | null>(null)
+
+  const pollForResult = useCallback(
+    async (resultUrl: string, pollInterval = 3000): Promise<Record<string, unknown>> => {
+      const maxAttempts = 30 // 90 seconds max
+      let attempts = 0
+
+      while (attempts < maxAttempts) {
+        setPollingStatus(`Processing... (${attempts * 3}s)`)
+
+        try {
+          const pollResponse = await fetch("/api/poll-result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ resultUrl }),
+          })
+
+          if (pollResponse.ok) {
+            const pollResult = await pollResponse.json()
+
+            if (pollResult.status === "complete") {
+              setPollingStatus(null)
+              return pollResult
+            }
+
+            if (pollResult.status === "error") {
+              throw new Error(pollResult.error || "Processing failed")
+            }
+          }
+        } catch (pollError) {
+          console.error("Polling error:", pollError)
+          // Continue polling even if one request fails
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, pollInterval))
+        attempts++
+      }
+
+      throw new Error("Processing timed out after 90 seconds")
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!uploadedFile) return
@@ -56,6 +111,22 @@ export function ProcessingPage() {
           body: formData,
         })
 
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || "Failed to process document")
+        }
+
+        let data = await response.json()
+
+        if (data.status === "processing" && data.resultUrl) {
+          setPollingStatus("Processing started...")
+          const pollResult = await pollForResult(data.resultUrl, data.pollInterval || 3000)
+          data = transformExtractedData(pollResult)
+        } else if (!data.success && !data.studentInfo) {
+          // Transform direct Lambda response
+          data = transformExtractedData(data)
+        }
+
         // Mark step 1 complete
         setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "complete" } : step)))
 
@@ -74,23 +145,13 @@ export function ProcessingPage() {
         await new Promise((resolve) => setTimeout(resolve, 500))
         setSteps((prev) => prev.map((step, idx) => (idx === 3 ? { ...step, status: "complete" } : step)))
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to process document")
-        }
-
-        const data = await response.json()
-
-        if (!data.success) {
-          throw new Error(data.error || "Extraction failed")
-        }
-
         // Build extracted info from response
         const extracted: ExtractedInfo = {
           name: data.studentInfo?.name || "Unknown Student",
           grade: data.studentInfo?.grade || "Unknown",
-          primaryDisability: data.eligibility?.primaryDisability || "Not specified",
-          secondaryDisability: data.eligibility?.secondaryDisability || "",
+          primaryDisability:
+            data.eligibility?.primaryDisability || data.studentInfo?.primaryDisability || "Not specified",
+          secondaryDisability: data.eligibility?.secondaryDisability || data.studentInfo?.secondaryDisability || "",
           goalCount: data.goals?.length || 0,
         }
 
@@ -102,8 +163,8 @@ export function ProcessingPage() {
           studentInfo: {
             name: data.studentInfo?.name || "",
             grade: data.studentInfo?.grade || "",
-            primaryDisability: data.eligibility?.primaryDisability || "",
-            secondaryDisability: data.eligibility?.secondaryDisability || "",
+            primaryDisability: data.eligibility?.primaryDisability || data.studentInfo?.primaryDisability || "",
+            secondaryDisability: data.eligibility?.secondaryDisability || data.studentInfo?.secondaryDisability || "",
             dob: data.studentInfo?.dob || "",
             school: data.studentInfo?.school || "",
             district: data.studentInfo?.district || "",
@@ -119,6 +180,7 @@ export function ProcessingPage() {
       } catch (err) {
         console.error("Processing error:", err)
         setError(err instanceof Error ? err.message : "Unknown error occurred")
+        setPollingStatus(null)
 
         // Mark current step as error
         setSteps((prev) => prev.map((step) => (step.status === "processing" ? { ...step, status: "error" } : step)))
@@ -139,7 +201,7 @@ export function ProcessingPage() {
     }
 
     processDocument()
-  }, [uploadedFile, addSessionLog, setExtractedData])
+  }, [uploadedFile, addSessionLog, setExtractedData, pollForResult])
 
   const handleConfirm = () => {
     if (editedInfo && isEditing) {
@@ -191,7 +253,9 @@ export function ProcessingPage() {
                 : "Document Analyzed"
               : `Analyzing ${uploadedFile?.name || "document"}...`}
           </h1>
-          {!isComplete && <p className="text-muted-foreground">This usually takes about 30 seconds</p>}
+          {!isComplete && (
+            <p className="text-muted-foreground">{pollingStatus || "This usually takes about 30-60 seconds"}</p>
+          )}
           {error && <p className="text-destructive mt-2 text-sm">{error}. Please enter the information manually.</p>}
         </div>
 
