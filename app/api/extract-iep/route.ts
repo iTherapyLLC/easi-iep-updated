@@ -1,5 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+function transformExtractedData(data: Record<string, unknown>) {
+  return {
+    success: true,
+    studentInfo: data.studentInfo || data.student_info || {},
+    eligibility: data.eligibility || {},
+    goals: data.goals || [],
+    services: data.services || [],
+    presentLevels: data.presentLevels || data.present_levels || {},
+    compliance: data.compliance || {},
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const iepGuardianUrl = process.env.IEP_GUARDIAN_URL
@@ -48,12 +60,42 @@ export async function POST(request: NextRequest) {
       throw new Error(`Lambda returned ${response.status}: ${errorText}`)
     }
 
-    const data = await response.json()
+    const result = await response.json()
 
-    return NextResponse.json({
-      success: true,
-      ...data,
-    })
+    if (result.status === "processing" && result.resultUrl) {
+      let attempts = 0
+      const maxAttempts = 30 // 90 seconds max (30 attempts * 3 seconds)
+      const pollInterval = result.pollInterval || 3000
+
+      while (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, pollInterval))
+
+        try {
+          const pollResponse = await fetch(result.resultUrl)
+          if (pollResponse.ok) {
+            const pollResult = await pollResponse.json()
+            if (pollResult.status === "complete") {
+              return NextResponse.json(transformExtractedData(pollResult))
+            }
+            if (pollResult.status === "error") {
+              return NextResponse.json(
+                { success: false, error: pollResult.error || "Processing failed" },
+                { status: 500 },
+              )
+            }
+          }
+        } catch (pollError) {
+          console.error("Polling error:", pollError)
+          // Continue polling even if one request fails
+        }
+
+        attempts++
+      }
+
+      return NextResponse.json({ success: false, error: "Processing timed out" }, { status: 504 })
+    }
+
+    return NextResponse.json(transformExtractedData(result))
   } catch (error) {
     console.error("Extract IEP error:", error)
     return NextResponse.json(
