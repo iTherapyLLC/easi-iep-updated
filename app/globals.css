@@ -3,7 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Warm, calming color scheme with blues and greens for exhausted teachers */
 :root {
   --background: oklch(0.98 0.01 180);
   --foreground: oklch(0.25 0.02 220);
@@ -84,8 +83,7 @@
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -141,17 +139,6 @@
   .animate-fade-in {
     animation: fade-in 0.5s ease-out forwards;
   }
-
-  .animate-fade-in-delay {
-    opacity: 0;
-    animation: fade-in 0.5s ease-out 0.3s forwards;
-  }
-
-  .animate-fade-in-delay-2 {
-    opacity: 0;
-    animation: fade-in 0.5s ease-out 0.6s forwards;
-  }
-
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -160,11 +147,9 @@
       opacity: 1;
     }
   }
-
   .animate-slide-up {
     animation: slide-up 0.5s ease-out forwards;
   }
-
   @keyframes slide-up {
     from {
       opacity: 0;
@@ -175,11 +160,9 @@
       transform: translateY(0);
     }
   }
-
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-
   @keyframes float {
     0%,
     100% {
@@ -187,20 +170,6 @@
     }
     50% {
       transform: translateY(-10px);
-    }
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-glow {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 oklch(0.55 0.12 180 / 0.4);
-    }
-    50% {
-      box-shadow: 0 0 20px 4px oklch(0.55 0.12 180 / 0.2);
     }
   }
 }
