@@ -11,7 +11,15 @@ export async function POST(request: NextRequest) {
     const response = await fetch(resultUrl)
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Failed to fetch result: ${response.status}` }, { status: response.status })
+      if (response.status === 404 || response.status === 403) {
+        return NextResponse.json({
+          success: true,
+          status: "processing",
+          message: "Still processing...",
+        })
+      }
+      // Other errors are real errors
+      return NextResponse.json({ success: false, error: `Poll failed: ${response.status}` }, { status: 500 })
     }
 
     const result = await response.json()
