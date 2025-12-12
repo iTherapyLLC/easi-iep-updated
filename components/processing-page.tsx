@@ -78,6 +78,7 @@ export function ProcessingPage() {
 
   const handleCorrection = () => {
     addSessionLog("User requested data correction")
+    setCurrentStep("goal-progress")
   }
 
   return (
