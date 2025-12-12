@@ -1,0 +1,310 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Warm, calming color scheme with blues and greens for exhausted teachers */
+:root {
+  --background: oklch(0.98 0.01 180);
+  --foreground: oklch(0.25 0.02 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.25 0.02 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.25 0.02 220);
+  --primary: oklch(0.55 0.12 180);
+  --primary-foreground: oklch(0.98 0.01 180);
+  --secondary: oklch(0.92 0.03 160);
+  --secondary-foreground: oklch(0.3 0.05 180);
+  --muted: oklch(0.94 0.02 180);
+  --muted-foreground: oklch(0.5 0.03 220);
+  --accent: oklch(0.65 0.15 160);
+  --accent-foreground: oklch(0.98 0.01 180);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.98 0.01 180);
+  --border: oklch(0.88 0.03 180);
+  --input: oklch(0.92 0.02 180);
+  --ring: oklch(0.55 0.12 180);
+  --chart-1: oklch(0.55 0.12 180);
+  --chart-2: oklch(0.65 0.15 160);
+  --chart-3: oklch(0.45 0.1 200);
+  --chart-4: oklch(0.7 0.1 140);
+  --chart-5: oklch(0.6 0.08 220);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.96 0.02 180);
+  --sidebar-foreground: oklch(0.25 0.02 220);
+  --sidebar-primary: oklch(0.55 0.12 180);
+  --sidebar-primary-foreground: oklch(0.98 0.01 180);
+  --sidebar-accent: oklch(0.92 0.03 160);
+  --sidebar-accent-foreground: oklch(0.3 0.05 180);
+  --sidebar-border: oklch(0.88 0.03 180);
+  --sidebar-ring: oklch(0.55 0.12 180);
+
+  /* Custom colors for compliance states */
+  --success: oklch(0.65 0.15 145);
+  --success-foreground: oklch(0.98 0.01 145);
+  --warning: oklch(0.75 0.15 85);
+  --warning-foreground: oklch(0.3 0.05 85);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 220);
+  --foreground: oklch(0.95 0.01 180);
+  --card: oklch(0.22 0.02 220);
+  --card-foreground: oklch(0.95 0.01 180);
+  --popover: oklch(0.22 0.02 220);
+  --popover-foreground: oklch(0.95 0.01 180);
+  --primary: oklch(0.65 0.12 180);
+  --primary-foreground: oklch(0.18 0.02 220);
+  --secondary: oklch(0.28 0.03 200);
+  --secondary-foreground: oklch(0.95 0.01 180);
+  --muted: oklch(0.28 0.02 220);
+  --muted-foreground: oklch(0.65 0.03 180);
+  --accent: oklch(0.55 0.12 160);
+  --accent-foreground: oklch(0.95 0.01 180);
+  --destructive: oklch(0.5 0.2 25);
+  --destructive-foreground: oklch(0.95 0.01 180);
+  --border: oklch(0.32 0.02 220);
+  --input: oklch(0.28 0.02 220);
+  --ring: oklch(0.65 0.12 180);
+  --chart-1: oklch(0.65 0.12 180);
+  --chart-2: oklch(0.55 0.12 160);
+  --chart-3: oklch(0.5 0.1 200);
+  --chart-4: oklch(0.6 0.1 140);
+  --chart-5: oklch(0.55 0.08 220);
+  --sidebar: oklch(0.22 0.02 220);
+  --sidebar-foreground: oklch(0.95 0.01 180);
+  --sidebar-primary: oklch(0.65 0.12 180);
+  --sidebar-primary-foreground: oklch(0.18 0.02 220);
+  --sidebar-accent: oklch(0.28 0.03 200);
+  --sidebar-accent-foreground: oklch(0.95 0.01 180);
+  --sidebar-border: oklch(0.32 0.02 220);
+  --sidebar-ring: oklch(0.65 0.12 180);
+
+  --success: oklch(0.55 0.15 145);
+  --success-foreground: oklch(0.95 0.01 145);
+  --warning: oklch(0.65 0.15 85);
+  --warning-foreground: oklch(0.18 0.02 85);
+}
+
+@theme inline {
+  --font-sans: "Geist", "Geist Fallback";
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Adding engaging hover animations and effects */
+@layer utilities {
+  /* Animated title shimmer effect on hover */
+  .animate-title-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--foreground) 0%,
+      var(--primary) 25%,
+      var(--accent) 50%,
+      var(--primary) 75%,
+      var(--foreground) 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    transition: all 0.3s ease;
+  }
+
+  .animate-title-shimmer:hover {
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    to {
+      background-position: 200% center;
+    }
+  }
+
+  /* Card hover lift effect */
+  .hover-lift {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px -12px oklch(0.55 0.12 180 / 0.25);
+  }
+
+  /* Subtle glow effect for interactive elements */
+  .hover-glow {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px oklch(0.55 0.12 180 / 0.3), 0 0 40px oklch(0.55 0.12 180 / 0.1);
+  }
+
+  /* Icon bounce animation */
+  .hover-bounce {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .hover-bounce:hover {
+    transform: scale(1.1) translateY(-2px);
+  }
+
+  /* Button press effect */
+  .press-effect {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .press-effect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px oklch(0.55 0.12 180 / 0.3);
+  }
+
+  .press-effect:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  /* Floating animation for decorative elements */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  /* Pulse glow for active/focus states */
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.55 0.12 180 / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 20px 4px oklch(0.55 0.12 180 / 0.2);
+    }
+  }
+
+  /* Text reveal animation */
+  .animate-text-reveal {
+    background: linear-gradient(90deg, var(--foreground) 50%, transparent 50%);
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: text-reveal 0.8s ease forwards;
+  }
+
+  @keyframes text-reveal {
+    to {
+      background-position: 0 0;
+    }
+  }
+
+  /* Stagger children animation helper */
+  .stagger-children > * {
+    opacity: 0;
+    animation: stagger-fade-in 0.5s ease forwards;
+  }
+
+  .stagger-children > *:nth-child(1) {
+    animation-delay: 0.1s;
+  }
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 0.4s;
+  }
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 0.5s;
+  }
+
+  @keyframes stagger-fade-in {
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Underline grow animation for links/titles */
+  .hover-underline-grow {
+    position: relative;
+  }
+
+  .hover-underline-grow::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transition: width 0.3s ease, left 0.3s ease;
+    border-radius: 2px;
+  }
+
+  .hover-underline-grow:hover::after {
+    width: 100%;
+    left: 0;
+  }
+}
