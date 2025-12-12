@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: "extract_iep",
+        action: "generate_iep",
         data: {
           documents: [
             {
