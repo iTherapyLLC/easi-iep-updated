@@ -52,7 +52,7 @@ export function ProcessingPage() {
 
   const pollForResult = useCallback(
     async (resultUrl: string, pollInterval = 3000): Promise<Record<string, unknown>> => {
-      const maxAttempts = 30 // 90 seconds max
+      const maxAttempts = 100 // 5 minutes max
       let attempts = 0
 
       while (attempts < maxAttempts) {
@@ -87,7 +87,7 @@ export function ProcessingPage() {
         attempts++
       }
 
-      throw new Error("Processing timed out after 90 seconds")
+      throw new Error("Processing timed out after 5 minutes")
     },
     [],
   )
