@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { useIEP } from "@/lib/iep-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -23,18 +23,6 @@ interface ExtractedInfo {
   goalCount: number
 }
 
-function transformExtractedData(data: Record<string, unknown>) {
-  return {
-    success: true,
-    studentInfo: data.studentInfo || data.student_info || {},
-    eligibility: data.eligibility || {},
-    goals: data.goals || [],
-    services: data.services || [],
-    presentLevels: data.presentLevels || data.present_levels || {},
-    compliance: data.compliance || {},
-  }
-}
-
 export function ProcessingPage() {
   const { uploadedFile, setExtractedData, setCurrentStep, addSessionLog } = useIEP()
   const [steps, setSteps] = useState<ProcessingStep[]>([
@@ -48,55 +36,14 @@ export function ProcessingPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedInfo, setEditedInfo] = useState<ExtractedInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pollingStatus, setPollingStatus] = useState<string | null>(null)
-
-  const pollForResult = useCallback(
-    async (resultUrl: string, pollInterval = 3000): Promise<Record<string, unknown>> => {
-      const maxAttempts = 100 // 5 minutes max
-      let attempts = 0
-
-      while (attempts < maxAttempts) {
-        setPollingStatus(`Processing... (${attempts * 3}s)`)
-
-        try {
-          const pollResponse = await fetch("/api/poll-result", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resultUrl }),
-          })
-
-          if (pollResponse.ok) {
-            const pollResult = await pollResponse.json()
-
-            if (pollResult.status === "complete") {
-              setPollingStatus(null)
-              return pollResult
-            }
-
-            if (pollResult.status === "error") {
-              throw new Error(pollResult.error || "Processing failed")
-            }
-          }
-        } catch (pollError) {
-          console.error("Polling error:", pollError)
-          // Continue polling even if one request fails
-        }
-
-        // Wait before next poll
-        await new Promise((resolve) => setTimeout(resolve, pollInterval))
-        attempts++
-      }
-
-      throw new Error("Processing timed out after 5 minutes")
-    },
-    [],
-  )
+  const [processingStatus, setProcessingStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (!uploadedFile) return
 
     const processDocument = async () => {
       setError(null)
+      setProcessingStatus("Uploading document to IEP Guardian...")
 
       // Step 1: Extracting student information
       setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "processing" } : step)))
@@ -105,6 +52,8 @@ export function ProcessingPage() {
         // Create FormData and send to API
         const formData = new FormData()
         formData.append("file", uploadedFile)
+
+        setProcessingStatus("Analyzing document... (this may take 30-60 seconds)")
 
         const response = await fetch("/api/extract-iep", {
           method: "POST",
@@ -116,71 +65,76 @@ export function ProcessingPage() {
           throw new Error(errorData.error || "Failed to process document")
         }
 
-        let data = await response.json()
+        const data = await response.json()
 
-        if (data.status === "processing" && data.resultUrl) {
-          setPollingStatus("Processing started...")
-          const pollResult = await pollForResult(data.resultUrl, data.pollInterval || 3000)
-          data = transformExtractedData(pollResult)
-        } else if (!data.success && !data.studentInfo) {
-          // Transform direct Lambda response
-          data = transformExtractedData(data)
+        console.log("[v0] API response:", JSON.stringify(data, null, 2))
+
+        if (!data.success) {
+          throw new Error(data.error || "Extraction failed")
         }
+
+        const iep = data.iep || {}
+        const student = iep.student || {}
+        const goals = iep.goals || []
+        const services = iep.services || []
+        const eligibility = iep.eligibility || student.eligibility || {}
 
         // Mark step 1 complete
         setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "complete" } : step)))
+        setProcessingStatus("Processing goals...")
 
         // Step 2: Identifying goals
         setSteps((prev) => prev.map((step, idx) => (idx === 1 ? { ...step, status: "processing" } : step)))
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 300))
         setSteps((prev) => prev.map((step, idx) => (idx === 1 ? { ...step, status: "complete" } : step)))
 
         // Step 3: Reading present levels
         setSteps((prev) => prev.map((step, idx) => (idx === 2 ? { ...step, status: "processing" } : step)))
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 300))
         setSteps((prev) => prev.map((step, idx) => (idx === 2 ? { ...step, status: "complete" } : step)))
 
         // Step 4: Checking compliance
         setSteps((prev) => prev.map((step, idx) => (idx === 3 ? { ...step, status: "processing" } : step)))
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 300))
         setSteps((prev) => prev.map((step, idx) => (idx === 3 ? { ...step, status: "complete" } : step)))
 
-        // Build extracted info from response
         const extracted: ExtractedInfo = {
-          name: data.studentInfo?.name || "Unknown Student",
-          grade: data.studentInfo?.grade || "Unknown",
-          primaryDisability:
-            data.eligibility?.primaryDisability || data.studentInfo?.primaryDisability || "Not specified",
-          secondaryDisability: data.eligibility?.secondaryDisability || data.studentInfo?.secondaryDisability || "",
-          goalCount: data.goals?.length || 0,
+          name: student.name || "Unknown Student",
+          grade: student.grade || "Unknown",
+          primaryDisability: eligibility.primaryDisability || student.primaryDisability || "Not specified",
+          secondaryDisability: eligibility.secondaryDisability || student.secondaryDisability || "",
+          goalCount: goals.length,
         }
 
         setExtractedInfo(extracted)
         setEditedInfo(extracted)
 
-        // Store full extracted data in context
         setExtractedData({
           studentInfo: {
-            name: data.studentInfo?.name || "",
-            grade: data.studentInfo?.grade || "",
-            primaryDisability: data.eligibility?.primaryDisability || data.studentInfo?.primaryDisability || "",
-            secondaryDisability: data.eligibility?.secondaryDisability || data.studentInfo?.secondaryDisability || "",
-            dob: data.studentInfo?.dob || "",
-            school: data.studentInfo?.school || "",
-            district: data.studentInfo?.district || "",
+            name: student.name || "",
+            grade: student.grade || "",
+            primaryDisability: eligibility.primaryDisability || student.primaryDisability || "",
+            secondaryDisability: eligibility.secondaryDisability || student.secondaryDisability || "",
+            dob: student.dob || student.dateOfBirth || "",
+            school: student.school || "",
+            district: student.district || "",
+            age: student.age || "",
           },
-          goals: data.goals || [],
-          services: data.services || [],
-          presentLevels: data.presentLevels || "",
-          compliance: data.compliance || null,
+          goals: goals,
+          services: services,
+          presentLevels: iep.presentLevels || iep.present_levels || "",
+          compliance: iep.compliance || null,
+          accommodations: iep.accommodations || [],
+          placement: iep.placement || null,
         })
 
         addSessionLog("Document processed successfully")
+        setProcessingStatus(null)
         setIsComplete(true)
       } catch (err) {
         console.error("Processing error:", err)
         setError(err instanceof Error ? err.message : "Unknown error occurred")
-        setPollingStatus(null)
+        setProcessingStatus(null)
 
         // Mark current step as error
         setSteps((prev) => prev.map((step) => (step.status === "processing" ? { ...step, status: "error" } : step)))
@@ -201,11 +155,10 @@ export function ProcessingPage() {
     }
 
     processDocument()
-  }, [uploadedFile, addSessionLog, setExtractedData, pollForResult])
+  }, [uploadedFile, addSessionLog, setExtractedData])
 
   const handleConfirm = () => {
     if (editedInfo && isEditing) {
-      // Save edited info
       setExtractedData((prev: any) => ({
         ...prev,
         studentInfo: {
@@ -254,7 +207,7 @@ export function ProcessingPage() {
               : `Analyzing ${uploadedFile?.name || "document"}...`}
           </h1>
           {!isComplete && (
-            <p className="text-muted-foreground">{pollingStatus || "This usually takes about 30-60 seconds"}</p>
+            <p className="text-muted-foreground">{processingStatus || "This usually takes about 30-60 seconds"}</p>
           )}
           {error && <p className="text-destructive mt-2 text-sm">{error}. Please enter the information manually.</p>}
         </div>

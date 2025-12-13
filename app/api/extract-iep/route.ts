@@ -1,17 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-function transformExtractedData(data: Record<string, unknown>) {
-  return {
-    success: true,
-    studentInfo: data.studentInfo || data.student_info || {},
-    eligibility: data.eligibility || {},
-    goals: data.goals || [],
-    services: data.services || [],
-    presentLevels: data.presentLevels || data.present_levels || {},
-    compliance: data.compliance || {},
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const iepGuardianUrl = process.env.IEP_GUARDIAN_URL
@@ -62,8 +50,17 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json()
 
-    // If Lambda returns processing status, client will handle polling
-    return NextResponse.json(result)
+    console.log("[v0] Lambda response status:", result.status)
+    console.log("[v0] Lambda response keys:", Object.keys(result))
+
+    // Return the complete result - frontend will map result.iep fields
+    return NextResponse.json({
+      success: true,
+      status: result.status,
+      jobId: result.jobId,
+      iep: result.result?.iep || result.iep,
+      _debug_raw: result,
+    })
   } catch (error) {
     console.error("Extract IEP error:", error)
     return NextResponse.json(
