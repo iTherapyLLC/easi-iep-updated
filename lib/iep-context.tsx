@@ -16,14 +16,19 @@ export interface StudentInfo {
   name: string
   grade: string
   primaryDisability: string
+  secondaryDisability?: string
+  dob?: string
   dateOfBirth?: string
+  age?: string
   school?: string
+  district?: string
 }
 
 export interface Goal {
   id: string
   area: string
-  description: string
+  description?: string
+  goal_text?: string
   baseline: string
   target: string
   progress?: string
@@ -31,12 +36,35 @@ export interface Goal {
 }
 
 export interface Service {
-  id: string
+  id?: string
   type: string
   frequency: string
   duration: string
   provider: string
-  location: string
+  location?: string
+}
+
+export interface PLAAFP {
+  strengths?: string
+  concerns?: string
+  academic?: string
+  functional?: string
+}
+
+export interface Placement {
+  setting?: string
+  percent_general_ed?: string
+}
+
+export interface Eligibility {
+  primary_disability?: string
+  secondary_disability?: string
+}
+
+export interface Compliance {
+  status?: "COMPLIANT" | "NEEDS_REVISION" | "NON_COMPLIANT"
+  issues?: string[]
+  recommendations?: string[]
 }
 
 export interface ComplianceIssue {
@@ -47,6 +75,16 @@ export interface ComplianceIssue {
   citation?: string
 }
 
+export interface RawIEPData {
+  student?: StudentInfo
+  eligibility?: Eligibility
+  plaafp?: PLAAFP
+  goals?: Goal[]
+  services?: Service[]
+  accommodations?: string[]
+  placement?: Placement
+}
+
 export interface IEPDraft {
   studentInfo: StudentInfo
   presentLevels: string
@@ -55,6 +93,22 @@ export interface IEPDraft {
   accommodations: string[]
   complianceScore: number
   complianceIssues: ComplianceIssue[]
+}
+
+export interface ExtractedIEPData {
+  studentInfo: StudentInfo
+  eligibility?: Eligibility
+  plaafp?: PLAAFP
+  goals: Goal[]
+  services: Service[]
+  accommodations: string[]
+  placement?: Placement
+  compliance?: Compliance
+  presentLevels?: string
+  complianceScore?: number
+  complianceIssues?: ComplianceIssue[]
+  // Store the raw IEP object from Lambda
+  rawIEP?: RawIEPData
 }
 
 export interface MySLPReview {
@@ -76,8 +130,8 @@ interface IEPContextType {
   setCurrentStep: (step: WorkflowStep) => void
   uploadedFile: File | null
   setUploadedFile: (file: File | null) => void
-  extractedData: Partial<IEPDraft> | null
-  setExtractedData: (data: Partial<IEPDraft> | null) => void
+  extractedData: ExtractedIEPData | null
+  setExtractedData: (data: ExtractedIEPData | ((prev: ExtractedIEPData | null) => ExtractedIEPData) | null) => void
   goalProgressData: string
   setGoalProgressData: (data: string) => void
   additionalFiles: File[]
@@ -97,13 +151,24 @@ const IEPContext = createContext<IEPContextType | null>(null)
 export function IEPProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>("welcome")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [extractedData, setExtractedData] = useState<Partial<IEPDraft> | null>(null)
+  const [extractedData, setExtractedDataState] = useState<ExtractedIEPData | null>(null)
   const [goalProgressData, setGoalProgressData] = useState("")
   const [additionalFiles, setAdditionalFiles] = useState<File[]>([])
   const [draft, setDraft] = useState<IEPDraft | null>(null)
   const [myslpReview, setMyslpReview] = useState<MySLPReview | null>(null)
   const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([])
   const [sessionStartTime] = useState<Date>(new Date())
+
+  const setExtractedData = useCallback(
+    (data: ExtractedIEPData | ((prev: ExtractedIEPData | null) => ExtractedIEPData) | null) => {
+      if (typeof data === "function") {
+        setExtractedDataState(data)
+      } else {
+        setExtractedDataState(data)
+      }
+    },
+    [],
+  )
 
   const addSessionLog = useCallback((action: string, hash?: string) => {
     setSessionLogs((prev) => [
@@ -120,7 +185,7 @@ export function IEPProvider({ children }: { children: ReactNode }) {
   const resetSession = useCallback(() => {
     setCurrentStep("welcome")
     setUploadedFile(null)
-    setExtractedData(null)
+    setExtractedDataState(null)
     setGoalProgressData("")
     setAdditionalFiles([])
     setDraft(null)

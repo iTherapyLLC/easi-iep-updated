@@ -18,6 +18,8 @@ interface ProcessingStep {
 interface ExtractedInfo {
   name: string
   grade: string
+  school: string
+  district: string
   primaryDisability: string
   secondaryDisability: string
   goalCount: number
@@ -37,6 +39,7 @@ export function ProcessingPage() {
   const [editedInfo, setEditedInfo] = useState<ExtractedInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [processingStatus, setProcessingStatus] = useState<string | null>(null)
+  const [complianceStatus, setComplianceStatus] = useState<string | null>(null)
 
   useEffect(() => {
     if (!uploadedFile) return
@@ -67,17 +70,29 @@ export function ProcessingPage() {
 
         const data = await response.json()
 
-        console.log("[v0] API response:", JSON.stringify(data, null, 2))
+        console.log("[v0] Full API response:", JSON.stringify(data, null, 2))
 
         if (!data.success) {
           throw new Error(data.error || "Extraction failed")
         }
 
         const iep = data.iep || {}
+
         const student = iep.student || {}
+        const eligibility = iep.eligibility || {}
         const goals = iep.goals || []
         const services = iep.services || []
-        const eligibility = iep.eligibility || student.eligibility || {}
+        const accommodations = iep.accommodations || []
+        const plaafp = iep.plaafp || {}
+        const placement = iep.placement || {}
+        const compliance = data.compliance || {}
+
+        console.log("[v0] Parsed data:", {
+          student,
+          eligibility,
+          goalsCount: goals.length,
+          servicesCount: services.length,
+        })
 
         // Mark step 1 complete
         setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "complete" } : step)))
@@ -101,31 +116,42 @@ export function ProcessingPage() {
         const extracted: ExtractedInfo = {
           name: student.name || "Unknown Student",
           grade: student.grade || "Unknown",
-          primaryDisability: eligibility.primaryDisability || student.primaryDisability || "Not specified",
-          secondaryDisability: eligibility.secondaryDisability || student.secondaryDisability || "",
+          school: student.school || "",
+          district: student.district || "",
+          primaryDisability: eligibility.primary_disability || "Not specified",
+          secondaryDisability: eligibility.secondary_disability || "",
           goalCount: goals.length,
         }
 
+        console.log("[v0] Extracted info:", extracted)
+
         setExtractedInfo(extracted)
         setEditedInfo(extracted)
+
+        if (compliance.status) {
+          setComplianceStatus(compliance.status)
+        }
 
         setExtractedData({
           studentInfo: {
             name: student.name || "",
             grade: student.grade || "",
-            primaryDisability: eligibility.primaryDisability || student.primaryDisability || "",
-            secondaryDisability: eligibility.secondaryDisability || student.secondaryDisability || "",
-            dob: student.dob || student.dateOfBirth || "",
+            primaryDisability: eligibility.primary_disability || "",
+            secondaryDisability: eligibility.secondary_disability || "",
+            dob: student.dob || "",
             school: student.school || "",
             district: student.district || "",
             age: student.age || "",
           },
+          eligibility: eligibility,
+          plaafp: plaafp,
           goals: goals,
           services: services,
-          presentLevels: iep.presentLevels || iep.present_levels || "",
-          compliance: iep.compliance || null,
-          accommodations: iep.accommodations || [],
-          placement: iep.placement || null,
+          accommodations: accommodations,
+          placement: placement,
+          compliance: compliance,
+          // Store raw IEP for later use
+          rawIEP: iep,
         })
 
         addSessionLog("Document processed successfully")
@@ -143,6 +169,8 @@ export function ProcessingPage() {
         const fallbackInfo: ExtractedInfo = {
           name: "",
           grade: "",
+          school: "",
+          district: "",
           primaryDisability: "",
           secondaryDisability: "",
           goalCount: 0,
@@ -159,12 +187,14 @@ export function ProcessingPage() {
 
   const handleConfirm = () => {
     if (editedInfo && isEditing) {
-      setExtractedData((prev: any) => ({
-        ...prev,
+      setExtractedData((prev) => ({
+        ...prev!,
         studentInfo: {
-          ...prev?.studentInfo,
+          ...prev?.studentInfo!,
           name: editedInfo.name,
           grade: editedInfo.grade,
+          school: editedInfo.school,
+          district: editedInfo.district,
           primaryDisability: editedInfo.primaryDisability,
           secondaryDisability: editedInfo.secondaryDisability,
         },
@@ -193,6 +223,19 @@ export function ProcessingPage() {
   }
 
   const displayInfo = isEditing ? editedInfo : extractedInfo
+
+  const getComplianceBadgeColor = (status: string) => {
+    switch (status) {
+      case "COMPLIANT":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "NEEDS_REVISION":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "NON_COMPLIANT":
+        return "bg-red-100 text-red-800 border-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12">
@@ -276,11 +319,25 @@ export function ProcessingPage() {
                     ) : (
                       <>
                         <h2 className="font-semibold text-lg text-foreground mb-1">{displayInfo.name}</h2>
-                        <p className="text-sm text-muted-foreground">{displayInfo.grade}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {displayInfo.grade}
+                          {displayInfo.school && ` • ${displayInfo.school}`}
+                          {displayInfo.district && ` • ${displayInfo.district}`}
+                        </p>
                       </>
                     )}
                   </div>
                 </div>
+                {complianceStatus && !isEditing && (
+                  <span
+                    className={cn(
+                      "px-2 py-1 text-xs font-medium rounded-full border",
+                      getComplianceBadgeColor(complianceStatus),
+                    )}
+                  >
+                    {complianceStatus.replace(/_/g, " ")}
+                  </span>
+                )}
                 {isEditing && (
                   <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="flex-shrink-0">
                     <X className="w-4 h-4" />
@@ -299,6 +356,28 @@ export function ProcessingPage() {
                       value={displayInfo.grade}
                       onChange={(e) => updateEditedInfo("grade", e.target.value)}
                       placeholder="e.g., 2nd Grade"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="school" className="text-xs">
+                      School
+                    </Label>
+                    <Input
+                      id="school"
+                      value={displayInfo.school}
+                      onChange={(e) => updateEditedInfo("school", e.target.value)}
+                      placeholder="e.g., Lincoln Elementary"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="district" className="text-xs">
+                      District
+                    </Label>
+                    <Input
+                      id="district"
+                      value={displayInfo.district}
+                      onChange={(e) => updateEditedInfo("district", e.target.value)}
+                      placeholder="e.g., Springfield USD"
                     />
                   </div>
                   <div>
