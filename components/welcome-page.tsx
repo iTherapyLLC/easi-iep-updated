@@ -70,7 +70,9 @@ export function WelcomePage() {
               className="object-contain"
             />
           </div>
-          <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-3 text-balance">{title}</h1>
+          <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-3 text-balance hover-title-underline">
+            {title}
+          </h1>
           <p className="text-lg text-muted-foreground text-pretty animate-fade-in-delay">
             Upload the student{"'"}s current IEP so we can build from there.
           </p>

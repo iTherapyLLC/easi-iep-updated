@@ -53,7 +53,9 @@ export function FinalizePage() {
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6 animate-pulse transition-transform hover:scale-110">
             <Check className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">Your IEP is ready!</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2 hover-title-underline">
+            Your IEP is ready!
+          </h1>
           <p className="text-muted-foreground">
             Both IEP Guardian and MySLP confirm this document meets all requirements.
           </p>

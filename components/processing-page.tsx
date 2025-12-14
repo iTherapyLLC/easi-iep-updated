@@ -242,7 +242,7 @@ export function ProcessingPage() {
       <div className="w-full max-w-xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2 hover-title">
             {isComplete
               ? error
                 ? "Manual Entry Required"

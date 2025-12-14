@@ -172,4 +172,71 @@
       transform: translateY(-10px);
     }
   }
+
+  /* Add engaging hover animations for titles */
+  .hover-title {
+    display: inline-block;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+  }
+  .hover-title:hover {
+    transform: scale(1.02) translateY(-2px);
+    color: var(--primary);
+    text-shadow: 0 4px 12px oklch(0.55 0.12 180 / 0.3);
+  }
+
+  .hover-title-underline {
+    display: inline-block;
+    position: relative;
+    transition: color 0.3s ease;
+  }
+  .hover-title-underline::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 2px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .hover-title-underline:hover {
+    color: var(--primary);
+  }
+  .hover-title-underline:hover::after {
+    width: 100%;
+  }
+
+  .hover-title-glow {
+    display: inline-block;
+    transition: all 0.4s ease;
+  }
+  .hover-title-glow:hover {
+    color: var(--primary);
+    filter: drop-shadow(0 0 8px oklch(0.55 0.12 180 / 0.5));
+  }
+
+  .hover-title-bounce {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+  .hover-title-bounce:hover {
+    animation: title-bounce 0.5s ease;
+  }
+  @keyframes title-bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    25% {
+      transform: translateY(-6px);
+    }
+    50% {
+      transform: translateY(0);
+    }
+    75% {
+      transform: translateY(-3px);
+    }
+  }
 }

@@ -150,7 +150,9 @@ export function GeneratingPage() {
       <div className="w-full max-w-xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">Creating your IEP draft...</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2 hover-title-glow">
+            Creating your IEP draft...
+          </h1>
           <p className="text-muted-foreground">Checking against compliance requirements</p>
         </div>
 

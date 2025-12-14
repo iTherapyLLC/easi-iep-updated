@@ -72,7 +72,7 @@ export function MySLPReviewPage() {
       <div className="w-full max-w-xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-2 hover-title">
             {isComplete ? "MySLP Review Complete" : "MySLP is reviewing your draft..."}
           </h1>
           {!isComplete && <p className="text-muted-foreground">Getting a second clinical perspective</p>}

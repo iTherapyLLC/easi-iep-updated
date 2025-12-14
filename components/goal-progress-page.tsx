@@ -73,7 +73,7 @@ export function GoalProgressPage() {
       <div className="w-full max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3 text-balance">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3 text-balance hover-title-underline">
             Do you have information about how {studentName} performed on their current goals?
           </h1>
         </div>

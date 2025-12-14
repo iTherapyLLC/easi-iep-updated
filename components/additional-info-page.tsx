@@ -66,7 +66,7 @@ export function AdditionalInfoPage() {
       <div className="w-full max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
+          <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3 hover-title-underline">
             Anything else that should be in this IEP?
           </h1>
           <p className="text-muted-foreground">Optional: Add any additional documents that might help</p>

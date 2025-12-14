@@ -75,7 +75,7 @@ export function DraftReviewPage() {
       <div className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Draft IEP: {draft.studentInfo.name}</h1>
+            <h1 className="text-xl font-semibold text-foreground hover-title">Draft IEP: {draft.studentInfo.name}</h1>
             <p className="text-sm text-muted-foreground">Review and edit before second look</p>
           </div>
           <div className="flex items-center gap-3">
