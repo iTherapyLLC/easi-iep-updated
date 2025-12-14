@@ -138,6 +138,7 @@ interface IEPContextType {
   setAdditionalFiles: (files: File[]) => void
   draft: IEPDraft | null
   setDraft: (draft: IEPDraft | null) => void
+  updateDraft: (updates: Partial<IEPDraft>) => void
   myslpReview: MySLPReview | null
   setMyslpReview: (review: MySLPReview | null) => void
   sessionLogs: SessionLog[]
@@ -169,6 +170,13 @@ export function IEPProvider({ children }: { children: ReactNode }) {
     },
     [],
   )
+
+  const updateDraft = useCallback((updates: Partial<IEPDraft>) => {
+    setDraft((prev) => {
+      if (!prev) return null
+      return { ...prev, ...updates }
+    })
+  }, [])
 
   const addSessionLog = useCallback((action: string, hash?: string) => {
     setSessionLogs((prev) => [
@@ -208,6 +216,7 @@ export function IEPProvider({ children }: { children: ReactNode }) {
         setAdditionalFiles,
         draft,
         setDraft,
+        updateDraft,
         myslpReview,
         setMyslpReview,
         sessionLogs,
