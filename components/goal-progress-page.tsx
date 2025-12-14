@@ -7,7 +7,7 @@ import { useIEP } from "@/lib/iep-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { FileText, Upload, Mic, MicOff, X, ChevronRight } from "lucide-react"
+import { FileText, Upload, Mic, MicOff, X, ChevronRight, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function GoalProgressPage() {
@@ -20,6 +20,11 @@ export function GoalProgressPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const studentName = extractedData?.studentInfo?.name || "the student"
+
+  const handleBack = () => {
+    addSessionLog("Returned to processing page")
+    setCurrentStep("processing")
+  }
 
   const handleFiles = useCallback(
     (files: FileList | null) => {
@@ -71,6 +76,17 @@ export function GoalProgressPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 md:p-12">
       <div className="w-full max-w-2xl mx-auto">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground transition-transform hover:scale-105"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Document Review
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
           <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3 text-balance hover-title-underline">
@@ -255,7 +271,7 @@ export function GoalProgressPage() {
           </div>
         )}
 
-        {/* Back button */}
+        {/* Back button for choices */}
         {hasData !== null && (
           <div className="mt-6 text-center animate-fade-in">
             <button

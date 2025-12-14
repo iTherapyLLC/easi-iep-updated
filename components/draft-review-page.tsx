@@ -6,7 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
-import { Check, AlertTriangle, Info, ChevronDown, ChevronRight, Save, ExternalLink, Edit2 } from "lucide-react"
+import {
+  Check,
+  AlertTriangle,
+  Info,
+  ChevronDown,
+  ChevronRight,
+  Save,
+  ExternalLink,
+  Edit2,
+  ArrowLeft,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function DraftReviewPage() {
@@ -41,6 +51,11 @@ export function DraftReviewPage() {
     setCurrentStep("myslp-review")
   }
 
+  const handleBack = () => {
+    addSessionLog("Returned to generating page")
+    setCurrentStep("generating")
+  }
+
   const updatePresentLevels = (value: string) => {
     setDraft({ ...draft, presentLevels: value })
   }
@@ -54,7 +69,7 @@ export function DraftReviewPage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return "text-primary"
-    if (score >= 70) return "text-warning"
+    if (score >= 70) return "text-yellow-600"
     return "text-destructive"
   }
 
@@ -63,7 +78,7 @@ export function DraftReviewPage() {
       case "error":
         return <AlertTriangle className="w-4 h-4 text-destructive" />
       case "warning":
-        return <AlertTriangle className="w-4 h-4 text-warning" />
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />
       case "info":
         return <Info className="w-4 h-4 text-primary" />
     }
@@ -74,9 +89,20 @@ export function DraftReviewPage() {
       {/* Header */}
       <div className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground hover-title">Draft IEP: {draft.studentInfo.name}</h1>
-            <p className="text-sm text-muted-foreground">Review and edit before second look</p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold text-foreground hover-title">Draft IEP: {draft.studentInfo.name}</h1>
+              <p className="text-sm text-muted-foreground">Review and edit before second look</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -191,7 +217,7 @@ export function DraftReviewPage() {
 
             {/* Services */}
             <Card className="p-6 transition-all hover:shadow-lg hover:-translate-y-1">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Services</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Services ({draft.services.length})</h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -220,7 +246,9 @@ export function DraftReviewPage() {
 
             {/* Accommodations */}
             <Card className="p-6 transition-all hover:shadow-lg hover:-translate-y-1">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Accommodations</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Accommodations ({draft.accommodations.length})
+              </h2>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {draft.accommodations.map((accommodation, index) => (
                   <li
@@ -276,43 +304,49 @@ export function DraftReviewPage() {
                 </div>
 
                 {/* Compliance Issues */}
-                <div className="space-y-3">
-                  {(showAllIssues ? draft.complianceIssues : draft.complianceIssues.slice(0, 3)).map((issue, index) => (
-                    <div
-                      key={issue.id}
-                      className={cn(
-                        "p-3 rounded-lg border transition-all hover:scale-[1.02] hover:translate-x-1",
-                        issue.severity === "error" && "bg-destructive/10 border-destructive/20",
-                        issue.severity === "warning" && "bg-warning/10 border-warning/20",
-                        issue.severity === "info" && "bg-primary/10 border-primary/20",
-                      )}
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      <div className="flex items-start gap-2">
-                        {getSeverityIcon(issue.severity)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">{issue.section}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{issue.message}</p>
-                          {issue.citation && (
-                            <button className="flex items-center gap-1 mt-2 text-xs text-primary hover:underline">
-                              <ExternalLink className="w-3 h-3" />
-                              <span>{issue.citation}</span>
-                            </button>
+                {draft.complianceIssues.length > 0 ? (
+                  <div className="space-y-3">
+                    {(showAllIssues ? draft.complianceIssues : draft.complianceIssues.slice(0, 3)).map(
+                      (issue, index) => (
+                        <div
+                          key={issue.id}
+                          className={cn(
+                            "p-3 rounded-lg border transition-all hover:scale-[1.02] hover:translate-x-1",
+                            issue.severity === "error" && "bg-destructive/10 border-destructive/20",
+                            issue.severity === "warning" && "bg-yellow-100 border-yellow-200",
+                            issue.severity === "info" && "bg-primary/10 border-primary/20",
                           )}
+                          style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {getSeverityIcon(issue.severity)}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{issue.section}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{issue.message}</p>
+                              {issue.citation && (
+                                <button className="flex items-center gap-1 mt-2 text-xs text-primary hover:underline">
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>{issue.citation}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      ),
+                    )}
 
-                  {draft.complianceIssues.length > 3 && (
-                    <button
-                      onClick={() => setShowAllIssues(!showAllIssues)}
-                      className="w-full text-sm text-primary py-2 hover:underline transition-transform hover:scale-105"
-                    >
-                      {showAllIssues ? "Show less" : `Show ${draft.complianceIssues.length - 3} more`}
-                    </button>
-                  )}
-                </div>
+                    {draft.complianceIssues.length > 3 && (
+                      <button
+                        onClick={() => setShowAllIssues(!showAllIssues)}
+                        className="w-full text-sm text-primary py-2 hover:underline transition-transform hover:scale-105"
+                      >
+                        {showAllIssues ? "Show less" : `Show ${draft.complianceIssues.length - 3} more`}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No compliance issues found</p>
+                )}
 
                 {/* Quick Stats */}
                 <div className="mt-6 pt-6 border-t space-y-3">

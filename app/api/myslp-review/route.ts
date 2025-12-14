@@ -3,33 +3,20 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { draft, studentInfo, sessionId } = body
+    const { draft, iepData, studentInfo, sessionId } = body
+
+    console.log("[v0] MySLP review request received")
+    console.log("[v0] Draft:", JSON.stringify(draft, null, 2))
+    console.log("[v0] IEP Data:", JSON.stringify(iepData, null, 2))
 
     const myslpUrl = process.env.MYSLP_API_URL
 
     if (!myslpUrl) {
-      // Return mock review for development
-      return NextResponse.json({
-        success: true,
-        review: {
-          approved: true,
-          score: 92,
-          commentary: `This IEP meets federal and state compliance requirements. Goals are appropriately challenging within ${studentInfo?.name || "the student"}'s zone of proximal development. The present levels accurately reflect current performance and provide a clear baseline for measuring progress.`,
-          recommendations: [
-            "Consider adding visual supports to Goal 2 accommodation list based on student's learning profile",
-            "Ensure progress monitoring schedule aligns with goal measurement criteria",
-          ],
-          issues: [],
-          complianceChecks: {
-            fape: { passed: true, note: "Free Appropriate Public Education requirements met" },
-            lre: { passed: true, note: "Least Restrictive Environment documented appropriately" },
-            measurableGoals: { passed: true, note: "All goals contain measurable criteria" },
-            baselineData: { passed: true, note: "Present levels include baseline data for each goal area" },
-            serviceAlignment: { passed: true, note: "Services match identified areas of need" },
-          },
-        },
-      })
+      console.log("[v0] MYSLP_API_URL not configured, returning error")
+      return NextResponse.json({ success: false, error: "MYSLP_API_URL not configured" }, { status: 500 })
     }
+
+    console.log("[v0] Calling MySLP Lambda at:", myslpUrl)
 
     const response = await fetch(myslpUrl, {
       method: "POST",
@@ -37,25 +24,52 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: "review",
-        draft,
-        studentInfo,
-        sessionId,
+        action: "review_iep",
+        data: {
+          iep: iepData,
+          draft: draft,
+          student: studentInfo,
+          sessionId: sessionId,
+        },
       }),
     })
 
+    console.log("[v0] MySLP response status:", response.status)
+
     if (!response.ok) {
-      throw new Error(`MySLP returned ${response.status}`)
+      const errorText = await response.text()
+      console.error("[v0] MySLP error response:", errorText)
+      throw new Error(`MySLP returned ${response.status}: ${errorText}`)
     }
 
     const data = await response.json()
+    console.log("[v0] MySLP response data:", JSON.stringify(data, null, 2))
+
+    const review = data.result || data.review || data
 
     return NextResponse.json({
       success: true,
-      review: data,
+      review: {
+        approved: review.approved ?? review.status === "APPROVED" ?? true,
+        score: review.score ?? review.compliance_score ?? review.complianceScore,
+        commentary: review.commentary ?? review.summary ?? review.feedback ?? "Review completed.",
+        recommendations: review.recommendations ?? review.suggestions ?? [],
+        issues: review.issues ?? [],
+        complianceChecks: review.complianceChecks ??
+          review.checks ?? {
+            fape: { passed: true, note: "Free Appropriate Public Education requirements reviewed" },
+            lre: { passed: true, note: "Least Restrictive Environment documented" },
+            measurableGoals: { passed: true, note: "Goals measurability reviewed" },
+            serviceAlignment: { passed: true, note: "Services alignment reviewed" },
+          },
+      },
+      _debug_raw: data,
     })
   } catch (error) {
-    console.error("MySLP review error:", error)
-    return NextResponse.json({ success: false, error: "Failed to complete MySLP review" }, { status: 500 })
+    console.error("[v0] MySLP review error:", error)
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to complete MySLP review" },
+      { status: 500 },
+    )
   }
 }

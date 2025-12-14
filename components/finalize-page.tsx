@@ -4,31 +4,103 @@ import { useState } from "react"
 import { useIEP } from "@/lib/iep-context"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Check, Download, FileText, Clock, Shield, Plus } from "lucide-react"
+import { Check, Download, FileText, Clock, Shield, Plus, Loader2, ArrowLeft } from "lucide-react"
 
 export function FinalizePage() {
-  const { draft, sessionLogs, sessionStartTime, resetSession, addSessionLog } = useIEP()
+  const { draft, sessionLogs, sessionStartTime, resetSession, addSessionLog, setCurrentStep } = useIEP()
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   if (!draft) return null
 
   const sessionDuration = sessionStartTime ? Math.round((new Date().getTime() - sessionStartTime.getTime()) / 60000) : 0
 
-  const handleDownloadPDF = () => {
-    addSessionLog("PDF downloaded")
-    setDownloadStatus("PDF downloading...")
-    setTimeout(() => setDownloadStatus(null), 2000)
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true)
+    setDownloadStatus("Generating PDF...")
+    addSessionLog("PDF generation started")
+
+    try {
+      const response = await fetch("/api/generate-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft,
+          studentInfo: draft.studentInfo,
+          format: "pdf",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.downloadUrl) {
+        // Create a text-based IEP document for download
+        const iepContent = generateIEPTextContent(draft)
+        const blob = new Blob([iepContent], { type: "text/plain" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download =
+          data.filename ||
+          `IEP_${draft.studentInfo.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.txt`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        setDownloadStatus("Downloaded!")
+        addSessionLog("PDF downloaded successfully")
+      } else {
+        setDownloadStatus("Download failed")
+        addSessionLog("PDF download failed: " + (data.error || "Unknown error"))
+      }
+    } catch (error) {
+      console.error("PDF download error:", error)
+      setDownloadStatus("Download failed")
+      addSessionLog("PDF download error")
+    } finally {
+      setIsDownloading(false)
+      setTimeout(() => setDownloadStatus(null), 2000)
+    }
   }
 
-  const handleDownloadWord = () => {
-    addSessionLog("Word document downloaded")
-    setDownloadStatus("Word downloading...")
-    setTimeout(() => setDownloadStatus(null), 2000)
+  const handleDownloadWord = async () => {
+    setIsDownloading(true)
+    setDownloadStatus("Generating Word document...")
+    addSessionLog("Word document generation started")
+
+    try {
+      const iepContent = generateIEPTextContent(draft)
+      const blob = new Blob([iepContent], { type: "application/msword" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `IEP_${draft.studentInfo.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.doc`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setDownloadStatus("Downloaded!")
+      addSessionLog("Word document downloaded successfully")
+    } catch (error) {
+      console.error("Word download error:", error)
+      setDownloadStatus("Download failed")
+      addSessionLog("Word document download error")
+    } finally {
+      setIsDownloading(false)
+      setTimeout(() => setDownloadStatus(null), 2000)
+    }
   }
 
   const handleStartNew = () => {
     addSessionLog("Session completed")
     resetSession()
+  }
+
+  const handleBack = () => {
+    addSessionLog("Returned to MySLP review")
+    setCurrentStep("myslp-review")
   }
 
   return (
@@ -49,6 +121,17 @@ export function FinalizePage() {
       </div>
 
       <div className="w-full max-w-xl mx-auto relative z-10">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground transition-transform hover:scale-105"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Review
+          </Button>
+        </div>
+
         <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6 animate-pulse transition-transform hover:scale-110">
             <Check className="w-10 h-10 text-primary" />
@@ -69,18 +152,20 @@ export function FinalizePage() {
           <Button
             size="lg"
             onClick={handleDownloadPDF}
+            disabled={isDownloading}
             className="flex-1 h-14 text-base font-medium transition-transform hover:scale-105 active:scale-95"
           >
-            <Download className="w-5 h-5 mr-2" />
+            {isDownloading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Download className="w-5 h-5 mr-2" />}
             Download PDF
           </Button>
           <Button
             size="lg"
             variant="outline"
             onClick={handleDownloadWord}
+            disabled={isDownloading}
             className="flex-1 h-14 text-base font-medium bg-transparent transition-transform hover:scale-105 active:scale-95"
           >
-            <FileText className="w-5 h-5 mr-2" />
+            {isDownloading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <FileText className="w-5 h-5 mr-2" />}
             Download Word
           </Button>
         </div>
@@ -150,4 +235,80 @@ export function FinalizePage() {
       </div>
     </div>
   )
+}
+
+function generateIEPTextContent(draft: {
+  studentInfo: { name: string; grade: string; primaryDisability: string; secondaryDisability?: string }
+  presentLevels: string
+  goals: Array<{ area: string; description?: string; baseline: string; target: string }>
+  services: Array<{ type: string; frequency: string; duration: string; provider: string; location?: string }>
+  accommodations: string[]
+  complianceScore: number
+}): string {
+  const lines: string[] = []
+
+  lines.push("=".repeat(60))
+  lines.push("INDIVIDUALIZED EDUCATION PROGRAM (IEP)")
+  lines.push("=".repeat(60))
+  lines.push("")
+
+  // Student Information
+  lines.push("STUDENT INFORMATION")
+  lines.push("-".repeat(40))
+  lines.push(`Name: ${draft.studentInfo.name}`)
+  lines.push(`Grade: ${draft.studentInfo.grade}`)
+  lines.push(`Primary Disability: ${draft.studentInfo.primaryDisability}`)
+  if (draft.studentInfo.secondaryDisability) {
+    lines.push(`Secondary Disability: ${draft.studentInfo.secondaryDisability}`)
+  }
+  lines.push("")
+
+  // Present Levels
+  lines.push("PRESENT LEVELS OF ACADEMIC ACHIEVEMENT AND FUNCTIONAL PERFORMANCE (PLAAFP)")
+  lines.push("-".repeat(40))
+  lines.push(draft.presentLevels)
+  lines.push("")
+
+  // Goals
+  lines.push("ANNUAL GOALS")
+  lines.push("-".repeat(40))
+  draft.goals.forEach((goal, index) => {
+    lines.push(`Goal ${index + 1}: ${goal.area}`)
+    lines.push(`  Description: ${goal.description || "N/A"}`)
+    lines.push(`  Baseline: ${goal.baseline}`)
+    lines.push(`  Target: ${goal.target}`)
+    lines.push("")
+  })
+
+  // Services
+  lines.push("SPECIAL EDUCATION AND RELATED SERVICES")
+  lines.push("-".repeat(40))
+  draft.services.forEach((service) => {
+    lines.push(`Service: ${service.type}`)
+    lines.push(`  Frequency: ${service.frequency}`)
+    lines.push(`  Duration: ${service.duration}`)
+    lines.push(`  Provider: ${service.provider}`)
+    lines.push(`  Location: ${service.location || "N/A"}`)
+    lines.push("")
+  })
+
+  // Accommodations
+  lines.push("ACCOMMODATIONS AND MODIFICATIONS")
+  lines.push("-".repeat(40))
+  draft.accommodations.forEach((acc, index) => {
+    lines.push(`${index + 1}. ${acc}`)
+  })
+  lines.push("")
+
+  // Compliance
+  lines.push("COMPLIANCE STATUS")
+  lines.push("-".repeat(40))
+  lines.push(`Compliance Score: ${draft.complianceScore}%`)
+  lines.push("")
+
+  lines.push("=".repeat(60))
+  lines.push(`Generated: ${new Date().toLocaleString()}`)
+  lines.push("=".repeat(60))
+
+  return lines.join("\n")
 }
