@@ -2266,34 +2266,45 @@ export function IEPWizard() {
       }
 
       const extractData = await extractResponse.json()
-      console.log("[v0] Extract response received:", extractData.success)
+      console.log("[v0] Full response data:", JSON.stringify(extractData).substring(0, 1000))
+      console.log("[v0] Response keys:", Object.keys(extractData))
+      console.log("[v0] extractData.success:", extractData.success)
+      console.log("[v0] extractData.iep exists:", !!extractData.iep)
+      console.log("[v0] extractData.result exists:", !!extractData.result)
+      console.log("[v0] extractData._debug_raw exists:", !!extractData._debug_raw)
 
-      if (!extractData.success) {
-        throw new Error(extractData.error || "Extraction failed")
+      const iepData = extractData.iep || extractData.result?.iep || extractData.data?.iep || extractData
+      const remediationData =
+        extractData._debug_raw?.remediation || extractData.remediation || extractData.result?.remediation
+
+      console.log("[v0] Resolved iepData keys:", iepData ? Object.keys(iepData) : "null")
+      console.log("[v0] Resolved iepData.student:", iepData?.student)
+      console.log("[v0] Resolved iepData.goals count:", iepData?.goals?.length)
+
+      if (!iepData || (!iepData.student && !iepData.goals)) {
+        console.error("[v0] No valid IEP data found in response")
+        throw new Error("No IEP data returned from extraction")
       }
 
-      // Extract IEP data - it's at the top level
-      const iepData = extractData.iep
-      console.log("[v0] Extracted IEP data:", iepData?.student?.name)
+      setExtractedIEP(iepData as ExtractedIEP)
+      logEvent("EXTRACTION_COMPLETED", {
+        goalsCount: iepData.goals?.length || 0,
+        servicesCount: iepData.services?.length || 0,
+        accommodationsCount: iepData.accommodations?.length || 0,
+        // Removed studentName from logEvent here as it might be sensitive and is not always present
+      })
 
-      if (iepData) {
-        setExtractedIEP(iepData as ExtractedIEP)
-        logEvent("EXTRACTION_COMPLETED", {
-          goalsCount: iepData.goals?.length || 0,
-          servicesCount: iepData.services?.length || 0,
-          accommodationsCount: iepData.accommodations?.length || 0,
-          studentName: iepData.student?.name, // Include student name for context, assuming it's not PII in this context
-        })
-      }
-
-      // Extract remediation data - it's inside _debug_raw
-      const remediationData = extractData._debug_raw?.remediation
-      console.log("[v0] Remediation data:", remediationData?.original_score, "issues:", remediationData?.issues?.length)
+      console.log(
+        "[v0] Resolved remediationData:",
+        remediationData?.original_score || remediationData?.score,
+        "issues:",
+        remediationData?.issues?.length,
+      )
 
       if (remediationData) {
         setRemediation(remediationData as RemediationData)
         logEvent("REMEDIATION_COMPLETED", {
-          score: remediationData.score, // Use remediation score
+          score: remediationData.score || remediationData.original_score,
           issuesCount: remediationData.issues?.length || 0,
         })
       }
