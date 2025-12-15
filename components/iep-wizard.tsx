@@ -1759,6 +1759,7 @@ export function IEPWizard() {
     { id: "services", label: "Aligning services with new goals", status: "pending" },
   ])
   const [buildError, setBuildError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Review state
   const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
@@ -1800,6 +1801,10 @@ export function IEPWizard() {
   }
 
   const handleRetryBuild = () => {
+    if (isSubmitting) {
+      console.log("[v0] Retry blocked - already submitting")
+      return
+    }
     // Reset tasks and error, then restart the building process
     setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
     setBuildError(null)
@@ -1808,6 +1813,13 @@ export function IEPWizard() {
   }
 
   const handleStartBuilding = async () => {
+    if (isSubmitting) {
+      console.log("[v0] handleStartBuilding blocked - already submitting")
+      return
+    }
+    setIsSubmitting(true)
+    console.log("[v0] handleStartBuilding started at:", new Date().toISOString())
+
     setCurrentStep("building")
     setBuildError(null)
 
@@ -1829,7 +1841,7 @@ export function IEPWizard() {
       formData.append("state", selectedState)
       formData.append("iepDate", iepDate)
 
-      console.log("[v0] Uploading file directly to extract-iep:", iepFile.name)
+      console.log("[v0] Uploading file directly to extract-iep:", iepFile.name, "at:", new Date().toISOString())
 
       // Simulate progress while waiting for the Lambda (it takes 30-60 seconds)
       const progressInterval = setInterval(() => {
@@ -1931,6 +1943,9 @@ export function IEPWizard() {
       setBuildError(errorMessage)
       updateTask("extract", "error") // Mark the first task as error to trigger error state in BuildingStep
       logEvent("EXTRACTION_ERROR", { errorType: "processing_failed", errorMessage }) // Log error
+    } finally {
+      setIsSubmitting(false)
+      console.log("[v0] handleStartBuilding finished at:", new Date().toISOString())
     }
   }
 
