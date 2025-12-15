@@ -33,6 +33,8 @@ import {
   VolumeX,
   Settings,
   Edit3,
+  AlertCircle,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
@@ -167,13 +169,23 @@ interface ExtractedIEP {
 }
 
 interface RemediationData {
-  original_score: number
-  potential_score: number
-  issues: ComplianceIssue[]
-  summary: string
-  priority_order: string[]
-  compliance_checks?: Array<{ name: string; passed: boolean; citation?: string }> // Added for compliance checks
-  score: number // Added score field for remediation
+  score: number
+  original_score?: number // Added for clarity
+  issues: Array<{
+    id: string
+    title: string
+    description: string
+    severity: "critical" | "warning" | "suggestion"
+    citation?: string
+    suggested_fix?: string
+    auto_fixable?: boolean
+    points_deducted?: number // Added for clarity
+  }>
+  passed_count?: number
+  total_checks?: number
+  checks_passed?: Array<{ name: string; citation?: string }>
+  checks_failed?: Array<{ name: string; citation?: string; issue_id?: string }>
+  compliance_checks?: Array<{ name: string; passed: boolean; citation?: string }>
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review" | "myslp"
@@ -778,18 +790,34 @@ function ReviewStep({
     }
   }, [remediation, fixedIssues, expandedIssue])
 
+  // Map new severity levels to old ones for display
+  const mapSeverity = (severity: "critical" | "warning" | "suggestion"): "critical" | "high" | "medium" | "low" => {
+    switch (severity) {
+      case "critical":
+        return "critical"
+      case "warning":
+        return "high"
+      case "suggestion":
+        return "medium" // Assuming suggestion maps to medium or low, choosing medium for now
+      default:
+        return "low"
+    }
+  }
+
   const issues = remediation?.issues || []
   const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
   const resolvedIssues = issues.filter((i) => fixedIssues.has(i.id)) // Issues that have been fixed
   const autoFixable = remainingIssues.filter((i) => i.auto_fixable && i.suggested_fix)
-  const criticalRemaining = remainingIssues.filter((i) => i.severity === "critical").length
-  const highRemaining = remainingIssues.filter((i) => i.severity === "high").length
+  const criticalRemaining = remainingIssues.filter((i) => mapSeverity(i.severity) === "critical").length
+  const highRemaining = remainingIssues.filter((i) => mapSeverity(i.severity) === "high").length
 
   const originalScore = remediation?.original_score || 0
-  const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + i.points_deducted, 0)
+  const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + (i.points_deducted ?? 0), 0)
   const displayScore = Math.min(100, originalScore + fixedPoints)
-  const passedChecks = remediation?.compliance_checks?.filter((c) => c.passed)?.length || 0 // Count of passed compliance checks
-  const totalChecks = remediation?.compliance_checks?.length || 0 // Total number of compliance checks
+  const passedChecks = remediation?.passed_count ?? remediation?.compliance_checks?.filter((c) => c.passed)?.length ?? 0
+  const totalChecks = remediation?.total_checks ?? remediation?.compliance_checks?.length ?? 0
+  const checksPassedArray = remediation?.checks_passed ?? remediation?.compliance_checks?.filter((c) => c.passed) ?? []
+  const checksFailedArray = remediation?.checks_failed ?? remediation?.compliance_checks?.filter((c) => !c.passed) ?? []
 
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Get state name from selectedState code
 
@@ -842,7 +870,7 @@ function ReviewStep({
   }
 
   // Function to handle tab changes and log them
-  const handleTabChange = (tab: "questions" | "goals" | "services") => {
+  const handleTabChange = (tab: "questions" | "goals" | "services" | "compliance") => {
     setActiveTab(tab)
     logEvent("TAB_CHANGED", { tab })
   }
@@ -1129,20 +1157,50 @@ function ReviewStep({
       </button>
 
       {complianceExpanded && (
-        <div className="mb-6 p-4 bg-white rounded-xl border border-slate-200 space-y-2 animate-slide-up">
-          {remediation?.compliance_checks?.map((check, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm">
-              {check.passed ? (
-                <CheckCircle2 className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
-              ) : (
-                <div className="w-4 h-4 rounded-full bg-amber-400 mt-0.5 flex-shrink-0" />
-              )}
-              <div>
-                <span className="text-slate-700">{check.name}</span>
-                {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
-              </div>
+        <div className="mb-6 p-4 bg-white rounded-xl border border-slate-200 space-y-3 animate-slide-up">
+          {/* Passed checks with green checkmarks */}
+          {checksPassedArray.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-teal-600 uppercase tracking-wide">Passed</span>
+              {checksPassedArray.map((check, i) => (
+                <div key={`passed-${i}`} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-slate-700">{check.name}</span>
+                    {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Failed checks with links to issues */}
+          {checksFailedArray.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <span className="text-xs font-medium text-amber-600 uppercase tracking-wide">Needs Attention</span>
+              {checksFailedArray.map((check, i) => (
+                <button
+                  key={`failed-${i}`}
+                  onClick={() => {
+                    setActiveTab("questions") // Navigate to "questions" tab on click
+                    // Scroll to the issue if issue_id is provided
+                    if (check.issue_id) {
+                      const issueEl = document.getElementById(`issue-${check.issue_id}`)
+                      issueEl?.scrollIntoView({ behavior: "smooth", block: "center" })
+                    }
+                  }}
+                  className="flex items-start gap-2 text-sm w-full text-left hover:bg-amber-50 rounded p-1 -ml-1 transition-colors"
+                >
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-slate-700 hover:text-amber-700">{check.name}</span>
+                    {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
+                    <ChevronRight className="w-3 h-3 inline-block ml-1 text-amber-400" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1176,6 +1234,7 @@ function ReviewStep({
           { id: "questions", label: "Questions", icon: MessageCircle, count: remainingIssues.length }, // Changed tab ID to "questions"
           { id: "goals", label: "Goals", icon: Target, count: iep?.goals?.length || 0 },
           { id: "services", label: "Services", icon: Users, count: iep?.services?.length || 0 },
+          { id: "compliance", label: "Compliance", icon: CheckCircle2, count: checksFailedArray.length }, // Added compliance tab
         ].map((tab) => (
           <button
             key={tab.id}
@@ -1193,7 +1252,9 @@ function ReviewStep({
                 className={`text-xs px-2 py-0.5 rounded-full ${
                   tab.id === "questions" && tab.count > 0 // Conditional styling for "questions" tab
                     ? "bg-amber-100 text-amber-700"
-                    : "bg-slate-100 text-slate-600"
+                    : tab.id === "compliance" && tab.count > 0 // Conditional styling for "compliance" tab
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-slate-100 text-slate-600"
                 }`}
               >
                 {tab.count}
@@ -1237,6 +1298,7 @@ function ReviewStep({
                 return (
                   <div
                     key={issue.id}
+                    id={`issue-${issue.id}`} // Added ID for scrolling
                     className={`rounded-xl border-2 border-amber-200 bg-white overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
                   >
                     <button
@@ -1641,6 +1703,51 @@ function ReviewStep({
             ))}
             {(!iep?.services || iep.services.length === 0) && (
               <div className="text-center py-12 text-slate-500">No services extracted</div>
+            )}
+          </div>
+        )}
+
+        {/* Compliance Tab Content */}
+        {activeTab === "compliance" && (
+          <div className="space-y-4 animate-slide-in-right">
+            {checksFailedArray.length === 0 ? (
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-8 text-center animate-fade-in">
+                <CheckCircle2 className="w-16 h-16 text-teal-500 mx-auto mb-4" />
+                <p className="text-teal-800 font-semibold text-lg">Compliance checks passed!</p>
+                <p className="text-teal-600">No items require your attention.</p>
+              </div>
+            ) : (
+              checksFailedArray.map((check, i) => (
+                <div
+                  key={`compliance-item-${i}`}
+                  className="bg-white rounded-xl border border-amber-200 p-4 card-hover animate-fade-in animate-stagger-1"
+                  id={`issue-${check.issue_id}`} // Add ID for scrolling
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <div>
+                      <span className="font-medium text-slate-900">{check.name}</span>
+                      {check.citation && <span className="text-sm text-slate-400 ml-2">({check.citation})</span>}
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-700">
+                    This check requires attention. Please review the related question for details.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveTab("questions") // Navigate to "questions" tab
+                      // Scroll to the corresponding issue
+                      if (check.issue_id) {
+                        const issueEl = document.getElementById(`issue-${check.issue_id}`)
+                        issueEl?.scrollIntoView({ behavior: "smooth", block: "center" })
+                      }
+                    }}
+                    className="mt-3 px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                  >
+                    Go to Question
+                  </button>
+                </div>
+              ))
             )}
           </div>
         )}
