@@ -562,8 +562,8 @@ function BuildingStep({
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Sparkles className="w-8 h-8 text-teal-600 animate-pulse" />
+        <div className="w-20 h-20 mx-auto mb-4">
+          <img src="/images/easi-iep-logo.webp" alt="EASI IEP" className="w-full h-full object-contain animate-pulse" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Building Your New IEP</h1>
         <p className="text-slate-600">
@@ -989,7 +989,7 @@ function ReviewStep({
             autoFixable.forEach((i) => logEvent("FIX_AUTO_APPLIED", { issueId: i.id })) // Log each auto-applied fix
           }}
           disabled={isFixing}
-          className="w-full mb-6 py-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover-scale transition-all"
+          className="w-full mb-6 py-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold flex items-center justify-center gap-2 hover-scale transition-all"
         >
           {isFixing ? (
             <>
@@ -1535,7 +1535,7 @@ function MySLPStep({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={1.5}
-                  d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"
+                  d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491/.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"
                 />
               </svg>
             </div>
