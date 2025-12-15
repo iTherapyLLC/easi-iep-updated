@@ -9,6 +9,8 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get("file") as File
+    const state = (formData.get("state") as string) || "CA"
+    const iepDate = (formData.get("iepDate") as string) || new Date().toISOString().split("T")[0]
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 })
@@ -29,16 +31,10 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        action: "generate_iep",
-        data: {
-          documents: [
-            {
-              type: fileType,
-              content: base64,
-              filename: file.name,
-            },
-          ],
-        },
+        action: "analyze",
+        pdf_base64: base64,
+        state: state,
+        iep_date: iepDate,
       }),
     })
 

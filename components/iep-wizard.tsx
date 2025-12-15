@@ -7,7 +7,6 @@ import {
   Upload,
   FileText,
   Mic,
-  MicOff,
   Sparkles,
   CheckCircle2,
   AlertTriangle,
@@ -23,8 +22,65 @@ import {
   Target,
   Users,
   BookOpen,
-  GraduationCap,
 } from "lucide-react"
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const US_STATES = [
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "DC", name: "District of Columbia" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
+]
 
 // =============================================================================
 // TYPES
@@ -291,21 +347,50 @@ function UploadStep({
 // STEP 2: TELL US
 // =============================================================================
 
+// Define a simple Button component for consistency, or use a UI library
+const Button = ({
+  variant = "default",
+  className,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "outline" }) => {
+  const baseClasses =
+    "flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+  const variants = {
+    default: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl",
+    outline: "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200",
+  }
+  return (
+    <button className={`${baseClasses} ${variants[variant]} ${className || ""}`} {...props}>
+      {children}
+    </button>
+  )
+}
+
 function TellStep({
   studentUpdate,
   onUpdateText,
   onBack,
   onNext,
   studentName,
+  selectedState,
+  onStateChange,
+  iepDate,
+  onDateChange,
 }: {
   studentUpdate: string
   onUpdateText: (text: string) => void
   onBack: () => void
   onNext: () => void
   studentName?: string
+  selectedState: string
+  onStateChange: (state: string) => void
+  iepDate: string
+  onDateChange: (date: string) => void
 }) {
   const [isRecording, setIsRecording] = useState(false)
   const hasContent = studentUpdate.trim().length > 20
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -318,21 +403,57 @@ function TellStep({
         </p>
       </div>
 
-      <div className="relative mb-6">
+      {/* State and date selection */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+            <select
+              value={selectedState}
+              onChange={(e) => onStateChange(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+            >
+              {US_STATES.map((state) => (
+                <option key={state.code} value={state.code}>
+                  {state.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">IEP Date</label>
+            <input
+              type="date"
+              value={iepDate}
+              onChange={(e) => onDateChange(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+            />
+          </div>
+        </div>
+        <p className="text-sm text-slate-500">
+          We'll check against <span className="font-medium text-teal-600">{stateName}</span> regulations
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
         <textarea
           value={studentUpdate}
           onChange={(e) => onUpdateText(e.target.value)}
-          placeholder="Example: She met her reading goal but is still working on writing. Behavior has improved a lot — fewer meltdowns. Still needs support with transitions between activities..."
-          className="w-full h-48 p-4 pr-16 border border-slate-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-800 placeholder:text-slate-400"
+          placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
+          className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
         />
-        <button
-          onClick={() => setIsRecording(!isRecording)}
-          className={`absolute bottom-4 right-4 p-3 rounded-full transition-colors ${
-            isRecording ? "bg-red-500 text-white animate-pulse" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-          }`}
-        >
-          {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center justify-between mt-3">
+          <button
+            onClick={() => setIsRecording(!isRecording)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              isRecording ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
+            {isRecording ? "Stop Recording" : "Voice Input"}
+          </button>
+          <span className="text-sm text-slate-500">{studentUpdate.length} characters</span>
+        </div>
       </div>
 
       <div className="mb-8">
@@ -357,32 +478,21 @@ function TellStep({
       </div>
 
       <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="px-6 py-4 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={onNext}
-          disabled={!hasContent}
-          className={`flex-1 py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-            hasContent
-              ? "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl"
-              : "bg-slate-200 text-slate-400 cursor-not-allowed"
-          }`}
-        >
-          {hasContent ? (
-            <>
-              Build My New IEP
-              <Sparkles className="w-5 h-5" />
-            </>
-          ) : (
-            "Tell us a bit more to continue"
-          )}
-        </button>
+        <Button variant="outline" onClick={onBack} className="flex-1 bg-transparent">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Button onClick={onNext} disabled={!hasContent} className="flex-1 bg-teal-600 hover:bg-teal-700">
+          Build My IEP
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
       </div>
+
+      {!hasContent && (
+        <p className="text-center text-sm text-slate-500 mt-4">
+          Please add at least 20 characters about student progress
+        </p>
+      )}
     </div>
   )
 }
@@ -400,17 +510,22 @@ interface BuildingTask {
 function BuildingStep({
   tasks,
   error,
+  onRetry,
+  selectedState,
 }: {
   tasks: BuildingTask[]
   error: string | null
+  onRetry: () => void
+  selectedState: string
 }) {
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
   const allComplete = tasks.every((t) => t.status === "complete")
   const currentTask = tasks.find((t) => t.status === "running")
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-100 rounded-full mb-4">
+        <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <Sparkles className="w-8 h-8 text-teal-600 animate-pulse" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Building Your New IEP</h1>
@@ -429,6 +544,9 @@ function BuildingStep({
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
           <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
           <p className="text-red-800">{error}</p>
+          <button onClick={onRetry} className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg font-medium">
+            Retry
+          </button>
         </div>
       )}
 
@@ -497,6 +615,7 @@ function ReviewStep({
   onFinish,
   onDownload,
   isFixing,
+  selectedState, // Add selectedState prop here
 }: {
   iep: ExtractedIEP | null
   remediation: RemediationData | null
@@ -507,6 +626,7 @@ function ReviewStep({
   onFinish: () => void
   onDownload: () => void
   isFixing: boolean
+  selectedState: string // Add selectedState prop type here
 }) {
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"compliance" | "goals" | "services" | "overview">("compliance")
@@ -540,24 +660,17 @@ function ReviewStep({
 
   // Extract student name for display
   const studentName = iep?.student?.name?.split(",")[1]?.trim() || iep?.student?.name || "Student"
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Use selectedState here
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header with Student Info */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Your New IEP Draft is Ready</h1>
-        {iep?.student && (
-          <div className="flex items-center justify-center gap-4 text-sm text-slate-600">
-            <span className="flex items-center gap-1">
-              <GraduationCap className="w-4 h-4" />
-              {studentName}
-            </span>
-            <span>•</span>
-            <span>Grade {iep.student.grade?.replace(/\D/g, "") || "?"}</span>
-            <span>•</span>
-            <span>{iep.eligibility?.primary_disability || "IEP"}</span>
-          </div>
-        )}
+        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title cursor-default">Review Your IEP Draft</h1>
+        <p className="text-slate-600">
+          Checked against <span className="font-medium text-primary">{stateName}</span> regulations and federal IDEA
+          requirements
+        </p>
       </div>
 
       {/* Score Card */}
@@ -895,24 +1008,22 @@ function ReviewStep({
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        <button onClick={onBack} className="px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        <Button variant="outline" onClick={onBack} className="flex-1 bg-transparent">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
 
-        <button
-          onClick={onDownload}
-          className="flex items-center gap-2 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          <Download className="w-5 h-5" />
+        <Button variant="outline" onClick={onDownload} className="flex-1 bg-transparent">
+          <Download className="w-4 h-4 mr-2" />
           Download
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={onFinish}
           disabled={criticalRemaining > 0 || highRemaining > 0}
-          className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+          className={`flex-1 ${
             criticalRemaining > 0 || highRemaining > 0
-              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              ? "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200"
               : "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl"
           }`}
         >
@@ -923,10 +1034,10 @@ function ReviewStep({
           ) : (
             <>
               Get Second Look from MySLP
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 ml-2" />
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <div className="mt-4 text-center">
@@ -948,6 +1059,8 @@ export function IEPWizard() {
 
   // Tell state
   const [studentUpdate, setStudentUpdate] = useState("")
+  const [selectedState, setSelectedState] = useState("CA")
+  const [iepDate, setIepDate] = useState(() => new Date().toISOString().split("T")[0])
 
   // Building state
   const [buildingTasks, setBuildingTasks] = useState<BuildingTask[]>([
@@ -981,6 +1094,13 @@ export function IEPWizard() {
     setBuildingTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)))
   }
 
+  const handleRetryBuild = () => {
+    // Reset tasks and error, then restart the building process
+    setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
+    setBuildError(null)
+    handleStartBuilding()
+  }
+
   const handleStartBuilding = async () => {
     setCurrentStep("building")
     setBuildError(null)
@@ -999,11 +1119,10 @@ export function IEPWizard() {
       }
       formData.append("file", iepFile.file)
       formData.append("studentUpdate", studentUpdate)
+      formData.append("state", selectedState)
+      formData.append("iepDate", iepDate)
 
       console.log("[v0] Uploading file directly to extract-iep:", iepFile.name)
-
-      updateTask("extract", "complete")
-      updateTask("analyze", "running")
 
       // Simulate progress while waiting for the Lambda (it takes 30-60 seconds)
       const progressInterval = setInterval(() => {
@@ -1090,7 +1209,7 @@ export function IEPWizard() {
     } catch (error) {
       console.error("[v0] Build error:", error)
       setBuildError(error instanceof Error ? error.message : "An error occurred")
-      updateTask("extract", "error")
+      updateTask("extract", "error") // Mark the first task as error to trigger error state in BuildingStep
     }
   }
 
@@ -1145,12 +1264,23 @@ export function IEPWizard() {
           onBack={() => setCurrentStep("upload")}
           onNext={handleStartBuilding}
           studentName={extractedIEP?.student?.name?.split(",")[1]?.trim()}
+          selectedState={selectedState}
+          onStateChange={setSelectedState}
+          iepDate={iepDate}
+          onDateChange={setIepDate}
         />
       )}
 
-      {currentStep === "building" && <BuildingStep tasks={buildingTasks} error={buildError} />}
+      {currentStep === "building" && (
+        <BuildingStep
+          tasks={buildingTasks}
+          error={buildError}
+          onRetry={handleRetryBuild}
+          selectedState={selectedState}
+        />
+      )}
 
-      {currentStep === "review" && (
+      {currentStep === "review" && extractedIEP && (
         <ReviewStep
           iep={extractedIEP}
           remediation={remediation}
@@ -1161,6 +1291,7 @@ export function IEPWizard() {
           onFinish={handleFinish}
           onDownload={handleDownload}
           isFixing={isFixing}
+          selectedState={selectedState} // Pass selectedState to ReviewStep
         />
       )}
     </div>
