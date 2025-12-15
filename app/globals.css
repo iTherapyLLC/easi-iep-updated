@@ -239,4 +239,108 @@
       transform: translateY(-3px);
     }
   }
+
+  /* Add celebration and shimmer animations */
+  .animate-celebration {
+    animation: celebration-entrance 0.5s ease-out forwards;
+  }
+  @keyframes celebration-entrance {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-wiggle {
+    animation: wiggle 0.8s ease-in-out infinite;
+  }
+  @keyframes wiggle {
+    0%,
+    100% {
+      transform: rotate(-5deg);
+    }
+    50% {
+      transform: rotate(5deg);
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-left 0.3s ease-out forwards;
+  }
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out forwards;
+  }
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-stagger-1 {
+    animation-delay: 0.1s;
+  }
+  .animate-stagger-2 {
+    animation-delay: 0.2s;
+  }
+  .animate-stagger-3 {
+    animation-delay: 0.3s;
+  }
+  .animate-stagger-4 {
+    animation-delay: 0.4s;
+  }
+
+  .hover-scale {
+    transition: transform 0.2s ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+  .hover-scale:active {
+    transform: scale(0.98);
+  }
+
+  .card-hover {
+    transition: all 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+  }
 }

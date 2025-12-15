@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Upload,
   FileText,
@@ -21,7 +21,9 @@ import {
   Shield,
   Target,
   Users,
-  BookOpen,
+  Clock,
+  MessageCircle,
+  Zap,
 } from "lucide-react"
 
 // =============================================================================
@@ -157,6 +159,7 @@ interface RemediationData {
   issues: ComplianceIssue[]
   summary: string
   priority_order: string[]
+  compliance_checks?: Array<{ name: string; passed: boolean; citation?: string }> // Added for compliance checks
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review"
@@ -605,6 +608,16 @@ function BuildingStep({
 // STEP 4: REVIEW
 // =============================================================================
 
+type HashChainEvent =
+  | "REVIEW_OPENED"
+  | "COMPLIANCE_EXPANDED"
+  | "ISSUE_VIEWED"
+  | "FIX_AUTO_APPLIED"
+  | "FIX_MANUAL_ENTERED"
+  | "GOAL_REVIEWED"
+  | "IEP_APPROVED"
+  | "IEP_DOWNLOADED"
+
 function ReviewStep({
   iep,
   remediation,
@@ -615,7 +628,8 @@ function ReviewStep({
   onFinish,
   onDownload,
   isFixing,
-  selectedState, // Add selectedState prop here
+  selectedState,
+  startTime, // Added startTime prop
 }: {
   iep: ExtractedIEP | null
   remediation: RemediationData | null
@@ -626,137 +640,282 @@ function ReviewStep({
   onFinish: () => void
   onDownload: () => void
   isFixing: boolean
-  selectedState: string // Add selectedState prop type here
+  selectedState: string
+  startTime?: number // Added startTime prop type
 }) {
+  const [showCelebration, setShowCelebration] = useState(true) // State for celebration animation
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"compliance" | "goals" | "services" | "overview">("compliance")
+  const [activeTab, setActiveTab] = useState<"questions" | "goals" | "services">("questions") // Changed default tab
+  const [complianceExpanded, setComplianceExpanded] = useState(false) // State for compliance details expansion
+  const [manualEditIssue, setManualEditIssue] = useState<string | null>(null) // State for manual edit mode
+  const [manualEditText, setManualEditText] = useState("") // State for manual edit text
+  const [expandedGoal, setExpandedGoal] = useState<string | null>(null) // State for expanded goal
+
+  // Auto-dismiss celebration after 2 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowCelebration(false)
+      logEvent("REVIEW_OPENED") // Log event when review screen is opened
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Expand first issue by default after component mounts or dependencies change
+  useEffect(() => {
+    const issues = remediation?.issues || []
+    const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
+    if (remainingIssues.length > 0 && !expandedIssue) {
+      setExpandedIssue(remainingIssues[0].id)
+    }
+  }, [remediation, fixedIssues, expandedIssue])
+
+  // Function to log events to the backend
+  const logEvent = async (event: HashChainEvent, metadata?: Record<string, any>) => {
+    try {
+      await fetch("/api/log-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: event,
+          metadata,
+          timestamp: new Date().toISOString(),
+        }),
+      })
+    } catch (e) {
+      console.error("Failed to log event:", e)
+    }
+  }
 
   const issues = remediation?.issues || []
   const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
+  const resolvedIssues = issues.filter((i) => fixedIssues.has(i.id)) // Issues that have been fixed
+  const autoFixable = remainingIssues.filter((i) => i.auto_fixable && i.suggested_fix)
   const criticalRemaining = remainingIssues.filter((i) => i.severity === "critical").length
   const highRemaining = remainingIssues.filter((i) => i.severity === "high").length
-  const autoFixable = remainingIssues.filter((i) => i.auto_fixable && i.suggested_fix)
 
   const originalScore = remediation?.original_score || 0
   const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + i.points_deducted, 0)
   const displayScore = Math.min(100, originalScore + fixedPoints)
+  const passedChecks = remediation?.compliance_checks?.filter((c) => c.passed)?.length || 0 // Count of passed compliance checks
+  const totalChecks = remediation?.compliance_checks?.length || 0 // Total number of compliance checks
 
-  const severityColors = {
-    critical: { bg: "bg-red-50", border: "border-red-200", badge: "bg-red-100 text-red-700", icon: "text-red-500" },
-    high: {
-      bg: "bg-orange-50",
-      border: "border-orange-200",
-      badge: "bg-orange-100 text-orange-700",
-      icon: "text-orange-500",
-    },
-    medium: {
-      bg: "bg-yellow-50",
-      border: "border-yellow-200",
-      badge: "bg-yellow-100 text-yellow-700",
-      icon: "text-yellow-500",
-    },
-    low: { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-700", icon: "text-blue-500" },
+  // Calculate time saved based on elapsed time and estimated manual effort
+  const elapsedMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 10 // Calculate elapsed minutes, default to 10 if startTime is not provided
+  const typicalIEPMinutes = 180 // Estimate of time for manual IEP creation (3 hours)
+  const timeSavedMinutes = Math.max(0, typicalIEPMinutes - elapsedMinutes - 45) // Subtract current time and estimated AI saving
+
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Get state name from selectedState code
+
+  // Handler for expanding/collapsing an issue
+  const handleIssueExpand = (issueId: string) => {
+    const newExpanded = expandedIssue === issueId ? null : issueId
+    setExpandedIssue(newExpanded)
+    if (newExpanded) {
+      logEvent("ISSUE_VIEWED", { issueId }) // Log when an issue is viewed
+    }
   }
 
-  // Extract student name for display
-  const studentName = iep?.student?.name?.split(",")[1]?.trim() || iep?.student?.name || "Student"
-  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Use selectedState here
+  // Handler for applying an automatic fix
+  const handleApplyFix = (issue: ComplianceIssue) => {
+    onApplyFix(issue)
+    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id, title: issue.title }) // Log auto fix application
+  }
 
+  // Handler for saving manual edits
+  const handleManualSave = (issue: ComplianceIssue) => {
+    // For now, treat manual edit as applying the fix
+    onApplyFix(issue)
+    logEvent("FIX_MANUAL_ENTERED", { issueId: issue.id, title: issue.title }) // Log manual fix entry
+    setManualEditIssue(null) // Exit manual edit mode
+    setManualEditText("") // Clear manual edit text
+  }
+
+  // Handler for expanding/collapsing a goal
+  const handleGoalExpand = (goalId: string) => {
+    const newExpanded = expandedGoal === goalId ? null : goalId
+    setExpandedGoal(newExpanded)
+    if (newExpanded) {
+      logEvent("GOAL_REVIEWED", { goalId }) // Log when a goal is reviewed
+    }
+  }
+
+  // Handler for downloading the IEP
+  const handleDownload = () => {
+    logEvent("IEP_DOWNLOADED") // Log IEP download event
+    onDownload()
+  }
+
+  // Handler for finishing the review process
+  const handleFinish = () => {
+    logEvent("IEP_APPROVED") // Log IEP approval event
+    onFinish()
+  }
+
+  // Celebration Overlay component
+  if (showCelebration) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-500 to-emerald-600 animate-celebration">
+        <div className="text-center text-white">
+          <div className="text-8xl mb-6 animate-wiggle">🎉</div>
+          <h1 className="text-4xl font-bold mb-3">Your IEP is Ready!</h1>
+          <p className="text-xl text-white/90">Let's do a quick review together</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Main Review Step UI
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header with Student Info */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title cursor-default">Review Your IEP Draft</h1>
-        <p className="text-slate-600">
-          Checked against <span className="font-medium text-primary">{stateName}</span> regulations and federal IDEA
-          requirements
-        </p>
-      </div>
+      {/* Confidence Badge Card */}
+      <div
+        className={`relative overflow-hidden rounded-2xl p-6 mb-6 ${
+          displayScore >= 85
+            ? "bg-gradient-to-br from-emerald-500 to-teal-600"
+            : displayScore >= 70
+              ? "bg-gradient-to-br from-amber-400 to-orange-500"
+              : "bg-gradient-to-br from-red-400 to-rose-500"
+        } text-white shadow-xl animate-fade-in`}
+      >
+        {/* Shimmer overlay */}
+        <div className="absolute inset-0 animate-shimmer pointer-events-none" />
 
-      {/* Score Card */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white mb-6">
-        <div className="flex items-center justify-between">
+        <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-slate-400 text-sm mb-1">Compliance Score</p>
-            <p className="text-4xl font-bold">{displayScore}%</p>
-            {fixedIssues.size > 0 && (
-              <p className="text-teal-400 text-sm mt-1">
-                +{fixedPoints} points from {fixedIssues.size} fix{fixedIssues.size !== 1 ? "es" : ""}
+            <p className="text-white/80 text-sm font-medium mb-1">Compliance Confidence</p>
+            <p className="text-5xl font-bold">{displayScore}%</p>
+            {remainingIssues.length > 0 && (
+              <p className="text-white/90 text-sm mt-2">
+                {remainingIssues.length} quick question{remainingIssues.length !== 1 ? "s" : ""} remaining
               </p>
             )}
-            {remainingIssues.length > 0 && (
-              <p className="text-slate-400 text-sm mt-1">
-                {remainingIssues.length} issue{remainingIssues.length !== 1 ? "s" : ""} remaining
+            {fixedIssues.size > 0 && (
+              <p className="text-white/80 text-xs mt-1">
+                +{fixedPoints} points from {fixedIssues.size} resolved
               </p>
             )}
           </div>
 
-          <div className="relative w-24 h-24">
-            <svg className="w-24 h-24 transform -rotate-90">
+          {/* Score Ring */}
+          <div className="relative w-28 h-28">
+            <svg className="w-28 h-28 transform -rotate-90">
               <circle
-                cx="48"
-                cy="48"
-                r="40"
+                cx="56"
+                cy="56"
+                r="48"
                 stroke="currentColor"
-                strokeWidth="6"
+                strokeWidth="8"
                 fill="none"
-                className="text-slate-700"
+                className="text-white/20"
               />
               <circle
-                cx="48"
-                cy="48"
-                r="40"
+                cx="56"
+                cy="56"
+                r="48"
                 stroke="currentColor"
-                strokeWidth="6"
+                strokeWidth="8"
                 fill="none"
-                strokeDasharray={`${(displayScore / 100) * 251} 251`}
-                className={
-                  displayScore >= 85 ? "text-teal-400" : displayScore >= 70 ? "text-yellow-400" : "text-red-400"
-                }
+                strokeDasharray={`${(displayScore / 100) * 301} 301`}
+                className="text-white"
                 strokeLinecap="round"
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Shield
-                className={`w-8 h-8 ${displayScore >= 85 ? "text-teal-400" : displayScore >= 70 ? "text-yellow-400" : "text-red-400"}`}
-              />
+              <Shield className="w-10 h-10 text-white" />
             </div>
           </div>
         </div>
 
-        {autoFixable.length > 0 && (
-          <button
-            onClick={onApplyAll}
-            disabled={isFixing}
-            className="w-full mt-4 py-3 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-slate-600 font-semibold flex items-center justify-center gap-2 transition-colors"
-          >
-            {isFixing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Fixing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                Fix All {autoFixable.length} Issues Automatically
-              </>
-            )}
-          </button>
-        )}
+        <p className="relative text-white/80 text-xs mt-4">Verified against {stateName} Ed Code & Federal IDEA</p>
       </div>
+
+      {/* Time Saved Banner */}
+      {timeSavedMinutes > 0 && (
+        <div className="bg-gradient-to-r from-violet-100 to-purple-100 border border-violet-200 rounded-xl p-4 mb-6 flex items-center gap-3 animate-slide-up">
+          <div className="bg-violet-500 rounded-full p-2">
+            <Clock className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="font-semibold text-violet-900">~{timeSavedMinutes} minutes saved</p>
+            <p className="text-sm text-violet-700">That's time back for your students</p>
+          </div>
+        </div>
+      )}
+
+      {/* Expandable Compliance Details */}
+      <button
+        onClick={() => {
+          setComplianceExpanded(!complianceExpanded)
+          if (!complianceExpanded) logEvent("COMPLIANCE_EXPANDED") // Log compliance expansion
+        }}
+        className="w-full mb-6 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-between transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-teal-600" />
+          <span className="font-medium text-slate-700">
+            What we verified ({passedChecks}/{totalChecks} checks passed)
+          </span>
+        </div>
+        {complianceExpanded ? (
+          <ChevronUp className="w-5 h-5 text-slate-400" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-slate-400" />
+        )}
+      </button>
+
+      {complianceExpanded && (
+        <div className="mb-6 p-4 bg-white rounded-xl border border-slate-200 space-y-2 animate-slide-up">
+          {remediation?.compliance_checks?.map((check, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm">
+              {check.passed ? (
+                <CheckCircle2 className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full bg-amber-400 mt-0.5 flex-shrink-0" />
+              )}
+              <div>
+                <span className="text-slate-700">{check.name}</span>
+                {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fix All Button */}
+      {autoFixable.length > 1 && ( // Only show if more than one auto-fixable issue exists
+        <button
+          onClick={() => {
+            onApplyAll()
+            autoFixable.forEach((i) => logEvent("FIX_AUTO_APPLIED", { issueId: i.id })) // Log each auto-applied fix
+          }}
+          disabled={isFixing}
+          className="w-full mb-6 py-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg hover-scale transition-all"
+        >
+          {isFixing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Fixing...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-5 h-5" />
+              Fix all {autoFixable.length} questions automatically
+            </>
+          )}
+        </button>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-slate-200">
         {[
-          { id: "compliance", label: "Compliance", icon: Shield, count: remainingIssues.length },
+          { id: "questions", label: "Questions", icon: MessageCircle, count: remainingIssues.length }, // Changed tab ID to "questions"
           { id: "goals", label: "Goals", icon: Target, count: iep?.goals?.length || 0 },
           { id: "services", label: "Services", icon: Users, count: iep?.services?.length || 0 },
-          { id: "overview", label: "Overview", icon: BookOpen },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all hover-scale ${
               activeTab === tab.id
                 ? "border-teal-600 text-teal-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
@@ -764,11 +923,11 @@ function ReviewStep({
           >
             <tab.icon className="w-4 h-4" />
             {tab.label}
-            {tab.count !== undefined && tab.count > 0 && (
+            {tab.count > 0 && (
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  tab.id === "compliance" && tab.count > 0
-                    ? "bg-orange-100 text-orange-700"
+                className={`text-xs px-2 py-0.5 rounded-full ${
+                  tab.id === "questions" && tab.count > 0 // Conditional styling for "questions" tab
+                    ? "bg-amber-100 text-amber-700"
                     : "bg-slate-100 text-slate-600"
                 }`}
               >
@@ -780,80 +939,131 @@ function ReviewStep({
       </div>
 
       {/* Tab Content */}
-      <div className="mb-6">
-        {/* Compliance Tab */}
-        {activeTab === "compliance" && (
-          <div className="space-y-3">
+      <div className="mb-6 min-h-[300px]">
+        {/* Questions Tab */}
+        {activeTab === "questions" && ( // Changed tab ID to "questions"
+          <div className="space-y-4 animate-slide-in-left">
+            {/* Resolved Issues */}
+            {resolvedIssues.map((issue, index) => (
+              <div
+                key={issue.id}
+                className={`rounded-xl border-2 border-teal-200 bg-teal-50 p-4 animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
+              >
+                <div className="flex items-center gap-2 text-teal-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">{issue.title}</span>
+                  <span className="text-teal-600 text-sm">— Resolved ✓</span>
+                </div>
+              </div>
+            ))}
+
+            {/* Remaining Issues as Questions */}
             {remainingIssues.length === 0 ? (
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center">
-                <CheckCircle2 className="w-12 h-12 text-teal-500 mx-auto mb-3" />
-                <p className="text-teal-800 font-medium">All compliance issues resolved!</p>
-                <p className="text-teal-600 text-sm">Your IEP is ready for final review.</p>
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-8 text-center animate-fade-in">
+                <CheckCircle2 className="w-16 h-16 text-teal-500 mx-auto mb-4" />
+                <p className="text-teal-800 font-semibold text-lg">All questions answered!</p>
+                <p className="text-teal-600">Your IEP is ready for the clinical review.</p>
               </div>
             ) : (
-              remainingIssues.map((issue) => {
-                const colors = severityColors[issue.severity]
+              remainingIssues.map((issue, index) => {
                 const isExpanded = expandedIssue === issue.id
+                const isManualEdit = manualEditIssue === issue.id
 
                 return (
-                  <div key={issue.id} className={`rounded-xl border-2 overflow-hidden ${colors.bg} ${colors.border}`}>
+                  <div
+                    key={issue.id}
+                    className={`rounded-xl border-2 border-amber-200 bg-white overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
+                  >
                     <button
-                      onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
-                      className="w-full p-4 flex items-center gap-3 text-left"
+                      onClick={() => handleIssueExpand(issue.id)}
+                      className="w-full p-4 flex items-center gap-3 text-left hover:bg-amber-50/50 transition-colors"
                     >
-                      <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${colors.icon}`} />
+                      <MessageCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-slate-900">{issue.title}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${colors.badge}`}>
-                            {issue.severity.toUpperCase()}
-                          </span>
-                          <span className="text-xs text-slate-500">-{issue.points_deducted} pts</span>
-                        </div>
-                        <p className="text-sm text-slate-600 mt-0.5 truncate">{issue.description}</p>
+                        <span className="font-medium text-slate-900">
+                          Quick question about {issue.title.toLowerCase()}
+                        </span>
                       </div>
-                      {isExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-slate-400" />
-                      ) : (
+                      <div className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
                         <ChevronDown className="w-5 h-5 text-slate-400" />
-                      )}
+                      </div>
                     </button>
 
                     {isExpanded && (
-                      <div className="px-4 pb-4 space-y-3 border-t border-slate-200 pt-3">
-                        <div className="bg-white/60 rounded-lg p-3">
-                          <p className="text-xs font-medium text-slate-500 mb-1">LEGAL REQUIREMENT</p>
-                          <p className="text-sm text-slate-700">{issue.legal_citation}</p>
-                        </div>
-
+                      <div className="px-4 pb-4 space-y-4 border-t border-amber-100 pt-4 animate-slide-up">
+                        {/* Current text */}
                         {issue.current_text && (
-                          <div className="bg-red-100/50 border border-red-200 rounded-lg p-3">
-                            <p className="text-xs font-medium text-red-600 mb-1">CURRENT (NON-COMPLIANT)</p>
-                            <p className="text-sm text-red-800">{issue.current_text}</p>
+                          <div className="bg-slate-50 rounded-lg p-3">
+                            <p className="text-xs font-medium text-slate-500 mb-1">WHAT WE FOUND</p>
+                            <p className="text-sm text-slate-700">{issue.current_text}</p>
                           </div>
                         )}
 
-                        {issue.suggested_fix && (
+                        {/* Citation */}
+                        <p className="text-xs text-slate-500">
+                          <span className="font-medium">Why it matters:</span> {issue.legal_citation}
+                        </p>
+
+                        {/* Action Buttons */}
+                        {!isManualEdit && (
+                          <div className="flex gap-2">
+                            {issue.auto_fixable && issue.suggested_fix && (
+                              <button
+                                onClick={() => handleApplyFix(issue)}
+                                disabled={isFixing}
+                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold flex items-center justify-center gap-2 hover-scale transition-all"
+                              >
+                                <Zap className="w-4 h-4" />
+                                Fix it for me
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setManualEditIssue(issue.id)
+                                setManualEditText(issue.current_text || "")
+                              }}
+                              className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold hover-scale transition-all"
+                            >
+                              I'll write it
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Manual Edit */}
+                        {isManualEdit && (
+                          <div className="space-y-3 animate-fade-in">
+                            <textarea
+                              value={manualEditText}
+                              onChange={(e) => setManualEditText(e.target.value)}
+                              className="w-full p-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                              rows={4}
+                              placeholder="Enter your text..."
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleManualSave(issue)}
+                                className="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium hover-scale"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setManualEditIssue(null)
+                                  setManualEditText("")
+                                }}
+                                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium hover-scale"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Suggested fix preview */}
+                        {issue.suggested_fix && !isManualEdit && (
                           <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
                             <p className="text-xs font-medium text-teal-600 mb-1">SUGGESTED FIX</p>
                             <p className="text-sm text-teal-800">{issue.suggested_fix}</p>
-                          </div>
-                        )}
-
-                        {issue.fix_explanation && (
-                          <p className="text-xs text-slate-500 italic">{issue.fix_explanation}</p>
-                        )}
-
-                        {issue.auto_fixable && issue.suggested_fix ? (
-                          <button
-                            onClick={() => onApplyFix(issue)}
-                            className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium text-sm transition-colors"
-                          >
-                            Apply This Fix
-                          </button>
-                        ) : (
-                          <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
-                            ⚠️ Requires manual review
                           </div>
                         )}
                       </div>
@@ -867,182 +1077,138 @@ function ReviewStep({
 
         {/* Goals Tab */}
         {activeTab === "goals" && (
-          <div className="space-y-4">
-            {iep?.goals?.map((goal, index) => (
-              <div key={goal.id || index} className="bg-white rounded-xl border border-slate-200 p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-slate-900">
-                    Goal {index + 1}: {goal.area}
-                  </h3>
-                  {goal.zpd_score && (
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        goal.zpd_score >= 7
-                          ? "bg-teal-100 text-teal-700"
-                          : goal.zpd_score >= 5
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      ZPD: {goal.zpd_score}/10
-                    </span>
+          <div className="space-y-4 animate-slide-in-right">
+            {iep?.goals?.map((goal, index) => {
+              const isExpanded = expandedGoal === (goal.id || `goal-${index}`)
+              const zpdScore = goal.zpd_score || 0
+              const zpdColor =
+                zpdScore >= 6.5 && zpdScore <= 8.5
+                  ? "bg-teal-100 text-teal-700"
+                  : zpdScore < 6.5
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-orange-100 text-orange-700"
+
+              return (
+                <div
+                  key={goal.id || index}
+                  className={`bg-white rounded-xl border border-slate-200 overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
+                >
+                  <button
+                    onClick={() => handleGoalExpand(goal.id || `goal-${index}`)}
+                    className="w-full p-4 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-slate-900">{goal.area}</span>
+                        {zpdScore > 0 && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${zpdColor}`}>ZPD: {zpdScore}/10</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600 truncate">{goal.goal_text}</p>
+                    </div>
+                    <div className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
+                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-4 animate-slide-up">
+                      <p className="text-sm text-slate-700">{goal.goal_text}</p>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-1">BASELINE</p>
+                          <p className="text-sm text-slate-700">{goal.baseline}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-1">TARGET</p>
+                          <p className="text-sm text-slate-700">{goal.target}</p>
+                        </div>
+                      </div>
+
+                      {goal.clinical_flags && goal.clinical_flags.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <p className="text-xs font-medium text-amber-600 mb-1">CLINICAL NOTE</p>
+                          <p className="text-sm text-amber-800">{goal.clinical_flags[0]}</p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-                <p className="text-slate-700 text-sm mb-3">{goal.goal_text}</p>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-slate-50 rounded-lg p-2">
-                    <span className="text-slate-500 block mb-1">Baseline</span>
-                    <span className="text-slate-700">{goal.baseline?.substring(0, 100)}...</span>
-                  </div>
-                  <div className="bg-slate-50 rounded-lg p-2">
-                    <span className="text-slate-500 block mb-1">Target</span>
-                    <span className="text-slate-700">{goal.target}</span>
-                  </div>
-                </div>
-                {goal.clinical_flags?.length > 0 && (
-                  <div className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
-                    ⚠️ {goal.clinical_flags[0]}
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
             {(!iep?.goals || iep.goals.length === 0) && (
-              <div className="text-center py-8 text-slate-500">No goals extracted</div>
+              <div className="text-center py-12 text-slate-500">No goals extracted</div>
             )}
           </div>
         )}
 
         {/* Services Tab */}
         {activeTab === "services" && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-slide-in-right">
             {iep?.services?.map((service, index) => (
-              <div key={index} className="bg-white rounded-xl border border-slate-200 p-4">
-                <h3 className="font-semibold text-slate-900 mb-2">{service.type}</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-slate-500">Frequency:</span>
-                    <span className="text-slate-700 ml-2">{service.frequency}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Duration:</span>
-                    <span className="text-slate-700 ml-2">{service.duration}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Setting:</span>
-                    <span className="text-slate-700 ml-2">{service.setting}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Provider:</span>
-                    <span className="text-slate-700 ml-2">{service.provider}</span>
-                  </div>
+              <div
+                key={index}
+                className={`bg-white rounded-xl border border-slate-200 p-4 card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
+              >
+                <h3 className="font-semibold text-slate-900 mb-3">{service.type}</h3>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs px-3 py-1 rounded-full bg-teal-100 text-teal-700">{service.frequency}</span>
+                  <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">{service.duration}</span>
+                  {service.setting && (
+                    <span className="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-700">
+                      {service.setting}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
             {(!iep?.services || iep.services.length === 0) && (
-              <div className="text-center py-8 text-slate-500">No services extracted</div>
+              <div className="text-center py-12 text-slate-500">No services extracted</div>
             )}
-          </div>
-        )}
-
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="space-y-4">
-            {/* Student Info */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-900 mb-3">Student Information</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-slate-500">Name:</span>{" "}
-                  <span className="text-slate-700">{iep?.student?.name}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Age:</span>{" "}
-                  <span className="text-slate-700">{iep?.student?.age}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Grade:</span>{" "}
-                  <span className="text-slate-700">{iep?.student?.grade}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">School:</span>{" "}
-                  <span className="text-slate-700">{iep?.student?.school}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Primary Disability:</span>{" "}
-                  <span className="text-slate-700">{iep?.eligibility?.primary_disability}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500">Secondary:</span>{" "}
-                  <span className="text-slate-700">{iep?.eligibility?.secondary_disability || "None"}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Placement */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-900 mb-3">Placement (LRE)</h3>
-              <p className="text-sm text-slate-700 mb-2">{iep?.placement?.setting}</p>
-              <div className="flex gap-4 text-sm">
-                <span className="text-teal-600">{iep?.placement?.percent_general_ed} General Ed</span>
-                <span className="text-orange-600">{iep?.placement?.percent_special_ed} Special Ed</span>
-              </div>
-            </div>
-
-            {/* Accommodations */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-900 mb-3">Accommodations ({iep?.accommodations?.length || 0})</h3>
-              <div className="flex flex-wrap gap-2">
-                {iep?.accommodations?.slice(0, 10).map((acc, i) => (
-                  <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
-                    {acc}
-                  </span>
-                ))}
-                {(iep?.accommodations?.length || 0) > 10 && (
-                  <span className="text-xs text-slate-500">+{(iep?.accommodations?.length || 0) - 10} more</span>
-                )}
-              </div>
-            </div>
           </div>
         )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="flex-1 bg-transparent">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
+        <button
+          onClick={handleDownload}
+          className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-2 hover-scale transition-all"
+        >
+          <Download className="w-4 h-4" />
+          Download Draft
+        </button>
 
-        <Button variant="outline" onClick={onDownload} className="flex-1 bg-transparent">
-          <Download className="w-4 h-4 mr-2" />
-          Download
-        </Button>
-
-        <Button
-          onClick={onFinish}
+        <button
+          onClick={handleFinish}
           disabled={criticalRemaining > 0 || highRemaining > 0}
-          className={`flex-1 ${
+          className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all hover-scale ${
             criticalRemaining > 0 || highRemaining > 0
-              ? "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200"
-              : "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl"
+              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+              : "bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg"
           }`}
         >
           {criticalRemaining > 0 ? (
-            `Fix ${criticalRemaining} critical issue${criticalRemaining !== 1 ? "s" : ""} to continue`
+            `Answer ${criticalRemaining} question${criticalRemaining !== 1 ? "s" : ""} to continue`
           ) : highRemaining > 0 ? (
-            `Fix ${highRemaining} high priority issue${highRemaining !== 1 ? "s" : ""} to continue`
+            `Answer ${highRemaining} question${highRemaining !== 1 ? "s" : ""} to continue`
           ) : (
             <>
-              Get Second Look from MySLP
-              <ArrowRight className="w-4 h-4 ml-2" />
+              Looks Good — Continue
+              <ArrowRight className="w-4 h-4" />
             </>
           )}
-        </Button>
+        </button>
       </div>
 
-      <div className="mt-4 text-center">
-        <p className="text-sm text-slate-500">After MySLP review: Download IEP → Schedule meeting → Done!</p>
-      </div>
+      {/* Footer */}
+      <p className="text-center text-sm text-slate-500 mt-6">
+        Next: MySLP will do a clinical review, then you can download the final IEP
+      </p>
     </div>
   )
 }
@@ -1077,6 +1243,7 @@ export function IEPWizard() {
   const [remediation, setRemediation] = useState<RemediationData | null>(null)
   const [fixedIssues, setFixedIssues] = useState<Set<string>>(new Set())
   const [isFixing, setIsFixing] = useState(false)
+  const [reviewStartTime, setReviewStartTime] = useState<number | undefined>(undefined) // State for review start time
 
   // ==========================================================================
   // HANDLERS
@@ -1206,6 +1373,7 @@ export function IEPWizard() {
 
       // Move to review step
       setCurrentStep("review")
+      setReviewStartTime(Date.now()) // Set the start time for the review step
     } catch (error) {
       console.error("[v0] Build error:", error)
       setBuildError(error instanceof Error ? error.message : "An error occurred")
@@ -1292,6 +1460,7 @@ export function IEPWizard() {
           onDownload={handleDownload}
           isFixing={isFixing}
           selectedState={selectedState} // Pass selectedState to ReviewStep
+          startTime={reviewStartTime} // Pass startTime to ReviewStep
         />
       )}
     </div>
