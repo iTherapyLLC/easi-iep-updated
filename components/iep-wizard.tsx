@@ -28,9 +28,14 @@ import {
   CheckCircle,
   RefreshCw,
   Check,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
+import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 
 // =============================================================================
 // CONSTANTS
@@ -382,9 +387,20 @@ function TellStep({
   onDateChange: (date: string) => void
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
 }) {
-  const [isRecording, setIsRecording] = useState(false)
   const hasContent = studentUpdate.trim().length > 20
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
+
+  const { isRecording, isSupported, toggleRecording } = useVoice({
+    onTranscript: (text) => {
+      onUpdateText(studentUpdate + (studentUpdate ? " " : "") + text)
+      logEvent("VOICE_TRANSCRIPT_ADDED", { length: text.length })
+    },
+  })
+
+  const handleMicClick = () => {
+    toggleRecording()
+    logEvent("MIC_TOGGLED", { isRecording: !isRecording })
+  }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -444,16 +460,31 @@ function TellStep({
         />
         <div className="flex items-center justify-between mt-3">
           <button
-            onClick={() => {
-              setIsRecording(!isRecording)
-              logEvent("MIC_TOGGLED", { isRecording: !isRecording }) // Log mic toggle
-            }}
+            onClick={handleMicClick}
+            disabled={!isSupported}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              isRecording ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              isRecording
+                ? "bg-red-100 text-red-700 animate-pulse"
+                : isSupported
+                  ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  : "bg-slate-50 text-slate-400 cursor-not-allowed"
             }`}
+            title={!isSupported ? "Voice input not supported in this browser" : undefined}
           >
-            <Mic className={`w-4 h-4 ${isRecording ? "animate-pulse" : ""}`} />
-            {isRecording ? "Stop Recording" : "Voice Input"}
+            {isRecording ? (
+              <>
+                <MicOff className="w-4 h-4" />
+                <span className="flex items-center gap-2">
+                  Stop Recording
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                </span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-4 h-4" />
+                Voice Input
+              </>
+            )}
           </button>
           <span className="text-sm text-slate-500">{studentUpdate.length} characters</span>
         </div>
@@ -622,6 +653,26 @@ type HashChainEvent =
   | "IEP_DOWNLOADED"
   | "TAB_CHANGED" // Added for tab changes
   | "FIX_MANUAL_STARTED" // Added for manual fix initiation
+  | "FIX_ALL_APPLIED" // Added for fixing all issues at once
+  | "FILE_UPLOADED" // Added for file upload logging
+  | "FILE_REMOVED" // Added for file removal logging
+  | "STATE_CHANGED" // Added for state change logging
+  | "DATE_CHANGED" // Added for date change logging
+  | "PROMPT_ADDED" // Added for prompt addition logging
+  | "VOICE_TRANSCRIPT_ADDED" // Added for voice transcript logging
+  | "MIC_TOGGLED" // Added for mic toggle logging
+  | "BUILD_RETRY_REQUESTED" // Added for build retry logging
+  | "EXTRACTION_STARTED" // Added for extraction start logging
+  | "EXTRACTION_COMPLETED" // Added for extraction completed logging
+  | "EXTRACTION_ERROR" // Added for extraction error logging
+  | "REMEDIATION_COMPLETED" // Added for remediation completion logging
+  | "BUILDING_COMPLETED" // Added for building completion logging
+  | "CLINICAL_REVIEW_STARTED" // Added for clinical review start
+  | "CLINICAL_REVIEW_COMPLETED" // Added for clinical review completion
+  | "CLINICAL_REVIEW_FALLBACK" // Added for clinical review fallback
+  | "FINAL_IEP_DOWNLOADED" // Added for final IEP download
+  | "COMPLIANCE_REPORT_DOWNLOADED" // Added for compliance report download
+  | "NEW_IEP_STARTED_FROM_CLINICAL" // Added for starting a new IEP from clinical review
 
 function ReviewStep({
   iep,
@@ -658,14 +709,26 @@ function ReviewStep({
   const [manualEditText, setManualEditText] = useState("") // State for manual edit text
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null) // State for expanded goal
 
+  const { speak, isSpeaking, voiceOutputEnabled, setVoiceOutputEnabled } = useVoice({})
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+
+  // Calculate time saved based on elapsed time and estimated manual effort
+  const elapsedMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 10 // Calculate elapsed minutes, default to 10 if startTime is not provided
+  const typicalIEPMinutes = 180 // Estimate of time for manual IEP creation (3 hours)
+  const timeSavedMinutes = Math.max(0, typicalIEPMinutes - elapsedMinutes - 45) // Subtract current time and estimated AI saving
+
   // Auto-dismiss celebration after 2 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowCelebration(false)
       logEvent("REVIEW_OPENED", { score: remediation?.score }) // Log event when review screen is opened
+      // Announce with voice after celebration dismisses
+      if (voiceOutputEnabled && timeSavedMinutes > 0) {
+        speak(`Your IEP is ready! You just saved about ${timeSavedMinutes} minutes.`)
+      }
     }, 2000)
     return () => clearTimeout(timer)
-  }, [logEvent, remediation?.score])
+  }, [logEvent, remediation?.score, speak, voiceOutputEnabled, timeSavedMinutes]) // Added dependencies
 
   // Expand first issue by default after component mounts or dependencies change
   useEffect(() => {
@@ -688,11 +751,6 @@ function ReviewStep({
   const displayScore = Math.min(100, originalScore + fixedPoints)
   const passedChecks = remediation?.compliance_checks?.filter((c) => c.passed)?.length || 0 // Count of passed compliance checks
   const totalChecks = remediation?.compliance_checks?.length || 0 // Total number of compliance checks
-
-  // Calculate time saved based on elapsed time and estimated manual effort
-  const elapsedMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 10 // Calculate elapsed minutes, default to 10 if startTime is not provided
-  const typicalIEPMinutes = 180 // Estimate of time for manual IEP creation (3 hours)
-  const timeSavedMinutes = Math.max(0, typicalIEPMinutes - elapsedMinutes - 45) // Subtract current time and estimated AI saving
 
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Get state name from selectedState code
 
@@ -768,6 +826,47 @@ function ReviewStep({
   // Main Review Step UI
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex justify-end mb-4">
+        <div className="relative">
+          <button
+            onClick={() => setShowVoiceSettings(!showVoiceSettings)}
+            className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            title="Voice settings"
+          >
+            <Settings className="w-5 h-5 text-slate-500" />
+          </button>
+          {showVoiceSettings && (
+            <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-slate-200 p-4 z-10 w-64">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-700">Voice announcements</span>
+                <button
+                  onClick={() => setVoiceOutputEnabled(!voiceOutputEnabled)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    voiceOutputEnabled ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {voiceOutputEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                {voiceOutputEnabled ? "Voice feedback is on" : "Voice feedback is off"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Header with back button */}
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
+          <ArrowLeft className="w-5 h-5 text-slate-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 hover-title">Review & Finish</h1>
+          <p className="text-slate-600">Almost there! Let's make sure everything looks good.</p>
+        </div>
+      </div>
+
       {/* Confidence Badge Card */}
       <div
         className={`relative overflow-hidden rounded-2xl p-6 mb-6 ${
