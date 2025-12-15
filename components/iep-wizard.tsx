@@ -32,6 +32,7 @@ import {
   Volume2,
   VolumeX,
   Settings,
+  Edit3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
@@ -549,15 +550,26 @@ function BuildingStep({
   error,
   onRetry,
   selectedState,
+  onComplete,
 }: {
   tasks: BuildingTask[]
   error: string | null
   onRetry: () => void
   selectedState: string
+  onComplete?: () => void
 }) {
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
   const allComplete = tasks.every((t) => t.status === "complete")
   const currentTask = tasks.find((t) => t.status === "running")
+
+  useEffect(() => {
+    if (allComplete && onComplete) {
+      const timer = setTimeout(() => {
+        onComplete()
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [allComplete, onComplete])
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -634,6 +646,21 @@ function BuildingStep({
           </p>
         </div>
       )}
+
+      {allComplete && !error && (
+        <div className="text-center mt-6 animate-fade-in">
+          <p className="text-sm text-slate-500 mb-3">Advancing to review in a moment...</p>
+          {onComplete && (
+            <button
+              onClick={onComplete}
+              className="px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors"
+            >
+              Continue to Review
+              <ArrowRight className="w-4 h-4 inline ml-2" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -673,6 +700,8 @@ type HashChainEvent =
   | "FINAL_IEP_DOWNLOADED" // Added for final IEP download
   | "COMPLIANCE_REPORT_DOWNLOADED" // Added for compliance report download
   | "NEW_IEP_STARTED_FROM_CLINICAL" // Added for starting a new IEP from clinical review
+  | "FIX_INITIATED" // Added for initiating a fix
+  | "AUTO_ADVANCED_TO_REVIEW" // Added for auto-advance log
 
 function ReviewStep({
   iep,
@@ -709,8 +738,18 @@ function ReviewStep({
   const [manualEditText, setManualEditText] = useState("") // State for manual edit text
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null) // State for expanded goal
 
+  // Voice hook initialization
   const { speak, isSpeaking, voiceOutputEnabled, setVoiceOutputEnabled } = useVoice({})
   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+
+  // State for goal editing (added from updates)
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState<"improve" | "dictate" | "manual" | null>(null)
+  const [improvedBaseline, setImprovedBaseline] = useState<string | null>(null)
+  const [isImproving, setIsImproving] = useState(false)
+  const [manualBaseline, setManualBaseline] = useState("")
+  const [isRecording, setIsRecording] = useState(false)
+  const [goalUpdates, setGoalUpdates] = useState<Record<string, string>>({}) // Store updated baselines by goal id
 
   // Calculate time saved based on elapsed time and estimated manual effort
   const elapsedMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 10 // Calculate elapsed minutes, default to 10 if startTime is not provided
@@ -821,6 +860,132 @@ function ReviewStep({
         </div>
       </div>
     )
+  }
+
+  // ---- Goal Editing Functions (from updates) ----
+
+  // Function to determine if clinical note is positive or needs fix
+  const isPositiveNote = (note: string): boolean => {
+    const positiveKeywords = [
+      "good use",
+      "strong",
+      "excellent",
+      "well-written",
+      "appropriate",
+      "clear",
+      "specific",
+      "measurable",
+      "data-driven",
+      "thorough",
+    ]
+    const lowerNote = note.toLowerCase()
+    return positiveKeywords.some((keyword) => lowerNote.includes(keyword))
+  }
+
+  // Function to handle AI baseline improvement
+  const handleImproveBaseline = async (
+    goalId: string,
+    goal: { goal_text: string; baseline: string; clinical_flags?: string[] },
+  ) => {
+    setEditingGoalId(goalId)
+    setEditMode("improve")
+    setIsImproving(true)
+    setImprovedBaseline(null)
+    logEvent("FIX_INITIATED", { goalId, method: "ai_improve" })
+
+    try {
+      const response = await fetch("/api/improve-baseline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal: goal.goal_text,
+          currentBaseline: goal.baseline,
+          clinicalNote: goal.clinical_flags?.[0],
+          studentContext: {
+            name: iep?.student?.name,
+            grade: iep?.student?.grade,
+            disability: iep?.eligibility?.primary_disability,
+          },
+        }),
+      })
+
+      const data = await response.json()
+      if (data.success && data.improvedBaseline) {
+        setImprovedBaseline(data.improvedBaseline)
+      } else {
+        setImprovedBaseline("Unable to generate improvement. Please edit manually.")
+      }
+    } catch (error) {
+      console.error("[v0] Baseline improvement failed:", error)
+      setImprovedBaseline("Unable to generate improvement. Please edit manually.")
+    } finally {
+      setIsImproving(false)
+    }
+  }
+
+  // Function to handle dictation
+  const handleDictateBaseline = (goalId: string) => {
+    setEditingGoalId(goalId)
+    setEditMode("dictate")
+    setIsRecording(true)
+    logEvent("FIX_INITIATED", { goalId, method: "dictate" })
+
+    // Use Web Speech API
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = false
+      recognition.lang = "en-US"
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        setManualBaseline(transcript)
+        setIsRecording(false)
+      }
+
+      recognition.onerror = () => {
+        setIsRecording(false)
+        setEditMode("manual") // Fall back to manual if speech fails
+      }
+
+      recognition.onend = () => {
+        setIsRecording(false)
+      }
+
+      recognition.start()
+    } else {
+      // Fallback if speech recognition not available
+      setIsRecording(false)
+      setEditMode("manual")
+    }
+  }
+
+  // Function to handle manual edit
+  const handleManualEdit = (goalId: string, currentBaseline: string) => {
+    setEditingGoalId(goalId)
+    setEditMode("manual")
+    setManualBaseline(currentBaseline)
+    logEvent("FIX_INITIATED", { goalId, method: "manual" })
+  }
+
+  // Function to accept a baseline fix
+  const handleAcceptBaseline = (goalId: string, newBaseline: string) => {
+    setGoalUpdates((prev) => ({ ...prev, [goalId]: newBaseline }))
+    setEditingGoalId(null)
+    setEditMode(null)
+    setImprovedBaseline(null)
+    setManualBaseline("")
+    logEvent("FIX_AUTO_APPLIED", { goalId, fixType: "baseline_updated" })
+  }
+
+  // Function to cancel editing
+  const handleCancelEdit = () => {
+    setEditingGoalId(null)
+    setEditMode(null)
+    setImprovedBaseline(null)
+    setManualBaseline("")
+    setIsRecording(false)
   }
 
   // Main Review Step UI
@@ -1176,11 +1341,12 @@ function ReviewStep({
           </div>
         )}
 
-        {/* Goals Tab */}
+        {/* Goals Tab - Updated with fix buttons */}
         {activeTab === "goals" && (
           <div className="space-y-4 animate-slide-in-right">
             {iep?.goals?.map((goal, index) => {
-              const isExpanded = expandedGoal === (goal.id || `goal-${index}`)
+              const goalId = goal.id || `goal-${index}`
+              const isExpanded = expandedGoal === goalId
               const zpdScore = goal.zpd_score || 0
               const zpdColor =
                 zpdScore >= 6.5 && zpdScore <= 8.5
@@ -1189,13 +1355,16 @@ function ReviewStep({
                     ? "bg-amber-100 text-amber-700"
                     : "bg-orange-100 text-orange-700"
 
+              const currentBaseline = goalUpdates[goalId] || goal.baseline
+              const hasUpdate = goalUpdates[goalId] !== undefined
+
               return (
                 <div
-                  key={goal.id || index}
+                  key={goalId}
                   className={`bg-white rounded-xl border border-slate-200 overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
                 >
                   <button
-                    onClick={() => handleGoalExpand(goal.id || `goal-${index}`)}
+                    onClick={() => handleGoalExpand(goalId)}
                     className="w-full p-4 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors"
                   >
                     <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -1206,6 +1375,11 @@ function ReviewStep({
                         <span className="font-medium text-slate-900">{goal.area}</span>
                         {zpdScore > 0 && (
                           <span className={`text-xs px-2 py-0.5 rounded-full ${zpdColor}`}>ZPD: {zpdScore}/10</span>
+                        )}
+                        {hasUpdate && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Updated
+                          </span>
                         )}
                       </div>
                       <p className="text-sm text-slate-600 truncate">{goal.goal_text}</p>
@@ -1222,7 +1396,7 @@ function ReviewStep({
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 rounded-lg p-3">
                           <p className="text-xs font-medium text-slate-500 mb-1">BASELINE</p>
-                          <p className="text-sm text-slate-700">{goal.baseline}</p>
+                          <p className="text-sm text-slate-700">{currentBaseline}</p>
                         </div>
                         <div className="bg-slate-50 rounded-lg p-3">
                           <p className="text-xs font-medium text-slate-500 mb-1">TARGET</p>
@@ -1231,9 +1405,207 @@ function ReviewStep({
                       </div>
 
                       {goal.clinical_flags && goal.clinical_flags.length > 0 && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <p className="text-xs font-medium text-amber-600 mb-1">CLINICAL NOTE</p>
-                          <p className="text-sm text-amber-800">{goal.clinical_flags[0]}</p>
+                        <div className="space-y-2">
+                          {goal.clinical_flags.map((note, noteIndex) => {
+                            const isPositive = isPositiveNote(note)
+                            const isEditingThis = editingGoalId === goalId
+
+                            return (
+                              <div key={noteIndex}>
+                                {/* Clinical note box */}
+                                <div
+                                  className={`rounded-lg p-3 ${
+                                    isPositive
+                                      ? "bg-teal-50 border border-teal-200"
+                                      : "bg-amber-50 border border-amber-200"
+                                  }`}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {isPositive ? (
+                                      <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
+                                    ) : (
+                                      <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1">
+                                      <p className="text-xs font-medium text-slate-500 mb-1">CLINICAL NOTE</p>
+                                      <p className={`text-sm ${isPositive ? "text-teal-800" : "text-amber-800"}`}>
+                                        {note}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Fix buttons for amber notes */}
+                                {!isPositive && !isEditingThis && (
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <button
+                                      onClick={() => handleImproveBaseline(goalId, goal)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors"
+                                    >
+                                      <Sparkles className="w-4 h-4" />
+                                      Improve this baseline
+                                    </button>
+                                    <button
+                                      onClick={() => handleDictateBaseline(goalId)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                    >
+                                      <Mic className="w-4 h-4" />
+                                      Dictate new baseline
+                                    </button>
+                                    <button
+                                      onClick={() => handleManualEdit(goalId, currentBaseline)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                                    >
+                                      <Edit3 className="w-4 h-4" />
+                                      Edit manually
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* AI Improvement UI */}
+                                {isEditingThis && editMode === "improve" && (
+                                  <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                                    {isImproving ? (
+                                      <div className="flex items-center gap-2 text-violet-700">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="text-sm">Generating improved baseline...</span>
+                                      </div>
+                                    ) : improvedBaseline ? (
+                                      <div className="space-y-2">
+                                        <p className="text-xs font-medium text-violet-600">
+                                          Here's an improved baseline:
+                                        </p>
+                                        <p className="text-sm text-slate-700 bg-white p-2 rounded border border-violet-100">
+                                          {improvedBaseline}
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => handleAcceptBaseline(goalId, improvedBaseline)}
+                                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                                          >
+                                            Use this
+                                          </button>
+                                          <button
+                                            onClick={() => handleImproveBaseline(goalId, goal)}
+                                            className="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200"
+                                          >
+                                            Try again
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setEditMode("manual")
+                                              setManualBaseline(improvedBaseline)
+                                            }}
+                                            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={handleCancelEdit}
+                                            className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                )}
+
+                                {/* Dictation UI */}
+                                {isEditingThis && editMode === "dictate" && (
+                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    {isRecording ? (
+                                      <div className="flex items-center gap-2 text-blue-700">
+                                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                                        <span className="text-sm">Listening... speak your new baseline</span>
+                                        <button
+                                          onClick={() => setIsRecording(false)}
+                                          className="ml-auto px-2 py-1 text-xs bg-red-100 text-red-700 rounded"
+                                        >
+                                          Stop
+                                        </button>
+                                      </div>
+                                    ) : manualBaseline ? (
+                                      <div className="space-y-2">
+                                        <p className="text-xs font-medium text-blue-600">You said:</p>
+                                        <p className="text-sm text-slate-700 bg-white p-2 rounded border border-blue-100">
+                                          {manualBaseline}
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => handleAcceptBaseline(goalId, manualBaseline)}
+                                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                                          >
+                                            Use this
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setEditMode("manual")
+                                            }}
+                                            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={handleCancelEdit}
+                                            className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center py-2">
+                                        <button
+                                          onClick={() => handleDictateBaseline(goalId)}
+                                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                        >
+                                          <Mic className="w-4 h-4 inline mr-2" />
+                                          Start Recording
+                                        </button>
+                                        <button
+                                          onClick={handleCancelEdit}
+                                          className="ml-2 px-3 py-2 text-slate-500 hover:text-slate-700"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Manual Edit UI */}
+                                {isEditingThis && editMode === "manual" && (
+                                  <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <p className="text-xs font-medium text-slate-600 mb-2">Edit baseline:</p>
+                                    <textarea
+                                      value={manualBaseline}
+                                      onChange={(e) => setManualBaseline(e.target.value)}
+                                      className="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                                      rows={3}
+                                      placeholder="Enter the new baseline statement..."
+                                    />
+                                    <div className="flex gap-2 mt-2">
+                                      <button
+                                        onClick={() => handleAcceptBaseline(goalId, manualBaseline)}
+                                        disabled={!manualBaseline.trim()}
+                                        className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEdit}
+                                        className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -1933,9 +2305,7 @@ export function IEPWizard() {
       updateTask("compliance", "complete")
       updateTask("services", "complete")
 
-      // Move to review step
-      setCurrentStep("review")
-      setReviewStartTime(Date.now()) // Set the start time for the review step
+      // Move to review step - handled by BuildingStep's onComplete
       logEvent("BUILDING_COMPLETED", { success: true }) // Log successful building
     } catch (error) {
       console.error("[v0] Build error:", error)
@@ -2018,6 +2388,13 @@ export function IEPWizard() {
           error={buildError}
           onRetry={handleRetryBuild}
           selectedState={selectedState}
+          onComplete={() => {
+            if (extractedIEP && remediation) {
+              setCurrentStep("review")
+              setReviewStartTime(Date.now())
+              logEvent("AUTO_ADVANCED_TO_REVIEW")
+            }
+          }}
         />
       )}
 
