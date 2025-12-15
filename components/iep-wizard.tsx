@@ -20,6 +20,10 @@ import {
   ChevronUp,
   Download,
   Shield,
+  Target,
+  Users,
+  BookOpen,
+  GraduationCap,
 } from "lucide-react"
 
 // =============================================================================
@@ -31,47 +35,78 @@ interface UploadedFile {
   name: string
   type: "iep" | "notes" | "photo" | "report" | "other"
   file: File
-  preview?: string
-}
-
-interface Goal {
-  id: string
-  area: string
-  previousGoal: string
-  progress: "met" | "partial" | "not_met" | "unknown"
-  newGoal: string
-  baseline: string
-  target: string
 }
 
 interface ComplianceIssue {
   id: string
+  category: string
   severity: "critical" | "high" | "medium" | "low"
   title: string
   description: string
   legal_citation: string
   current_text: string
   suggested_fix: string
+  fix_explanation: string
   auto_fixable: boolean
   points_deducted: number
 }
 
-interface DraftIEP {
-  studentName: string
-  grade: string
-  disability: string
-  presentLevels: string
-  goals: Goal[]
-  services: any[]
+interface ExtractedIEP {
+  student: {
+    name: string
+    age: string
+    grade: string
+    school: string
+    district: string
+  }
+  eligibility: {
+    primary_disability: string
+    secondary_disability: string
+  }
+  plaafp: {
+    strengths: string
+    concerns: string
+    academic: string
+    functional: string
+  }
+  goals: Array<{
+    id: string
+    area: string
+    goal_text: string
+    baseline: string
+    target: string
+    zpd_score: number
+    zpd_analysis: string
+    clinical_flags: string[]
+  }>
+  services: Array<{
+    type: string
+    frequency: string
+    duration: string
+    provider: string
+    setting: string
+  }>
   accommodations: string[]
-  complianceScore: number
+  placement: {
+    setting: string
+    percent_general_ed: string
+    percent_special_ed: string
+    lre_justification: string
+  }
+}
+
+interface RemediationData {
+  original_score: number
+  potential_score: number
   issues: ComplianceIssue[]
+  summary: string
+  priority_order: string[]
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review"
 
 // =============================================================================
-// STEP INDICATOR COMPONENT
+// STEP INDICATOR
 // =============================================================================
 
 function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
@@ -87,7 +122,6 @@ function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
   return (
     <div className="w-full bg-white border-b border-slate-200 px-4 py-3">
       <div className="max-w-3xl mx-auto">
-        {/* Progress bar */}
         <div className="relative mb-2">
           <div className="h-2 bg-slate-200 rounded-full">
             <div
@@ -96,13 +130,10 @@ function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
             />
           </div>
         </div>
-
-        {/* Step labels */}
         <div className="flex justify-between">
           {steps.map((step, index) => {
             const isComplete = index < currentIndex
             const isCurrent = index === currentIndex
-
             return (
               <div
                 key={step.id}
@@ -148,7 +179,7 @@ function UploadStep({
   onNext: () => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const hasIEP = files.some((f) => f.type === "iep")
+  const hasIEP = files.some((f) => f.type === "iep") || files.length > 0
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
@@ -164,7 +195,7 @@ function UploadStep({
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title cursor-default">Let's Build Your New IEP</h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Let's Build Your New IEP</h1>
         <p className="text-slate-600">
           Upload the current IEP and any notes, photos, or reports you have.
           <br />
@@ -172,10 +203,9 @@ function UploadStep({
         </p>
       </div>
 
-      {/* Upload area */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-all duration-300 mb-6"
+        className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-colors mb-6"
       >
         <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
         <p className="text-lg font-medium text-slate-700 mb-1">Drop files here or tap to browse</p>
@@ -190,7 +220,6 @@ function UploadStep({
         />
       </div>
 
-      {/* Quick upload buttons */}
       <div className="flex gap-3 justify-center mb-8">
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -208,7 +237,6 @@ function UploadStep({
         </button>
       </div>
 
-      {/* Uploaded files */}
       {files.length > 0 && (
         <div className="space-y-2 mb-8">
           <p className="text-sm font-medium text-slate-700 mb-2">Uploaded ({files.length})</p>
@@ -237,7 +265,6 @@ function UploadStep({
         </div>
       )}
 
-      {/* Next button */}
       <button
         onClick={onNext}
         disabled={!hasIEP}
@@ -261,7 +288,7 @@ function UploadStep({
 }
 
 // =============================================================================
-// STEP 2: TELL US ABOUT THE STUDENT
+// STEP 2: TELL US
 // =============================================================================
 
 function TellStep({
@@ -278,19 +305,12 @@ function TellStep({
   studentName?: string
 }) {
   const [isRecording, setIsRecording] = useState(false)
-
-  const handleVoiceToggle = () => {
-    setIsRecording(!isRecording)
-  }
-
   const hasContent = studentUpdate.trim().length > 20
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title cursor-default">
-          How is {studentName || "the student"} doing?
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">How is {studentName || "the student"} doing?</h1>
         <p className="text-slate-600">
           Tell us about progress on goals, what's improved, what's still challenging.
           <br />
@@ -298,18 +318,15 @@ function TellStep({
         </p>
       </div>
 
-      {/* Input area */}
       <div className="relative mb-6">
         <textarea
           value={studentUpdate}
           onChange={(e) => onUpdateText(e.target.value)}
-          placeholder="Example: He met his reading goal but is still working on math. Behavior has improved a lot — fewer meltdowns. Still needs support with transitions between activities..."
+          placeholder="Example: She met her reading goal but is still working on writing. Behavior has improved a lot — fewer meltdowns. Still needs support with transitions between activities..."
           className="w-full h-48 p-4 pr-16 border border-slate-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-800 placeholder:text-slate-400"
         />
-
-        {/* Voice button */}
         <button
-          onClick={handleVoiceToggle}
+          onClick={() => setIsRecording(!isRecording)}
           className={`absolute bottom-4 right-4 p-3 rounded-full transition-colors ${
             isRecording ? "bg-red-500 text-white animate-pulse" : "bg-slate-100 hover:bg-slate-200 text-slate-600"
           }`}
@@ -318,7 +335,6 @@ function TellStep({
         </button>
       </div>
 
-      {/* Prompt helpers */}
       <div className="mb-8">
         <p className="text-sm text-slate-500 mb-2">Quick prompts (tap to add):</p>
         <div className="flex flex-wrap gap-2">
@@ -340,7 +356,6 @@ function TellStep({
         </div>
       </div>
 
-      {/* Navigation */}
       <div className="flex gap-3">
         <button
           onClick={onBack}
@@ -384,13 +399,12 @@ interface BuildingTask {
 
 function BuildingStep({
   tasks,
-  onComplete,
-  allComplete,
+  error,
 }: {
   tasks: BuildingTask[]
-  onComplete: () => void
-  allComplete: boolean
+  error: string | null
 }) {
+  const allComplete = tasks.every((t) => t.status === "complete")
   const currentTask = tasks.find((t) => t.status === "running")
 
   return (
@@ -399,15 +413,25 @@ function BuildingStep({
         <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-100 rounded-full mb-4">
           <Sparkles className="w-8 h-8 text-teal-600 animate-pulse" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title-glow cursor-default">
-          Building Your New IEP
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Building Your New IEP</h1>
         <p className="text-slate-600">
-          {allComplete ? "Your draft is ready!" : currentTask ? `${currentTask.label}...` : "Starting..."}
+          {error
+            ? "An error occurred"
+            : allComplete
+              ? "Your draft is ready!"
+              : currentTask
+                ? `${currentTask.label}...`
+                : "Starting..."}
         </p>
       </div>
 
-      {/* Task list */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
+          <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
         <div className="space-y-4">
           {tasks.map((task, index) => (
@@ -447,37 +471,25 @@ function BuildingStep({
         </div>
       </div>
 
-      {/* What's happening explanation */}
-      {!allComplete && (
+      {!allComplete && !error && (
         <div className="bg-slate-50 rounded-xl p-4 text-center">
           <p className="text-sm text-slate-600">
             We're comparing the previous IEP with your notes, checking compliance against federal and state
-            requirements, and writing goals that build on the student's progress.
+            requirements, and identifying any issues.
           </p>
         </div>
-      )}
-
-      {/* Continue button */}
-      {allComplete && (
-        <button
-          onClick={onComplete}
-          className="w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl transition-all"
-        >
-          Review Your Draft
-          <ArrowRight className="w-5 h-5" />
-        </button>
       )}
     </div>
   )
 }
 
 // =============================================================================
-// STEP 4: REVIEW & FINISH
+// STEP 4: REVIEW
 // =============================================================================
 
 function ReviewStep({
-  draft,
-  issues,
+  iep,
+  remediation,
   fixedIssues,
   onApplyFix,
   onApplyAll,
@@ -486,8 +498,8 @@ function ReviewStep({
   onDownload,
   isFixing,
 }: {
-  draft: DraftIEP | null
-  issues: ComplianceIssue[]
+  iep: ExtractedIEP | null
+  remediation: RemediationData | null
   fixedIssues: Set<string>
   onApplyFix: (issue: ComplianceIssue) => void
   onApplyAll: () => void
@@ -497,37 +509,58 @@ function ReviewStep({
   isFixing: boolean
 }) {
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"compliance" | "goals" | "services" | "overview">("compliance")
 
+  const issues = remediation?.issues || []
   const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
   const criticalRemaining = remainingIssues.filter((i) => i.severity === "critical").length
-  const autoFixable = remainingIssues.filter((i) => i.auto_fixable)
+  const highRemaining = remainingIssues.filter((i) => i.severity === "high").length
+  const autoFixable = remainingIssues.filter((i) => i.auto_fixable && i.suggested_fix)
 
-  const currentScore = draft?.complianceScore || 0
+  const originalScore = remediation?.original_score || 0
   const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + i.points_deducted, 0)
-  const displayScore = Math.min(100, currentScore + fixedPoints)
+  const displayScore = Math.min(100, originalScore + fixedPoints)
 
   const severityColors = {
-    critical: { bg: "bg-red-50", border: "border-red-200", badge: "bg-red-100 text-red-700" },
-    high: { bg: "bg-orange-50", border: "border-orange-200", badge: "bg-orange-100 text-orange-700" },
-    medium: { bg: "bg-yellow-50", border: "border-yellow-200", badge: "bg-yellow-100 text-yellow-700" },
-    low: { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-700" },
+    critical: { bg: "bg-red-50", border: "border-red-200", badge: "bg-red-100 text-red-700", icon: "text-red-500" },
+    high: {
+      bg: "bg-orange-50",
+      border: "border-orange-200",
+      badge: "bg-orange-100 text-orange-700",
+      icon: "text-orange-500",
+    },
+    medium: {
+      bg: "bg-yellow-50",
+      border: "border-yellow-200",
+      badge: "bg-yellow-100 text-yellow-700",
+      icon: "text-yellow-500",
+    },
+    low: { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-700", icon: "text-blue-500" },
   }
 
+  // Extract student name for display
+  const studentName = iep?.student?.name?.split(",")[1]?.trim() || iep?.student?.name || "Student"
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Header */}
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header with Student Info */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2 hover-title cursor-default">
-          Your New IEP Draft is Ready
-        </h1>
-        <p className="text-slate-600">
-          {remainingIssues.length === 0
-            ? "No issues found. Ready for your review!"
-            : `${remainingIssues.length} item${remainingIssues.length !== 1 ? "s" : ""} to fix before finalizing.`}
-        </p>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">Your New IEP Draft is Ready</h1>
+        {iep?.student && (
+          <div className="flex items-center justify-center gap-4 text-sm text-slate-600">
+            <span className="flex items-center gap-1">
+              <GraduationCap className="w-4 h-4" />
+              {studentName}
+            </span>
+            <span>•</span>
+            <span>Grade {iep.student.grade?.replace(/\D/g, "") || "?"}</span>
+            <span>•</span>
+            <span>{iep.eligibility?.primary_disability || "IEP"}</span>
+          </div>
+        )}
       </div>
 
-      {/* Score card */}
+      {/* Score Card */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -538,37 +571,46 @@ function ReviewStep({
                 +{fixedPoints} points from {fixedIssues.size} fix{fixedIssues.size !== 1 ? "es" : ""}
               </p>
             )}
+            {remainingIssues.length > 0 && (
+              <p className="text-slate-400 text-sm mt-1">
+                {remainingIssues.length} issue{remainingIssues.length !== 1 ? "s" : ""} remaining
+              </p>
+            )}
           </div>
 
-          <div className="relative w-20 h-20">
-            <svg className="w-20 h-20 transform -rotate-90">
+          <div className="relative w-24 h-24">
+            <svg className="w-24 h-24 transform -rotate-90">
               <circle
-                cx="40"
-                cy="40"
-                r="32"
+                cx="48"
+                cy="48"
+                r="40"
                 stroke="currentColor"
                 strokeWidth="6"
                 fill="none"
                 className="text-slate-700"
               />
               <circle
-                cx="40"
-                cy="40"
-                r="32"
+                cx="48"
+                cy="48"
+                r="40"
                 stroke="currentColor"
                 strokeWidth="6"
                 fill="none"
-                strokeDasharray={`${(displayScore / 100) * 201} 201`}
+                strokeDasharray={`${(displayScore / 100) * 251} 251`}
                 className={
                   displayScore >= 85 ? "text-teal-400" : displayScore >= 70 ? "text-yellow-400" : "text-red-400"
                 }
                 strokeLinecap="round"
               />
             </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Shield
+                className={`w-8 h-8 ${displayScore >= 85 ? "text-teal-400" : displayScore >= 70 ? "text-yellow-400" : "text-red-400"}`}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Fix All button */}
         {autoFixable.length > 0 && (
           <button
             onClick={onApplyAll}
@@ -590,84 +632,276 @@ function ReviewStep({
         )}
       </div>
 
-      {/* Issues list */}
-      {remainingIssues.length > 0 && (
-        <div className="space-y-3 mb-6">
-          {remainingIssues.map((issue) => {
-            const colors = severityColors[issue.severity]
-            const isExpanded = expandedIssue === issue.id
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-slate-200">
+        {[
+          { id: "compliance", label: "Compliance", icon: Shield, count: remainingIssues.length },
+          { id: "goals", label: "Goals", icon: Target, count: iep?.goals?.length || 0 },
+          { id: "services", label: "Services", icon: Users, count: iep?.services?.length || 0 },
+          { id: "overview", label: "Overview", icon: BookOpen },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-teal-600 text-teal-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+            {tab.count !== undefined && tab.count > 0 && (
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full ${
+                  tab.id === "compliance" && tab.count > 0
+                    ? "bg-orange-100 text-orange-700"
+                    : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-            return (
-              <div key={issue.id} className={`rounded-xl border-2 overflow-hidden ${colors.bg} ${colors.border}`}>
-                <button
-                  onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
-                  className="w-full p-4 flex items-center gap-3 text-left"
-                >
-                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">{issue.title}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${colors.badge}`}>
-                        {issue.severity.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-0.5">{issue.description}</p>
-                  </div>
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-slate-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-slate-400" />
-                  )}
-                </button>
+      {/* Tab Content */}
+      <div className="mb-6">
+        {/* Compliance Tab */}
+        {activeTab === "compliance" && (
+          <div className="space-y-3">
+            {remainingIssues.length === 0 ? (
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center">
+                <CheckCircle2 className="w-12 h-12 text-teal-500 mx-auto mb-3" />
+                <p className="text-teal-800 font-medium">All compliance issues resolved!</p>
+                <p className="text-teal-600 text-sm">Your IEP is ready for final review.</p>
+              </div>
+            ) : (
+              remainingIssues.map((issue) => {
+                const colors = severityColors[issue.severity]
+                const isExpanded = expandedIssue === issue.id
 
-                {isExpanded && (
-                  <div className="px-4 pb-4 space-y-3 border-t border-slate-200 pt-3">
-                    <div className="bg-white/60 rounded-lg p-3">
-                      <p className="text-xs font-medium text-slate-500 mb-1">LEGAL REQUIREMENT</p>
-                      <p className="text-sm text-slate-700">{issue.legal_citation}</p>
-                    </div>
+                return (
+                  <div key={issue.id} className={`rounded-xl border-2 overflow-hidden ${colors.bg} ${colors.border}`}>
+                    <button
+                      onClick={() => setExpandedIssue(isExpanded ? null : issue.id)}
+                      className="w-full p-4 flex items-center gap-3 text-left"
+                    >
+                      <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${colors.icon}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-slate-900">{issue.title}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${colors.badge}`}>
+                            {issue.severity.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-slate-500">-{issue.points_deducted} pts</span>
+                        </div>
+                        <p className="text-sm text-slate-600 mt-0.5 truncate">{issue.description}</p>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-slate-400" />
+                      )}
+                    </button>
 
-                    {issue.suggested_fix && (
-                      <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
-                        <p className="text-xs font-medium text-teal-600 mb-1">SUGGESTED FIX</p>
-                        <p className="text-sm text-teal-800">{issue.suggested_fix}</p>
+                    {isExpanded && (
+                      <div className="px-4 pb-4 space-y-3 border-t border-slate-200 pt-3">
+                        <div className="bg-white/60 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-1">LEGAL REQUIREMENT</p>
+                          <p className="text-sm text-slate-700">{issue.legal_citation}</p>
+                        </div>
+
+                        {issue.current_text && (
+                          <div className="bg-red-100/50 border border-red-200 rounded-lg p-3">
+                            <p className="text-xs font-medium text-red-600 mb-1">CURRENT (NON-COMPLIANT)</p>
+                            <p className="text-sm text-red-800">{issue.current_text}</p>
+                          </div>
+                        )}
+
+                        {issue.suggested_fix && (
+                          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
+                            <p className="text-xs font-medium text-teal-600 mb-1">SUGGESTED FIX</p>
+                            <p className="text-sm text-teal-800">{issue.suggested_fix}</p>
+                          </div>
+                        )}
+
+                        {issue.fix_explanation && (
+                          <p className="text-xs text-slate-500 italic">{issue.fix_explanation}</p>
+                        )}
+
+                        {issue.auto_fixable && issue.suggested_fix ? (
+                          <button
+                            onClick={() => onApplyFix(issue)}
+                            className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium text-sm transition-colors"
+                          >
+                            Apply This Fix
+                          </button>
+                        ) : (
+                          <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
+                            ⚠️ Requires manual review
+                          </div>
+                        )}
                       </div>
                     )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
 
-                    {issue.auto_fixable && (
-                      <button
-                        onClick={() => onApplyFix(issue)}
-                        className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium text-sm transition-colors"
-                      >
-                        Apply This Fix
-                      </button>
-                    )}
+        {/* Goals Tab */}
+        {activeTab === "goals" && (
+          <div className="space-y-4">
+            {iep?.goals?.map((goal, index) => (
+              <div key={goal.id || index} className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-slate-900">
+                    Goal {index + 1}: {goal.area}
+                  </h3>
+                  {goal.zpd_score && (
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        goal.zpd_score >= 7
+                          ? "bg-teal-100 text-teal-700"
+                          : goal.zpd_score >= 5
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      ZPD: {goal.zpd_score}/10
+                    </span>
+                  )}
+                </div>
+                <p className="text-slate-700 text-sm mb-3">{goal.goal_text}</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-slate-50 rounded-lg p-2">
+                    <span className="text-slate-500 block mb-1">Baseline</span>
+                    <span className="text-slate-700">{goal.baseline?.substring(0, 100)}...</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2">
+                    <span className="text-slate-500 block mb-1">Target</span>
+                    <span className="text-slate-700">{goal.target}</span>
+                  </div>
+                </div>
+                {goal.clinical_flags?.length > 0 && (
+                  <div className="mt-3 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
+                    ⚠️ {goal.clinical_flags[0]}
                   </div>
                 )}
               </div>
-            )
-          })}
-        </div>
-      )}
+            ))}
+            {(!iep?.goals || iep.goals.length === 0) && (
+              <div className="text-center py-8 text-slate-500">No goals extracted</div>
+            )}
+          </div>
+        )}
 
-      {/* Success state */}
-      {remainingIssues.length === 0 && (
-        <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center mb-6">
-          <CheckCircle2 className="w-12 h-12 text-teal-500 mx-auto mb-3" />
-          <p className="text-teal-800 font-medium">All compliance issues resolved!</p>
-          <p className="text-teal-600 text-sm">Your IEP is ready for final review.</p>
-        </div>
-      )}
+        {/* Services Tab */}
+        {activeTab === "services" && (
+          <div className="space-y-4">
+            {iep?.services?.map((service, index) => (
+              <div key={index} className="bg-white rounded-xl border border-slate-200 p-4">
+                <h3 className="font-semibold text-slate-900 mb-2">{service.type}</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-slate-500">Frequency:</span>
+                    <span className="text-slate-700 ml-2">{service.frequency}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Duration:</span>
+                    <span className="text-slate-700 ml-2">{service.duration}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Setting:</span>
+                    <span className="text-slate-700 ml-2">{service.setting}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Provider:</span>
+                    <span className="text-slate-700 ml-2">{service.provider}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(!iep?.services || iep.services.length === 0) && (
+              <div className="text-center py-8 text-slate-500">No services extracted</div>
+            )}
+          </div>
+        )}
 
-      {/* Action buttons */}
+        {/* Overview Tab */}
+        {activeTab === "overview" && (
+          <div className="space-y-4">
+            {/* Student Info */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-900 mb-3">Student Information</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-slate-500">Name:</span>{" "}
+                  <span className="text-slate-700">{iep?.student?.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Age:</span>{" "}
+                  <span className="text-slate-700">{iep?.student?.age}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Grade:</span>{" "}
+                  <span className="text-slate-700">{iep?.student?.grade}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">School:</span>{" "}
+                  <span className="text-slate-700">{iep?.student?.school}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Primary Disability:</span>{" "}
+                  <span className="text-slate-700">{iep?.eligibility?.primary_disability}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">Secondary:</span>{" "}
+                  <span className="text-slate-700">{iep?.eligibility?.secondary_disability || "None"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Placement */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-900 mb-3">Placement (LRE)</h3>
+              <p className="text-sm text-slate-700 mb-2">{iep?.placement?.setting}</p>
+              <div className="flex gap-4 text-sm">
+                <span className="text-teal-600">{iep?.placement?.percent_general_ed} General Ed</span>
+                <span className="text-orange-600">{iep?.placement?.percent_special_ed} Special Ed</span>
+              </div>
+            </div>
+
+            {/* Accommodations */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-900 mb-3">Accommodations ({iep?.accommodations?.length || 0})</h3>
+              <div className="flex flex-wrap gap-2">
+                {iep?.accommodations?.slice(0, 10).map((acc, i) => (
+                  <span key={i} className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded-full">
+                    {acc}
+                  </span>
+                ))}
+                {(iep?.accommodations?.length || 0) > 10 && (
+                  <span className="text-xs text-slate-500">+{(iep?.accommodations?.length || 0) - 10} more</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons */}
       <div className="flex gap-3">
-        <button onClick={onBack} className="px-6 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors">
+        <button onClick={onBack} className="px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <button
           onClick={onDownload}
-          className="px-6 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors"
         >
           <Download className="w-5 h-5" />
           Download
@@ -675,26 +909,27 @@ function ReviewStep({
 
         <button
           onClick={onFinish}
-          disabled={criticalRemaining > 0}
+          disabled={criticalRemaining > 0 || highRemaining > 0}
           className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
-            criticalRemaining > 0
+            criticalRemaining > 0 || highRemaining > 0
               ? "bg-slate-200 text-slate-400 cursor-not-allowed"
               : "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl"
           }`}
         >
           {criticalRemaining > 0 ? (
             `Fix ${criticalRemaining} critical issue${criticalRemaining !== 1 ? "s" : ""} to continue`
+          ) : highRemaining > 0 ? (
+            `Fix ${highRemaining} high priority issue${highRemaining !== 1 ? "s" : ""} to continue`
           ) : (
             <>
               Get Second Look from MySLP
-              <Shield className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5" />
             </>
           )}
         </button>
       </div>
 
-      {/* What's next hint */}
-      <div className="mt-6 text-center">
+      <div className="mt-4 text-center">
         <p className="text-sm text-slate-500">After MySLP review: Download IEP → Schedule meeting → Done!</p>
       </div>
     </div>
@@ -702,21 +937,19 @@ function ReviewStep({
 }
 
 // =============================================================================
-// MAIN WIZARD COMPONENT
+// MAIN WIZARD
 // =============================================================================
 
 export function IEPWizard() {
-  // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
 
-  // Step 1: Upload
+  // Upload state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
 
-  // Step 2: Tell
+  // Tell state
   const [studentUpdate, setStudentUpdate] = useState("")
-  const [studentName, setStudentName] = useState<string>()
 
-  // Step 3: Building
+  // Building state
   const [buildingTasks, setBuildingTasks] = useState<BuildingTask[]>([
     { id: "extract", label: "Reading your uploaded documents", status: "pending" },
     { id: "analyze", label: "Analyzing previous goals and progress", status: "pending" },
@@ -724,16 +957,13 @@ export function IEPWizard() {
     { id: "compliance", label: "Checking against IDEA & state requirements", status: "pending" },
     { id: "services", label: "Aligning services with new goals", status: "pending" },
   ])
-  const [allTasksComplete, setAllTasksComplete] = useState(false)
+  const [buildError, setBuildError] = useState<string | null>(null)
 
-  // Step 4: Review
-  const [draft, setDraft] = useState<DraftIEP | null>(null)
-  const [issues, setIssues] = useState<ComplianceIssue[]>([])
+  // Review state
+  const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
+  const [remediation, setRemediation] = useState<RemediationData | null>(null)
   const [fixedIssues, setFixedIssues] = useState<Set<string>>(new Set())
   const [isFixing, setIsFixing] = useState(false)
-
-  // Extracted data storage
-  const [extractedData, setExtractedData] = useState<any>(null)
 
   // ==========================================================================
   // HANDLERS
@@ -747,111 +977,117 @@ export function IEPWizard() {
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id))
   }
 
+  const updateTask = (taskId: string, status: BuildingTask["status"]) => {
+    setBuildingTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)))
+  }
+
   const handleStartBuilding = async () => {
     setCurrentStep("building")
+    setBuildError(null)
 
-    const updateTask = (taskId: string, status: BuildingTask["status"]) => {
-      setBuildingTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)))
-    }
+    // Reset tasks
+    setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
 
     try {
-      // Task 1: Extract IEP
+      // Task 1: Upload and extract
       updateTask("extract", "running")
 
-      const iepFile = uploadedFiles.find((f) => f.type === "iep")
-      if (iepFile) {
-        const formData = new FormData()
-        formData.append("file", iepFile.file)
-
-        const extractResponse = await fetch("/api/extract-iep", {
-          method: "POST",
-          body: formData,
-        })
-
-        if (extractResponse.ok) {
-          const result = await extractResponse.json()
-          setExtractedData(result.iep || result)
-          setStudentName(result.iep?.student?.name || result.student?.name)
-        }
+      const formData = new FormData()
+      const iepFile = uploadedFiles.find((f) => f.type === "iep") || uploadedFiles[0]
+      if (!iepFile) {
+        throw new Error("No IEP file found")
       }
+      formData.append("file", iepFile.file)
+      formData.append("studentUpdate", studentUpdate)
+
+      console.log("[Wizard] Uploading file:", iepFile.name)
+
+      const uploadResponse = await fetch("/api/upload-iep", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status}`)
+      }
+
+      const uploadData = await uploadResponse.json()
+      console.log("[Wizard] Upload response:", uploadData)
+
+      if (!uploadData.success || !uploadData.jobId) {
+        throw new Error(uploadData.error || "Upload failed")
+      }
+
       updateTask("extract", "complete")
-
-      // Task 2: Analyze
       updateTask("analyze", "running")
-      await new Promise((r) => setTimeout(r, 1500))
-      updateTask("analyze", "complete")
 
-      // Task 3: Generate
-      updateTask("generate", "running")
-      await new Promise((r) => setTimeout(r, 1500))
-      updateTask("generate", "complete")
+      // Task 2-5: Poll for extraction results
+      let extractionComplete = false
+      let pollCount = 0
+      const maxPolls = 60 // 2 minutes max
 
-      // Task 4: Compliance check via remediation API
-      updateTask("compliance", "running")
+      while (!extractionComplete && pollCount < maxPolls) {
+        await new Promise((r) => setTimeout(r, 2000))
+        pollCount++
 
-      if (extractedData) {
-        const remediationResponse = await fetch("/api/iep-remediation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "remediate",
-            iepData: extractedData,
-          }),
-        })
+        const pollResponse = await fetch(`/api/extract-iep?jobId=${uploadData.jobId}`)
+        const pollData = await pollResponse.json()
 
-        if (remediationResponse.ok) {
-          const remediationResult = await remediationResponse.json()
+        console.log("[Wizard] Poll response:", pollData.status || pollData.success)
 
-          // Map remediation issues to our format
-          const mappedIssues: ComplianceIssue[] = (remediationResult.issues || []).map((issue: any, index: number) => ({
-            id: issue.id || `issue-${index}`,
-            severity: issue.severity || "medium",
-            title: issue.title || issue.issue_type || "Compliance Issue",
-            description: issue.description || issue.issue || "",
-            legal_citation: issue.legal_citation || issue.citation || "",
-            current_text: issue.current_text || "",
-            suggested_fix: issue.suggested_fix || issue.fix || "",
-            auto_fixable: issue.auto_fixable !== false,
-            points_deducted: issue.points_deducted || 5,
-          }))
+        if (pollData.success && pollData.status === "complete") {
+          extractionComplete = true
 
-          setIssues(mappedIssues)
+          // ============================================================
+          // THIS IS THE KEY FIX: Correct data extraction from response
+          // ============================================================
 
-          // Build draft from extracted data
-          const iep = extractedData
-          setDraft({
-            studentName: iep.student?.name || "Student",
-            grade: iep.student?.grade || "",
-            disability: iep.eligibility?.primary_disability || "",
-            presentLevels: iep.plaafp?.academic || "",
-            goals: (iep.goals || []).map((g: any) => ({
-              id: g.id || Math.random().toString(36).substr(2, 9),
-              area: g.area || "",
-              previousGoal: g.goal_text || g.description || "",
-              progress: "partial",
-              newGoal: g.goal_text || g.description || "",
-              baseline: g.baseline || "",
-              target: g.target || "",
-            })),
-            services: iep.services || [],
-            accommodations: iep.accommodations || [],
-            complianceScore: remediationResult.score || 85,
-            issues: mappedIssues,
-          })
+          // Extract IEP data - it's at the top level
+          const iepData = pollData.iep
+          console.log("[Wizard] Extracted IEP data:", iepData?.student?.name)
+
+          if (iepData) {
+            setExtractedIEP(iepData as ExtractedIEP)
+          }
+
+          // Extract remediation data - it's inside _debug_raw
+          const remediationData = pollData._debug_raw?.remediation
+          console.log(
+            "[Wizard] Remediation data:",
+            remediationData?.original_score,
+            "issues:",
+            remediationData?.issues?.length,
+          )
+
+          if (remediationData) {
+            setRemediation(remediationData as RemediationData)
+          }
+
+          // Mark all tasks complete
+          updateTask("analyze", "complete")
+          updateTask("generate", "complete")
+          updateTask("compliance", "complete")
+          updateTask("services", "complete")
+        } else if (pollData.status === "failed" || pollData.error) {
+          throw new Error(pollData.error || "Extraction failed")
         }
+
+        // Update progress tasks based on poll count
+        if (pollCount === 3) updateTask("analyze", "complete"), updateTask("generate", "running")
+        if (pollCount === 6) updateTask("generate", "complete"), updateTask("compliance", "running")
+        if (pollCount === 9) updateTask("compliance", "complete"), updateTask("services", "running")
       }
-      updateTask("compliance", "complete")
 
-      // Task 5: Services
-      updateTask("services", "running")
-      await new Promise((r) => setTimeout(r, 1000))
-      updateTask("services", "complete")
+      if (!extractionComplete) {
+        throw new Error("Extraction timed out")
+      }
 
-      setAllTasksComplete(true)
+      // Move to review step
+      setCurrentStep("review")
     } catch (error) {
-      console.error("Building error:", error)
-      // Mark current task as error
-      setBuildingTasks((prev) => prev.map((t) => (t.status === "running" ? { ...t, status: "error" } : t)))
+      console.error("[Wizard] Build error:", error)
+      setBuildError(error instanceof Error ? error.message : "An error occurred")
+      updateTask("extract", "error")
     }
   }
 
@@ -861,68 +1097,25 @@ export function IEPWizard() {
 
   const handleApplyAll = async () => {
     setIsFixing(true)
-    const autoFixable = issues.filter((i) => i.auto_fixable && !fixedIssues.has(i.id))
+    const autoFixable =
+      remediation?.issues?.filter((i) => i.auto_fixable && i.suggested_fix && !fixedIssues.has(i.id)) || []
 
     for (const issue of autoFixable) {
       await handleApplyFix(issue)
-      await new Promise((r) => setTimeout(r, 300))
+      await new Promise((r) => setTimeout(r, 200))
     }
 
     setIsFixing(false)
   }
 
   const handleDownload = () => {
-    if (!draft) return
-
-    const content = `
-INDIVIDUALIZED EDUCATION PROGRAM (IEP)
-=====================================
-
-Student: ${draft.studentName}
-Grade: ${draft.grade}
-Primary Disability: ${draft.disability}
-
-PRESENT LEVELS OF ACADEMIC ACHIEVEMENT AND FUNCTIONAL PERFORMANCE
------------------------------------------------------------------
-${draft.presentLevels}
-
-GOALS
------
-${draft.goals
-  .map(
-    (g, i) => `
-${i + 1}. ${g.area}
-   Goal: ${g.newGoal}
-   Baseline: ${g.baseline}
-   Target: ${g.target}
-`,
-  )
-  .join("\n")}
-
-SERVICES
---------
-${draft.services.map((s: any) => `- ${s.type || s.service_type}: ${s.frequency || ""} ${s.duration || ""}`).join("\n")}
-
-ACCOMMODATIONS
---------------
-${draft.accommodations.map((a) => `- ${a}`).join("\n")}
-
-Compliance Score: ${draft.complianceScore}%
-    `.trim()
-
-    const blob = new Blob([content], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `IEP_${draft.studentName.replace(/\s+/g, "_")}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    // TODO: Generate and download IEP document
+    console.log("Download IEP")
   }
 
   const handleFinish = () => {
-    // TODO: Navigate to MySLP review or finalize
-    console.log("Navigating to MySLP review...")
-    alert("IEP Ready! In production, this would navigate to MySLP for final review.")
+    // TODO: Navigate to MySLP review
+    console.log("Navigate to MySLP review")
   }
 
   // ==========================================================================
@@ -948,22 +1141,16 @@ Compliance Score: ${draft.complianceScore}%
           onUpdateText={setStudentUpdate}
           onBack={() => setCurrentStep("upload")}
           onNext={handleStartBuilding}
-          studentName={studentName}
+          studentName={extractedIEP?.student?.name?.split(",")[1]?.trim()}
         />
       )}
 
-      {currentStep === "building" && (
-        <BuildingStep
-          tasks={buildingTasks}
-          onComplete={() => setCurrentStep("review")}
-          allComplete={allTasksComplete}
-        />
-      )}
+      {currentStep === "building" && <BuildingStep tasks={buildingTasks} error={buildError} />}
 
       {currentStep === "review" && (
         <ReviewStep
-          draft={draft}
-          issues={issues}
+          iep={extractedIEP}
+          remediation={remediation}
           fixedIssues={fixedIssues}
           onApplyFix={handleApplyFix}
           onApplyAll={handleApplyAll}
