@@ -1,95 +1,61 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+const IEP_GUARDIAN_URL =
+  process.env.IEP_GUARDIAN_URL || "https://meii3s7r6y344klxifj7bzo22m0dzkcu.lambda-url.us-east-1.on.aws/"
+
 export async function POST(request: NextRequest) {
   try {
-    const iepGuardianUrl = process.env.IEP_GUARDIAN_URL
-    if (!iepGuardianUrl) {
-      return NextResponse.json({ error: "IEP_GUARDIAN_URL not configured" }, { status: 500 })
-    }
-
     const formData = await request.formData()
-    const file = formData.get("file") as File
+
+    const file = formData.get("file") as File | null
     const state = (formData.get("state") as string) || "CA"
     const iepDate = (formData.get("iepDate") as string) || new Date().toISOString().split("T")[0]
+    const userNotes = (formData.get("userNotes") as string) || ""
 
-    console.log("[v0] FormData received:", {
-      hasFile: !!file,
-      fileName: file?.name,
-      fileSize: file?.size,
-      fileType: file?.type,
-      state,
-      iepDate,
-    })
+    console.log("[extract-iep] File:", file?.name, "Size:", file?.size)
 
     if (!file) {
-      return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 })
+      return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // Convert file to base64 for Lambda
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const base64 = buffer.toString("base64")
+    const arrayBuffer = await file.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString("base64")
 
-    console.log("[v0] Base64 conversion:", {
-      bytesLength: bytes.byteLength,
-      bufferLength: buffer.length,
-      base64Length: base64.length,
-      base64Preview: base64.substring(0, 50) + "...",
-    })
-
-    // Determine file type from extension
-    const fileExtension = file.name.split(".").pop()?.toLowerCase() || "pdf"
-    const fileType = ["png", "jpg", "jpeg", "heic"].includes(fileExtension) ? fileExtension : "pdf"
+    console.log("[extract-iep] Base64 length:", base64.length)
 
     const payload = {
       action: "analyze",
       pdf_base64: base64,
       state: state,
       iep_date: iepDate,
+      user_notes: userNotes,
     }
 
-    console.log("[v0] Sending to Lambda:", {
-      action: payload.action,
-      hasBase64: !!payload.pdf_base64,
-      base64Length: payload.pdf_base64?.length,
-      state: payload.state,
-      iep_date: payload.iep_date,
-      lambdaUrl: iepGuardianUrl,
-    })
-
-    const response = await fetch(iepGuardianUrl, {
+    const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
 
-    console.log("[v0] Lambda response status:", response.status, response.statusText)
+    const result = await lambdaResponse.json()
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Lambda error response:", errorText)
-      throw new Error(`Lambda returned ${response.status}: ${errorText}`)
+    if (!lambdaResponse.ok) {
+      return NextResponse.json(
+        {
+          error: result.error || "Lambda processing failed",
+          jobId: result.jobId,
+        },
+        { status: lambdaResponse.status },
+      )
     }
 
-    const result = await response.json()
-
-    console.log("[v0] Lambda response keys:", Object.keys(result))
-    console.log("[v0] Lambda response status field:", result.status)
-
-    // Return the complete result - frontend will map result.iep fields
-    return NextResponse.json({
-      success: true,
-      status: result.status,
-      jobId: result.jobId,
-      iep: result.result?.iep || result.iep,
-      _debug_raw: result,
-    })
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("[v0] Extract IEP error:", error)
+    console.error("[extract-iep] Error:", error)
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Failed to extract IEP data" },
+      {
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     )
   }
