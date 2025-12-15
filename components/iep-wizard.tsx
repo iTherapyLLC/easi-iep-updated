@@ -24,7 +24,10 @@ import {
   Clock,
   MessageCircle,
   Zap,
+  PartyPopper,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
 
 // =============================================================================
 // CONSTANTS
@@ -111,6 +114,7 @@ interface ComplianceIssue {
 
 interface ExtractedIEP {
   student: {
+    id?: string // Added optional ID
     name: string
     age: string
     grade: string
@@ -160,6 +164,7 @@ interface RemediationData {
   summary: string
   priority_order: string[]
   compliance_checks?: Array<{ name: string; passed: boolean; citation?: string }> // Added for compliance checks
+  score: number // Added score field for remediation
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review"
@@ -350,25 +355,25 @@ function UploadStep({
 // STEP 2: TELL US
 // =============================================================================
 
-// Define a simple Button component for consistency, or use a UI library
-const Button = ({
-  variant = "default",
-  className,
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "outline" }) => {
-  const baseClasses =
-    "flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-  const variants = {
-    default: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl",
-    outline: "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200",
-  }
-  return (
-    <button className={`${baseClasses} ${variants[variant]} ${className || ""}`} {...props}>
-      {children}
-    </button>
-  )
-}
+// Remove the redeclaration of Button component
+// const Button = ({
+//   variant = "default",
+//   className,
+//   children,
+//   ...props
+// }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "default" | "outline" }) => {
+//   const baseClasses =
+//     "flex items-center justify-center px-4 py-2 rounded-xl font-semibold text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+//   const variants = {
+//     default: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl",
+//     outline: "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200",
+//   }
+//   return (
+//     <button className={`${baseClasses} ${variants[variant]} ${className || ""}`} {...props}>
+//       {children}
+//     </button>
+//   )
+// }
 
 function TellStep({
   studentUpdate,
@@ -380,6 +385,7 @@ function TellStep({
   onStateChange,
   iepDate,
   onDateChange,
+  logEvent, // Added logEvent prop
 }: {
   studentUpdate: string
   onUpdateText: (text: string) => void
@@ -390,6 +396,7 @@ function TellStep({
   onStateChange: (state: string) => void
   iepDate: string
   onDateChange: (date: string) => void
+  logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
 }) {
   const [isRecording, setIsRecording] = useState(false)
   const hasContent = studentUpdate.trim().length > 20
@@ -413,7 +420,10 @@ function TellStep({
             <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
             <select
               value={selectedState}
-              onChange={(e) => onStateChange(e.target.value)}
+              onChange={(e) => {
+                onStateChange(e.target.value)
+                logEvent("STATE_CHANGED", { newState: e.target.value }) // Log state change
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
             >
               {US_STATES.map((state) => (
@@ -428,7 +438,10 @@ function TellStep({
             <input
               type="date"
               value={iepDate}
-              onChange={(e) => onDateChange(e.target.value)}
+              onChange={(e) => {
+                onDateChange(e.target.value)
+                logEvent("DATE_CHANGED", { newDate: e.target.value }) // Log date change
+              }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
             />
           </div>
@@ -447,7 +460,10 @@ function TellStep({
         />
         <div className="flex items-center justify-between mt-3">
           <button
-            onClick={() => setIsRecording(!isRecording)}
+            onClick={() => {
+              setIsRecording(!isRecording)
+              logEvent("MIC_TOGGLED", { isRecording: !isRecording }) // Log mic toggle
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
               isRecording ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
@@ -471,7 +487,10 @@ function TellStep({
           ].map((prompt) => (
             <button
               key={prompt}
-              onClick={() => onUpdateText(studentUpdate + (studentUpdate ? " " : "") + prompt + ". ")}
+              onClick={() => {
+                onUpdateText(studentUpdate + (studentUpdate ? " " : "") + prompt + ". ")
+                logEvent("PROMPT_ADDED", { prompt }) // Log prompt addition
+              }}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-sm text-slate-600 transition-colors"
             >
               {prompt}
@@ -617,6 +636,8 @@ type HashChainEvent =
   | "GOAL_REVIEWED"
   | "IEP_APPROVED"
   | "IEP_DOWNLOADED"
+  | "TAB_CHANGED" // Added for tab changes
+  | "FIX_MANUAL_STARTED" // Added for manual fix initiation
 
 function ReviewStep({
   iep,
@@ -630,6 +651,7 @@ function ReviewStep({
   isFixing,
   selectedState,
   startTime, // Added startTime prop
+  logEvent, // Added logEvent prop
 }: {
   iep: ExtractedIEP | null
   remediation: RemediationData | null
@@ -642,6 +664,7 @@ function ReviewStep({
   isFixing: boolean
   selectedState: string
   startTime?: number // Added startTime prop type
+  logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
 }) {
   const [showCelebration, setShowCelebration] = useState(true) // State for celebration animation
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
@@ -655,10 +678,10 @@ function ReviewStep({
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowCelebration(false)
-      logEvent("REVIEW_OPENED") // Log event when review screen is opened
+      logEvent("REVIEW_OPENED", { score: remediation?.score }) // Log event when review screen is opened
     }, 2000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [logEvent, remediation?.score])
 
   // Expand first issue by default after component mounts or dependencies change
   useEffect(() => {
@@ -668,23 +691,6 @@ function ReviewStep({
       setExpandedIssue(remainingIssues[0].id)
     }
   }, [remediation, fixedIssues, expandedIssue])
-
-  // Function to log events to the backend
-  const logEvent = async (event: HashChainEvent, metadata?: Record<string, any>) => {
-    try {
-      await fetch("/api/log-action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: event,
-          metadata,
-          timestamp: new Date().toISOString(),
-        }),
-      })
-    } catch (e) {
-      console.error("Failed to log event:", e)
-    }
-  }
 
   const issues = remediation?.issues || []
   const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
@@ -740,15 +746,24 @@ function ReviewStep({
   }
 
   // Handler for downloading the IEP
-  const handleDownload = () => {
-    logEvent("IEP_DOWNLOADED") // Log IEP download event
+  const handleDownload = (format: string) => {
+    logEvent("IEP_DOWNLOADED", { format }) // Log IEP download event
     onDownload()
   }
 
   // Handler for finishing the review process
   const handleFinish = () => {
-    logEvent("IEP_APPROVED") // Log IEP approval event
+    logEvent("IEP_APPROVED", {
+      finalScore: remediation?.score,
+      fixedIssuesCount: fixedIssues.size,
+    }) // Log IEP approval event
     onFinish()
+  }
+
+  // Function to handle tab changes and log them
+  const handleTabChange = (tab: "questions" | "goals" | "services") => {
+    setActiveTab(tab)
+    logEvent("TAB_CHANGED", { tab })
   }
 
   // Celebration Overlay component
@@ -756,7 +771,9 @@ function ReviewStep({
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-500 to-emerald-600 animate-celebration">
         <div className="text-center text-white">
-          <div className="text-8xl mb-6 animate-wiggle">🎉</div>
+          <div className="text-8xl mb-6 animate-wiggle">
+            <PartyPopper />
+          </div>
           <h1 className="text-4xl font-bold mb-3">Your IEP is Ready!</h1>
           <p className="text-xl text-white/90">Let's do a quick review together</p>
         </div>
@@ -914,7 +931,7 @@ function ReviewStep({
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleTabChange(tab.id as any)}
             className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all hover-scale ${
               activeTab === tab.id
                 ? "border-teal-600 text-teal-600"
@@ -1021,6 +1038,7 @@ function ReviewStep({
                               onClick={() => {
                                 setManualEditIssue(issue.id)
                                 setManualEditText(issue.current_text || "")
+                                logEvent("FIX_MANUAL_STARTED", { issueId: issue.id }) // Log manual fix initiation
                               }}
                               className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold hover-scale transition-all"
                             >
@@ -1176,7 +1194,7 @@ function ReviewStep({
       {/* Action Buttons */}
       <div className="flex gap-3">
         <button
-          onClick={handleDownload}
+          onClick={() => handleDownload("pdf")}
           className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-2 hover-scale transition-all"
         >
           <Download className="w-4 h-4" />
@@ -1219,11 +1237,7 @@ function ReviewStep({
 
 export function IEPWizard() {
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
-
-  // Upload state
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-
-  // Tell state
   const [studentUpdate, setStudentUpdate] = useState("")
   const [selectedState, setSelectedState] = useState("CA")
   const [iepDate, setIepDate] = useState(() => new Date().toISOString().split("T")[0])
@@ -1245,16 +1259,32 @@ export function IEPWizard() {
   const [isFixing, setIsFixing] = useState(false)
   const [reviewStartTime, setReviewStartTime] = useState<number | undefined>(undefined) // State for review start time
 
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+
+  const { logEvent, getSessionMetrics } = useHashChainLogger({
+    sessionId,
+    iepId: extractedIEP?.student?.id, // Use optional chaining for student ID
+  })
+
   // ==========================================================================
   // HANDLERS
   // ==========================================================================
 
   const handleAddFiles = (newFiles: UploadedFile[]) => {
     setUploadedFiles((prev) => [...prev, ...newFiles])
+    newFiles.forEach((fileObj) => {
+      logEvent("FILE_UPLOADED", {
+        fileType: fileObj.file.type,
+        fileSizeKB: Math.round(fileObj.file.size / 1024),
+        fileName: fileObj.name, // Added for better debugging
+      })
+    })
   }
 
   const handleRemoveFile = (id: string) => {
+    const removedFile = uploadedFiles.find((f) => f.id === id)
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id))
+    logEvent("FILE_REMOVED", { fileName: removedFile?.name }) // Log file removal
   }
 
   const updateTask = (taskId: string, status: BuildingTask["status"]) => {
@@ -1266,6 +1296,7 @@ export function IEPWizard() {
     setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
     setBuildError(null)
     handleStartBuilding()
+    logEvent("BUILD_RETRY_REQUESTED") // Log retry request
   }
 
   const handleStartBuilding = async () => {
@@ -1278,6 +1309,7 @@ export function IEPWizard() {
     try {
       // Task 1: Upload and extract
       updateTask("extract", "running")
+      logEvent("EXTRACTION_STARTED", { state: selectedState, iepDate }) // Log extraction start
 
       const formData = new FormData()
       const iepFile = uploadedFiles.find((f) => f.type === "iep") || uploadedFiles[0]
@@ -1354,6 +1386,12 @@ export function IEPWizard() {
 
       if (iepData) {
         setExtractedIEP(iepData as ExtractedIEP)
+        logEvent("EXTRACTION_COMPLETED", {
+          goalsCount: iepData.goals?.length || 0,
+          servicesCount: iepData.services?.length || 0,
+          accommodationsCount: iepData.accommodations?.length || 0,
+          studentName: iepData.student?.name, // Include student name for context, assuming it's not PII in this context
+        })
       }
 
       // Extract remediation data - it's inside _debug_raw
@@ -1362,6 +1400,10 @@ export function IEPWizard() {
 
       if (remediationData) {
         setRemediation(remediationData as RemediationData)
+        logEvent("REMEDIATION_COMPLETED", {
+          score: remediationData.score, // Use remediation score
+          issuesCount: remediationData.issues?.length || 0,
+        })
       }
 
       // Mark all tasks complete
@@ -1374,10 +1416,13 @@ export function IEPWizard() {
       // Move to review step
       setCurrentStep("review")
       setReviewStartTime(Date.now()) // Set the start time for the review step
+      logEvent("BUILDING_COMPLETED", { success: true }) // Log successful building
     } catch (error) {
       console.error("[v0] Build error:", error)
-      setBuildError(error instanceof Error ? error.message : "An error occurred")
+      const errorMessage = error instanceof Error ? error.message : "An error occurred"
+      setBuildError(errorMessage)
       updateTask("extract", "error") // Mark the first task as error to trigger error state in BuildingStep
+      logEvent("EXTRACTION_ERROR", { errorType: "processing_failed", errorMessage }) // Log error
     }
   }
 
@@ -1401,11 +1446,13 @@ export function IEPWizard() {
   const handleDownload = () => {
     // TODO: Generate and download IEP document
     console.log("Download IEP")
+    logEvent("IEP_DOWNLOAD_REQUESTED") // Log download request
   }
 
   const handleFinish = () => {
     // TODO: Navigate to MySLP review
     console.log("Navigate to MySLP review")
+    logEvent("IEP_APPROVED") // Log IEP approval
   }
 
   // ==========================================================================
@@ -1431,11 +1478,12 @@ export function IEPWizard() {
           onUpdateText={setStudentUpdate}
           onBack={() => setCurrentStep("upload")}
           onNext={handleStartBuilding}
-          studentName={extractedIEP?.student?.name?.split(",")[1]?.trim()}
+          studentName={extractedIEP?.student?.name?.split(",")[1]?.trim()} // Safely access student name
           selectedState={selectedState}
           onStateChange={setSelectedState}
           iepDate={iepDate}
           onDateChange={setIepDate}
+          logEvent={logEvent} // Pass logEvent to TellStep
         />
       )}
 
@@ -1448,21 +1496,24 @@ export function IEPWizard() {
         />
       )}
 
-      {currentStep === "review" && extractedIEP && (
-        <ReviewStep
-          iep={extractedIEP}
-          remediation={remediation}
-          fixedIssues={fixedIssues}
-          onApplyFix={handleApplyFix}
-          onApplyAll={handleApplyAll}
-          onBack={() => setCurrentStep("building")}
-          onFinish={handleFinish}
-          onDownload={handleDownload}
-          isFixing={isFixing}
-          selectedState={selectedState} // Pass selectedState to ReviewStep
-          startTime={reviewStartTime} // Pass startTime to ReviewStep
-        />
-      )}
+      {currentStep === "review" &&
+        extractedIEP &&
+        remediation && ( // Ensure remediation is available
+          <ReviewStep
+            iep={extractedIEP}
+            remediation={remediation}
+            fixedIssues={fixedIssues}
+            onApplyFix={handleApplyFix}
+            onApplyAll={handleApplyAll}
+            onBack={() => setCurrentStep("building")}
+            onFinish={handleFinish}
+            onDownload={handleDownload}
+            isFixing={isFixing}
+            selectedState={selectedState} // Pass selectedState to ReviewStep
+            startTime={reviewStartTime} // Pass startTime to ReviewStep
+            logEvent={logEvent} // Pass logEvent to ReviewStep
+          />
+        )}
     </div>
   )
 }
