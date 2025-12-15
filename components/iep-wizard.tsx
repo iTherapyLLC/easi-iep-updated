@@ -1000,92 +1000,95 @@ export function IEPWizard() {
       formData.append("file", iepFile.file)
       formData.append("studentUpdate", studentUpdate)
 
-      console.log("[Wizard] Uploading file:", iepFile.name)
-
-      const uploadResponse = await fetch("/api/upload-iep", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`)
-      }
-
-      const uploadData = await uploadResponse.json()
-      console.log("[Wizard] Upload response:", uploadData)
-
-      if (!uploadData.success || !uploadData.jobId) {
-        throw new Error(uploadData.error || "Upload failed")
-      }
+      console.log("[v0] Uploading file directly to extract-iep:", iepFile.name)
 
       updateTask("extract", "complete")
       updateTask("analyze", "running")
 
-      // Task 2-5: Poll for extraction results
-      let extractionComplete = false
-      let pollCount = 0
-      const maxPolls = 60 // 2 minutes max
+      // Simulate progress while waiting for the Lambda (it takes 30-60 seconds)
+      const progressInterval = setInterval(() => {
+        setBuildingTasks((prev) => {
+          const extractComplete = prev.find((t) => t.id === "extract")?.status === "complete"
+          const analyzeComplete = prev.find((t) => t.id === "analyze")?.status === "complete"
+          const generateComplete = prev.find((t) => t.id === "generate")?.status === "complete"
+          const complianceComplete = prev.find((t) => t.id === "compliance")?.status === "complete"
 
-      while (!extractionComplete && pollCount < maxPolls) {
-        await new Promise((r) => setTimeout(r, 2000))
-        pollCount++
-
-        const pollResponse = await fetch(`/api/extract-iep?jobId=${uploadData.jobId}`)
-        const pollData = await pollResponse.json()
-
-        console.log("[Wizard] Poll response:", pollData.status || pollData.success)
-
-        if (pollData.success && pollData.status === "complete") {
-          extractionComplete = true
-
-          // ============================================================
-          // THIS IS THE KEY FIX: Correct data extraction from response
-          // ============================================================
-
-          // Extract IEP data - it's at the top level
-          const iepData = pollData.iep
-          console.log("[Wizard] Extracted IEP data:", iepData?.student?.name)
-
-          if (iepData) {
-            setExtractedIEP(iepData as ExtractedIEP)
+          if (!analyzeComplete) {
+            return prev.map((t) =>
+              t.id === "analyze"
+                ? { ...t, status: "complete" as const }
+                : t.id === "generate"
+                  ? { ...t, status: "running" as const }
+                  : t,
+            )
+          } else if (!generateComplete) {
+            return prev.map((t) =>
+              t.id === "generate"
+                ? { ...t, status: "complete" as const }
+                : t.id === "compliance"
+                  ? { ...t, status: "running" as const }
+                  : t,
+            )
+          } else if (!complianceComplete) {
+            return prev.map((t) =>
+              t.id === "compliance"
+                ? { ...t, status: "complete" as const }
+                : t.id === "services"
+                  ? { ...t, status: "running" as const }
+                  : t,
+            )
           }
+          return prev
+        })
+      }, 8000) // Update every 8 seconds
 
-          // Extract remediation data - it's inside _debug_raw
-          const remediationData = pollData._debug_raw?.remediation
-          console.log(
-            "[Wizard] Remediation data:",
-            remediationData?.original_score,
-            "issues:",
-            remediationData?.issues?.length,
-          )
+      // POST directly to extract-iep and wait for the complete response
+      const extractResponse = await fetch("/api/extract-iep", {
+        method: "POST",
+        body: formData,
+      })
 
-          if (remediationData) {
-            setRemediation(remediationData as RemediationData)
-          }
+      clearInterval(progressInterval)
 
-          // Mark all tasks complete
-          updateTask("analyze", "complete")
-          updateTask("generate", "complete")
-          updateTask("compliance", "complete")
-          updateTask("services", "complete")
-        } else if (pollData.status === "failed" || pollData.error) {
-          throw new Error(pollData.error || "Extraction failed")
-        }
-
-        // Update progress tasks based on poll count
-        if (pollCount === 3) updateTask("analyze", "complete"), updateTask("generate", "running")
-        if (pollCount === 6) updateTask("generate", "complete"), updateTask("compliance", "running")
-        if (pollCount === 9) updateTask("compliance", "complete"), updateTask("services", "running")
+      if (!extractResponse.ok) {
+        const errorData = await extractResponse.json().catch(() => ({}))
+        throw new Error(errorData.error || `Extraction failed: ${extractResponse.status}`)
       }
 
-      if (!extractionComplete) {
-        throw new Error("Extraction timed out")
+      const extractData = await extractResponse.json()
+      console.log("[v0] Extract response received:", extractData.success)
+
+      if (!extractData.success) {
+        throw new Error(extractData.error || "Extraction failed")
       }
+
+      // Extract IEP data - it's at the top level
+      const iepData = extractData.iep
+      console.log("[v0] Extracted IEP data:", iepData?.student?.name)
+
+      if (iepData) {
+        setExtractedIEP(iepData as ExtractedIEP)
+      }
+
+      // Extract remediation data - it's inside _debug_raw
+      const remediationData = extractData._debug_raw?.remediation
+      console.log("[v0] Remediation data:", remediationData?.original_score, "issues:", remediationData?.issues?.length)
+
+      if (remediationData) {
+        setRemediation(remediationData as RemediationData)
+      }
+
+      // Mark all tasks complete
+      updateTask("extract", "complete")
+      updateTask("analyze", "complete")
+      updateTask("generate", "complete")
+      updateTask("compliance", "complete")
+      updateTask("services", "complete")
 
       // Move to review step
       setCurrentStep("review")
     } catch (error) {
-      console.error("[Wizard] Build error:", error)
+      console.error("[v0] Build error:", error)
       setBuildError(error instanceof Error ? error.message : "An error occurred")
       updateTask("extract", "error")
     }
