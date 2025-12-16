@@ -35,6 +35,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card" // Added for chat interface
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
+// </CHANGE> Import DownloadIEPButton component
+import { DownloadIEPButton } from "@/components/download-iep-button"
 
 // =============================================================================
 // CONSTANTS
@@ -1552,10 +1554,13 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
 
       {/* Action buttons - updated to blue */}
       <div className="space-y-3">
-        <Button onClick={onDownload} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-          <Download className="w-4 h-4 mr-2" />
-          Download Final IEP
-        </Button>
+        <DownloadIEPButton
+          iep={iep}
+          state={state}
+          // complianceScore={complianceScore} // FIX: complianceScore is not defined here
+          complianceScore={remediation?.score ?? 0} // Use remediation.score as a fallback if original_score is not available
+          onDownloadComplete={() => logEvent("FINAL_IEP_DOWNLOADED")}
+        />
         <Button onClick={handleDownloadReport} variant="outline" className="w-full bg-transparent">
           <FileText className="w-4 h-4 mr-2" />
           Download Compliance Report
