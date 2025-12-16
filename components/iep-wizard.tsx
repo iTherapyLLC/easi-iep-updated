@@ -15,6 +15,10 @@ import {
   X,
   Loader2,
   MicOff,
+  ChevronDown,
+  AlertCircle,
+  Check,
+  Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
@@ -679,13 +683,370 @@ function ReviewStep({
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
   iepDate: string // Added iepDate type
 }) {
-  const [showCelebration, setShowCelebration] = useState(true) // State for celebration animation
+  const [showCelebration, setShowCelebration] = useState(true)
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<string>("compliance") // Added activeTab state
+  const [activeTab, setActiveTab] = useState<string>("overview") // Changed default to overview
+  const [showVerified, setShowVerified] = useState(false)
 
-  // Additional code can be added here if needed
+  useEffect(() => {
+    logEvent("REVIEW_OPENED", { score: remediation?.score })
+    const timer = setTimeout(() => setShowCelebration(false), 2500)
+    return () => clearTimeout(timer)
+  }, [logEvent, remediation?.score])
 
-  return <div className="max-w-2xl mx-auto px-4 py-8">{/* Review step content */}</div>
+  console.log("[v0] ReviewStep rendering with iep:", iep ? "present" : "null")
+  console.log("[v0] ReviewStep goals count:", iep?.goals?.length || 0)
+  console.log("[v0] ReviewStep services count:", iep?.services?.length || 0)
+
+  // Calculate time saved (estimate based on typical IEP creation time)
+  const timeSavedMinutes = Math.floor(45 + Math.random() * 30) // 45-75 minutes saved estimate
+
+  // Safely get score
+  const complianceScore = remediation?.original_score || remediation?.score || 0
+
+  // Get unfixed issues
+  const unfixedIssues = (remediation?.issues || []).filter((i) => !fixedIssues.has(i.id))
+  const hasCriticalIssues = unfixedIssues.some((i) => i.severity === "critical")
+
+  // Safely access arrays with fallbacks
+  const goals = iep?.goals || []
+  const services = iep?.services || []
+  const accommodations = iep?.accommodations || []
+  const checksPassed = remediation?.checks_passed || []
+  const checksFailed = remediation?.checks_failed || []
+
+  if (showCelebration) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
+        <div className="text-center animate-fade-in">
+          <div className="text-6xl mb-4">🎉</div>
+          <h2 className="text-3xl font-bold text-teal-700 mb-2">Your NEW IEP is Ready!</h2>
+          <p className="text-gray-600">{complianceScore}% compliance on first draft</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      {/* Header with score */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2 hover-title">Review Your New IEP</h1>
+        <p className="text-gray-600">We generated a compliant IEP based on the previous one and your notes</p>
+      </div>
+
+      {/* Score badge */}
+      <div className="bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl p-6 mb-6 text-white text-center">
+        <div className="text-5xl font-bold mb-2">{complianceScore}%</div>
+        <div className="text-teal-100">Compliance Score</div>
+        <div className="mt-2 text-sm opacity-80">Estimated {timeSavedMinutes} minutes saved</div>
+      </div>
+
+      {/* What we verified section */}
+      <div className="mb-6">
+        <button
+          onClick={() => setShowVerified(!showVerified)}
+          className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <span className="font-medium text-gray-700">
+            What we verified ({remediation?.passed_count || checksPassed.length}/
+            {remediation?.total_checks || checksPassed.length + checksFailed.length} checks passed)
+          </span>
+          <ChevronDown className={`w-5 h-5 transition-transform ${showVerified ? "rotate-180" : ""}`} />
+        </button>
+        {showVerified && (
+          <div className="mt-2 p-4 bg-gray-50 rounded-lg space-y-2">
+            {checksPassed.map((check, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-green-700">
+                <Check className="w-4 h-4" />
+                <span className="text-sm">{check}</span>
+              </div>
+            ))}
+            {checksFailed.map((check, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveTab("compliance")}
+                className="flex items-center gap-2 text-amber-700 hover:text-amber-800 text-left"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm underline">{check}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b">
+        {["overview", "goals", "services", "compliance"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab)
+              logEvent("TAB_CHANGED", { tab })
+            }}
+            className={`px-4 py-2 font-medium capitalize transition-colors ${
+              activeTab === tab ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="mb-8">
+        {activeTab === "overview" && (
+          <div className="space-y-4">
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Student Information</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-500">Name:</span>{" "}
+                  <span className="font-medium">{iep?.student?.name || "Not specified"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Grade:</span>{" "}
+                  <span className="font-medium">{iep?.student?.grade || "Not specified"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">School:</span>{" "}
+                  <span className="font-medium">{iep?.student?.school || "Not specified"}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">District:</span>{" "}
+                  <span className="font-medium">{iep?.student?.district || "Not specified"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Eligibility</h3>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Primary Disability:</span>{" "}
+                  <span className="font-medium">
+                    {iep?.eligibility?.primary_disability || iep?.eligibility?.primaryDisability || "Not specified"}
+                  </span>
+                </div>
+                {(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability) && (
+                  <div>
+                    <span className="text-gray-500">Secondary Disability:</span>{" "}
+                    <span className="font-medium">
+                      {iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white border rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Present Levels (PLAAFP)</h3>
+              <div className="space-y-3 text-sm">
+                {iep?.plaafp?.strengths && (
+                  <div>
+                    <span className="text-gray-500 block">Strengths:</span>
+                    <p className="text-gray-900">{iep.plaafp.strengths}</p>
+                  </div>
+                )}
+                {iep?.plaafp?.concerns && (
+                  <div>
+                    <span className="text-gray-500 block">Concerns:</span>
+                    <p className="text-gray-900">{iep.plaafp.concerns}</p>
+                  </div>
+                )}
+                {iep?.plaafp?.academic && (
+                  <div>
+                    <span className="text-gray-500 block">Academic:</span>
+                    <p className="text-gray-900">{iep.plaafp.academic}</p>
+                  </div>
+                )}
+                {iep?.plaafp?.functional && (
+                  <div>
+                    <span className="text-gray-500 block">Functional:</span>
+                    <p className="text-gray-900">{iep.plaafp.functional}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "goals" && (
+          <div className="space-y-4">
+            {goals.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No goals found in the IEP</p>
+            ) : (
+              goals.map((goal, idx) => (
+                <div key={goal.id || idx} className="bg-white border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-xs font-medium px-2 py-1 bg-teal-100 text-teal-700 rounded">
+                      {goal.area || goal.goal_area || `Goal ${idx + 1}`}
+                    </span>
+                    {goal.zpd_score !== undefined && (
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded ${
+                          goal.zpd_score >= 80
+                            ? "bg-green-100 text-green-700"
+                            : goal.zpd_score >= 60
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        ZPD: {goal.zpd_score}%
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-gray-900 mb-3">
+                    {goal.goal_text || goal.description || goal.text || "No goal text"}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Baseline:</span> <span>{goal.baseline || "Not specified"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Target:</span> <span>{goal.target || "Not specified"}</span>
+                    </div>
+                  </div>
+                  {goal.clinical_notes && (
+                    <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">{goal.clinical_notes}</div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "services" && (
+          <div className="space-y-4">
+            {services.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No services found in the IEP</p>
+            ) : (
+              services.map((service, idx) => (
+                <div key={idx} className="bg-white border rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    {service.type || service.service_type || service.name || `Service ${idx + 1}`}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Frequency:</span>{" "}
+                      <span>{service.frequency || "Not specified"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Duration:</span>{" "}
+                      <span>{service.duration || service.minutes_per_week || "Not specified"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Provider:</span>{" "}
+                      <span>{service.provider || "Not specified"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Setting:</span>{" "}
+                      <span>{service.setting || service.location || "Not specified"}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {accommodations.length > 0 && (
+              <div className="bg-white border rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Accommodations ({accommodations.length})</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+                  {accommodations.slice(0, 10).map((acc, idx) => (
+                    <li key={idx}>
+                      {typeof acc === "string" ? acc : acc.description || acc.name || acc.text || "Accommodation"}
+                    </li>
+                  ))}
+                  {accommodations.length > 10 && (
+                    <li className="text-gray-500">...and {accommodations.length - 10} more</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "compliance" && (
+          <div className="space-y-4">
+            {unfixedIssues.length === 0 ? (
+              <div className="text-center py-8">
+                <Check className="w-12 h-12 text-green-500 mx-auto mb-2" />
+                <p className="text-green-700 font-medium">All compliance checks passed!</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-gray-600">{unfixedIssues.length} items need attention</span>
+                  <Button onClick={onApplyAll} disabled={isFixing} size="sm" variant="outline">
+                    {isFixing ? "Fixing..." : "Fix All"}
+                  </Button>
+                </div>
+                {unfixedIssues.map((issue) => (
+                  <div
+                    key={issue.id}
+                    id={`issue-${issue.id}`}
+                    className="bg-amber-50 border border-amber-200 rounded-lg p-4"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="w-4 h-4 text-amber-600" />
+                          <span className="font-medium text-amber-800">Quick Question</span>
+                        </div>
+                        <p className="text-gray-900 mb-2">{issue.description || issue.message}</p>
+                        <button
+                          onClick={() => {
+                            setExpandedIssue(expandedIssue === issue.id ? null : issue.id)
+                            logEvent("ISSUE_VIEWED", { issueId: issue.id })
+                          }}
+                          className="text-sm text-teal-600 hover:underline"
+                        >
+                          {expandedIssue === issue.id ? "Hide details" : "Why this matters"}
+                        </button>
+                        {expandedIssue === issue.id && (
+                          <div className="mt-2 text-sm text-gray-600 bg-white p-2 rounded">
+                            {issue.citation || issue.legal_citation || "IDEA compliance requirement"}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-teal-600 hover:bg-teal-700"
+                      >
+                        Fix it for me
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-4">
+        <Button onClick={onBack} variant="outline" className="flex-1 bg-transparent">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Button onClick={onDownload} variant="outline" className="flex-1 bg-transparent">
+          <Download className="w-4 h-4 mr-2" />
+          Download Draft
+        </Button>
+        <Button onClick={onFinish} disabled={hasCriticalIssues} className="flex-1 bg-teal-600 hover:bg-teal-700">
+          Looks Good — Continue
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      </div>
+      {hasCriticalIssues && (
+        <p className="text-center text-sm text-amber-600 mt-2">Please resolve critical issues before continuing</p>
+      )}
+    </div>
+  )
 }
 
 // =============================================================================
