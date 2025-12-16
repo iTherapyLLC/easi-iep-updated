@@ -52,9 +52,16 @@ export async function POST(request: NextRequest) {
       user_notes: userNotes,
     }
 
-    console.log("[extract-iep] Sending to Lambda:", IEP_GUARDIAN_URL)
-    console.log("[extract-iep] Payload keys:", Object.keys(payload))
-    console.log("[extract-iep] pdf_base64 length:", payload.pdf_base64?.length)
+    console.log("[extract-iep] Sending to Lambda:", {
+      action: "analyze",
+      pdf_base64_length: base64?.length || 0,
+      pdf_base64_first_50: base64?.substring(0, 50),
+      state,
+      iep_date: iepDate,
+      user_notes_length: userNotes?.length || 0,
+    })
+
+    console.log("[extract-iep] Lambda URL:", IEP_GUARDIAN_URL)
 
     const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
       method: "POST",
