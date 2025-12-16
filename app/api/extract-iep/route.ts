@@ -15,7 +15,14 @@ export async function POST(request: NextRequest) {
     const iepDate = (formData.get("iepDate") as string) || new Date().toISOString().split("T")[0]
     const userNotes = (formData.get("userNotes") as string) || ""
 
-    console.log("[extract-iep] File:", file?.name, "Size:", file?.size)
+    console.log("[extract-iep] Received request")
+    console.log("[extract-iep] File present:", !!file)
+    console.log("[extract-iep] File name:", file?.name)
+    console.log("[extract-iep] File size:", file?.size)
+    console.log("[extract-iep] File type:", file?.type)
+    console.log("[extract-iep] State:", state)
+    console.log("[extract-iep] IEP Date:", iepDate)
+    console.log("[extract-iep] User Notes length:", userNotes?.length)
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -24,15 +31,23 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString("base64")
 
+    console.log("[extract-iep] ArrayBuffer size:", arrayBuffer.byteLength)
     console.log("[extract-iep] Base64 length:", base64.length)
+    console.log("[extract-iep] Base64 first 100 chars:", base64.substring(0, 100))
 
     const payload = {
       action: "analyze",
       pdf_base64: base64,
+      document: base64, // Alternative field name
       state: state,
       iep_date: iepDate,
       user_notes: userNotes,
     }
+
+    console.log("[extract-iep] Sending to Lambda:", IEP_GUARDIAN_URL)
+    console.log("[extract-iep] Payload keys:", Object.keys(payload))
+    console.log("[extract-iep] pdf_base64 present:", !!payload.pdf_base64)
+    console.log("[extract-iep] pdf_base64 length:", payload.pdf_base64?.length)
 
     const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
       method: "POST",
@@ -40,7 +55,12 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(payload),
     })
 
+    console.log("[extract-iep] Lambda response status:", lambdaResponse.status)
+
     const result = await lambdaResponse.json()
+
+    console.log("[extract-iep] Lambda response keys:", Object.keys(result))
+    console.log("[extract-iep] Lambda error?:", result.error)
 
     if (!lambdaResponse.ok) {
       return NextResponse.json(
