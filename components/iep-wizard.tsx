@@ -19,10 +19,11 @@ import {
   AlertCircle,
   Check,
   Download,
-  CheckCircle,
-  XCircle,
+  MessageSquare,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" // Added for chat interface
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 
@@ -185,6 +186,13 @@ interface RemediationData {
   checks_passed?: Array<{ name: string; citation?: string }>
   checks_failed?: Array<{ name: string; citation?: string; issue_id?: string }>
   compliance_checks?: Array<{ name: string; passed: boolean; citation?: string }>
+}
+
+interface ChatMessage {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  timestamp: Date
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review" | "myslp"
@@ -1058,6 +1066,8 @@ function ReviewStep({
 function ClinicalReviewStep({
   iep,
   remediation,
+  state, // Add state prop
+  stateName, // Add stateName prop
   onBack,
   onDownload,
   onStartNew,
@@ -1065,6 +1075,8 @@ function ClinicalReviewStep({
 }: {
   iep: ExtractedIEP | null // Changed to ExtractedIEP | null
   remediation: RemediationData | null // Changed to RemediationData | null
+  state: string // Add state type
+  stateName: string // Add stateName type
   onBack: () => void
   onDownload: () => void
   onStartNew: () => void
@@ -1073,6 +1085,13 @@ function ClinicalReviewStep({
   const [isLoading, setIsLoading] = useState(true)
   const [review, setReview] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [inputValue, setInputValue] = useState("")
+  const [isSending, setIsSending] = useState(false)
+  const [sessionId] = useState(() => `myslp-${Date.now()}`)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
   const [loadingSteps, setLoadingSteps] = useState([
     { id: "goals", label: "Checking goal appropriateness", status: "running" as const },
     { id: "services", label: "Verifying service alignment", status: "pending" as const },
@@ -1080,8 +1099,38 @@ function ClinicalReviewStep({
     { id: "sett", label: "Reviewing SETT framework alignment", status: "pending" as const },
   ])
 
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Function to handle key down event for input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault() // Prevent default form submission or newline
+      handleSendMessage()
+    }
+  }
+
   useEffect(() => {
     logEvent("CLINICAL_REVIEW_STARTED")
+
+    console.log("[v0] ========== MySLP DEBUG START ==========")
+    console.log("[v0] IEP prop received:", iep)
+    console.log("[v0] IEP is null?", iep === null)
+    console.log("[v0] IEP is undefined?", iep === undefined)
+    console.log("[v0] IEP type:", typeof iep)
+    if (iep) {
+      console.log("[v0] IEP keys:", Object.keys(iep))
+      console.log("[v0] IEP.student:", iep.student)
+      console.log("[v0] IEP.goals count:", iep.goals?.length)
+      console.log("[v0] IEP.services count:", iep.services?.length)
+      console.log("[v0] IEP.plaafp:", iep.plaafp)
+    }
+    console.log("[v0] State:", state)
+    console.log("[v0] State name:", stateName)
+    console.log("[v0] Remediation:", remediation)
+    console.log("[v0] ========== MySLP DEBUG END ==========")
 
     // Animate loading steps
     const stepTimers = loadingSteps.map((_, index) => {
@@ -1095,204 +1144,361 @@ function ClinicalReviewStep({
               })) as typeof prev,
           )
         },
-        (index + 1) * 2000,
+        (index + 1) * 1500,
       )
     })
 
-    // Call MySLP API
+    // Call MySLP API with full IEP data
     const callMySLP = async () => {
       try {
-        console.log("[v0] Calling MySLP API with IEP data")
+        const payload = {
+          new_iep: iep,
+          state: state,
+          state_name: stateName,
+          remediation: remediation,
+          sessionId: sessionId,
+        }
+
+        console.log("[v0] MySLP API payload:", JSON.stringify(payload, null, 2).substring(0, 2000))
+        console.log("[v0] Payload size:", JSON.stringify(payload).length, "bytes")
+
         const response = await fetch("/api/myslp-review", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ iep, remediation }),
+          body: JSON.stringify(payload),
         })
 
         const data = await response.json()
-        console.log("[v0] MySLP response:", data)
+        console.log("[v0] MySLP API response:", data)
 
         if (data.success && data.review) {
           setReview(data.review)
+          const initialMessage: ChatMessage = {
+            id: `msg-${Date.now()}`,
+            role: "assistant",
+            content: data.responseText || data.review.commentary,
+            timestamp: new Date(),
+          }
+          setMessages([initialMessage])
           logEvent("CLINICAL_REVIEW_COMPLETED", { score: data.review.score })
         } else {
-          // Graceful fallback - show completion without MySLP
-          console.log("[v0] MySLP API returned no review, using fallback")
-          setReview({
-            score: remediation?.original_score || 85,
-            approved: true,
-            commentary: "Your IEP has been reviewed and is ready for finalization.",
-            checks: [
-              { name: "FAPE Compliance", passed: true },
-              { name: "LRE Requirements", passed: true },
-              { name: "Measurable Goals", passed: true },
-              { name: "Service Alignment", passed: true },
-            ],
-          })
-          logEvent("CLINICAL_REVIEW_FALLBACK")
+          throw new Error(data.error || "Failed to get review")
         }
       } catch (err) {
-        console.error("[v0] MySLP API error:", err)
-        // Graceful fallback on error
-        setReview({
-          score: remediation?.original_score || 85,
-          approved: true,
-          commentary: "Your IEP has been reviewed and is ready for finalization.",
-          checks: [
-            { name: "FAPE Compliance", passed: true },
-            { name: "LRE Requirements", passed: true },
-            { name: "Measurable Goals", passed: true },
-            { name: "Service Alignment", passed: true },
-          ],
-        })
-        logEvent("CLINICAL_REVIEW_FALLBACK", { error: String(err) })
+        console.error("[v0] MySLP error:", err)
+        setError(err instanceof Error ? err.message : "Failed to complete clinical review")
+        // Fallback message
+        setMessages([
+          {
+            id: `msg-${Date.now()}`,
+            role: "assistant",
+            content:
+              "I encountered an issue connecting to the review service. Your IEP draft has been saved and you can download it now. Please try the clinical review again later.",
+            timestamp: new Date(),
+          },
+        ])
       } finally {
         setIsLoading(false)
+        stepTimers.forEach(clearTimeout)
         setLoadingSteps((prev) => prev.map((step) => ({ ...step, status: "complete" as const })))
       }
     }
 
-    const apiTimer = setTimeout(callMySLP, 3000) // Start API call after 3 seconds
+    callMySLP()
 
-    return () => {
-      stepTimers.forEach(clearTimeout)
-      clearTimeout(apiTimer)
+    return () => stepTimers.forEach(clearTimeout)
+  }, [iep, remediation, state, stateName, sessionId, logEvent])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isSending) return
+
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: "user",
+      content: inputValue.trim(),
+      timestamp: new Date(),
     }
-  }, [])
 
-  const handleDownloadFinal = () => {
-    logEvent("FINAL_IEP_DOWNLOADED")
-    onDownload()
+    setMessages((prev) => [...prev, userMessage])
+    setInputValue("")
+    setIsSending(true)
+    logEvent("MYSLP_QUESTION_ASKED", { questionLength: userMessage.content.length })
+
+    try {
+      // Build conversation history for context
+      const conversationHistory = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+
+      const payload = {
+        new_iep: iep,
+        state: state,
+        state_name: stateName,
+        message: userMessage.content,
+        conversationHistory,
+        sessionId,
+      }
+
+      console.log("[v0] MySLP follow-up payload:", JSON.stringify(payload).substring(0, 500))
+
+      const response = await fetch("/api/myslp-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        const assistantMessage: ChatMessage = {
+          id: `msg-${Date.now()}`,
+          role: "assistant",
+          content:
+            data.responseText ||
+            data.review?.commentary ||
+            "I received your question but couldn't generate a response.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        logEvent("MYSLP_RESPONSE_RECEIVED")
+      } else {
+        throw new Error(data.error || "Failed to get response")
+      }
+    } catch (err) {
+      console.error("[v0] MySLP follow-up error:", err)
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        role: "assistant",
+        content: "I'm sorry, I had trouble processing that question. Could you try rephrasing it?",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsSending(false)
+      inputRef.current?.focus()
+    }
   }
 
   const handleDownloadReport = () => {
     logEvent("COMPLIANCE_REPORT_DOWNLOADED")
     // Generate compliance report
-    const report = `COMPLIANCE REPORT
-==================
-
-IEP Compliance Score: ${review?.score || remediation?.original_score || "N/A"}%
-
-Clinical Review: ${review?.approved ? "APPROVED" : "NEEDS REVISION"}
-
-Commentary:
-${review?.commentary || "No additional commentary."}
-
-Compliance Checks:
-${(review?.checks || []).map((c: any) => `- ${c.name}: ${c.passed ? "PASSED" : "FAILED"}`).join("\n")}
-
+    const report = `
+CLINICAL COMPLIANCE REPORT
 Generated: ${new Date().toLocaleDateString()}
-`
+Session: ${sessionId}
+
+CLINICAL COMMENTARY:
+${review?.commentary || "No commentary available."}
+
+CONVERSATION HISTORY:
+${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
+    `.trim()
+
     const blob = new Blob([report], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = `compliance-report-${new Date().toISOString().split("T")[0]}.txt`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
-
-  const handleStartNew = () => {
-    logEvent("NEW_IEP_STARTED_FROM_CLINICAL")
-    onStartNew()
   }
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-        <div className="w-20 h-20 mb-6 relative">
-          <img src="/images/easi-iep-logo.webp" alt="EASI IEP" className="w-full h-full animate-pulse" />
+      <div className="space-y-8 animate-fade-in">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center animate-pulse">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">MySLP Clinical Review</h2>
+          <p className="text-muted-foreground">Getting a second opinion from our clinical expert...</p>
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Clinical Review in Progress</h2>
-        <p className="text-muted-foreground mb-8">MySLP is reviewing your IEP for clinical accuracy...</p>
 
-        <div className="w-full max-w-md space-y-3">
-          {loadingSteps.map((step) => (
-            <div key={step.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              {step.status === "complete" ? (
-                <CheckCircle className="w-5 h-5 text-teal-600" />
-              ) : step.status === "running" ? (
-                <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />
-              ) : (
-                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
-              )}
-              <span className={step.status === "complete" ? "text-foreground" : "text-muted-foreground"}>
-                {step.label}
-              </span>
-              {step.status === "complete" && <span className="ml-auto text-sm text-teal-600">Done</span>}
-            </div>
-          ))}
+        <Card className="border-border">
+          <CardContent className="p-6 space-y-4">
+            {loadingSteps.map((step) => (
+              <div key={step.id} className="flex items-center gap-3">
+                {step.status === "complete" ? (
+                  <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                ) : step.status === "running" ? (
+                  <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-2 border-muted" />
+                )}
+                <span className={step.status === "pending" ? "text-muted-foreground" : "text-foreground"}>
+                  {step.label}
+                </span>
+                {step.status === "complete" && <span className="ml-auto text-sm text-teal-600">Done</span>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground">Review Unavailable</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Button onClick={onDownload} className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+            <Download className="w-4 h-4 mr-2" />
+            Download IEP Anyway
+          </Button>
+          <Button onClick={onBack} variant="outline" className="w-full bg-transparent">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Review
+          </Button>
         </div>
       </div>
     )
   }
 
-  // Results state
-  const score = review?.score || remediation?.original_score || 85
-  const isApproved = review?.approved !== false
-
+  // Main chat interface
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Success header */}
-      <div className="text-center py-8">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-teal-100 flex items-center justify-center">
-          <CheckCircle className="w-10 h-10 text-teal-600" />
+      {/* Header with score */}
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          {isApproved ? "Clinical Review Complete!" : "Review Complete - Needs Attention"}
-        </h2>
-        <p className="text-muted-foreground">
-          {review?.commentary || "Your IEP has been reviewed and is ready for finalization."}
-        </p>
-      </div>
+        <h2 className="text-2xl font-semibold text-foreground">Clinical Review Complete</h2>
 
-      {/* Score display */}
-      <div className="flex justify-center">
-        <div className="relative w-32 h-32">
-          <svg className="w-full h-full transform -rotate-90">
-            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none" className="text-muted" />
-            <circle
-              cx="64"
-              cy="64"
-              r="56"
-              stroke="currentColor"
-              strokeWidth="8"
-              fill="none"
-              strokeDasharray={`${(score / 100) * 352} 352`}
-              className="text-teal-600"
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-foreground">{score}%</span>
-            <span className="text-xs text-muted-foreground">Compliance</span>
+        {/* Score ring */}
+        <div className="flex justify-center">
+          <div className="relative w-24 h-24">
+            <svg className="w-24 h-24 transform -rotate-90">
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="none"
+                className="text-muted/20"
+              />
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="none"
+                strokeDasharray={`${(review?.score || 75) * 2.51} 251`}
+                className="text-teal-600"
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-foreground">{review?.score || 75}%</span>
+              <span className="text-xs text-muted-foreground">Clinical</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Clinical checks */}
-      {review?.checks && review.checks.length > 0 && (
-        <div className="bg-muted/30 rounded-lg p-4">
-          <h3 className="font-semibold mb-3">Clinical Review Checks</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {review.checks.map((check: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-2">
-                {check.passed ? (
-                  <CheckCircle className="w-4 h-4 text-teal-600" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-500" />
-                )}
-                <span className="text-sm">{check.name}</span>
-              </div>
-            ))}
-          </div>
+      {/* Compliance checks */}
+      {review?.complianceChecks && (
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(review.complianceChecks).map(([key, check]: [string, any]) => (
+            <div
+              key={key}
+              className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                check.passed ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {check.passed ? (
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              )}
+              <span className="truncate">
+                {key === "fape" ? "FAPE" : key === "lre" ? "LRE" : key === "measurableGoals" ? "Measurable" : "Aligned"}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
+      {/* Chat interface */}
+      <Card className="border-border">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Chat with MySLP
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {/* Messages container */}
+          <div className="h-64 overflow-y-auto p-4 space-y-4 border-t border-b border-border">
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
+                    message.role === "user" ? "bg-teal-600 text-white" : "bg-muted text-foreground"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <span className="text-xs opacity-70 mt-1 block">
+                    {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {isSending && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-lg px-4 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input area */}
+          <div className="p-4 flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about the IEP... (e.g., 'Explain the math goal')"
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-background text-foreground"
+              disabled={isSending}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isSending}
+              size="icon"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Action buttons */}
-      <div className="flex flex-col gap-3 pt-4">
-        <Button onClick={handleDownloadFinal} className="w-full bg-teal-600 hover:bg-teal-700">
+      <div className="space-y-3">
+        <Button onClick={onDownload} className="w-full bg-teal-600 hover:bg-teal-700 text-white">
           <Download className="w-4 h-4 mr-2" />
           Download Final IEP
         </Button>
@@ -1300,7 +1506,7 @@ Generated: ${new Date().toLocaleDateString()}
           <FileText className="w-4 h-4 mr-2" />
           Download Compliance Report
         </Button>
-        <Button onClick={handleStartNew} variant="ghost" className="w-full">
+        <Button onClick={onStartNew} variant="ghost" className="w-full">
           Start Another IEP
         </Button>
         <Button onClick={onBack} variant="ghost" className="w-full text-muted-foreground">
@@ -1345,6 +1551,7 @@ export function IEPWizard() {
 
   const handleRemoveFile = (id: string) => {
     setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id))
+    logEvent("FILE_REMOVED", { fileId: id })
   }
 
   const handleStartBuilding = async () => {
@@ -1474,6 +1681,7 @@ export function IEPWizard() {
 
   const handleRetryBuild = () => {
     setBuildError(null)
+    logEvent("BUILD_RETRY_REQUESTED")
     handleStartBuilding()
   }
 
@@ -1623,18 +1831,18 @@ export function IEPWizard() {
         />
       )}
 
-      {currentStep === "myslp" &&
-        extractedIEP &&
-        remediation && ( // Added remediation condition
-          <ClinicalReviewStep
-            iep={extractedIEP}
-            remediation={remediation}
-            onBack={handleBack} // Use handleBack to go to review
-            onDownload={handleDownloadFinalIEP} // Use the correct download handler
-            onStartNew={handleStartNewIEP} // Use the correct reset handler
-            logEvent={logEvent}
-          />
-        )}
+      {currentStep === "myslp" && (
+        <ClinicalReviewStep
+          iep={extractedIEP}
+          remediation={remediation}
+          state={selectedState}
+          stateName={US_STATES.find((s) => s.code === selectedState)?.name || selectedState}
+          onBack={handleBack}
+          onDownload={handleDownloadFinalIEP}
+          onStartNew={handleStartNewIEP}
+          logEvent={logEvent}
+        />
+      )}
     </div>
   )
 }
