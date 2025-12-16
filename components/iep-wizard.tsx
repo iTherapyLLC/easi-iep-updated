@@ -19,11 +19,20 @@ import {
   AlertCircle,
   Check,
   Download,
-  MessageSquare,
   Send,
+  ChevronUp,
+  BarChart3,
+  Target,
+  Users,
+  Shield,
+  Award,
+  Clock,
+  Star,
+  GraduationCap,
+  ClipboardCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" // Added for chat interface
+import { Card, CardContent } from "@/components/ui/card" // Added for chat interface
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 
@@ -693,10 +702,12 @@ function ReviewStep({
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
   iepDate: string // Added iepDate type
 }) {
-  const [showCelebration, setShowCelebration] = useState(true)
+  const [showCelebration, setShowCelebration] = useState(false) // Set to false to avoid initial celebration
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("overview") // Changed default to overview
   const [showVerified, setShowVerified] = useState(false)
+
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Added
 
   useEffect(() => {
     logEvent("REVIEW_OPENED", { score: remediation?.score })
@@ -724,13 +735,17 @@ function ReviewStep({
   const accommodations = iep?.accommodations || []
   const checksPassed = remediation?.checks_passed || []
   const checksFailed = remediation?.checks_failed || []
+  const passedCount = remediation?.passed_count ?? checksPassed.length // Added
+  const totalChecks = remediation?.total_checks ?? checksPassed.length + checksFailed.length // Added
 
   if (showCelebration) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
-        <div className="text-center animate-fade-in">
-          <div className="text-6xl mb-4">🎉</div>
-          <h2 className="text-3xl font-bold text-teal-700 mb-2">Your NEW IEP is Ready!</h2>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="text-center animate-celebration">
+          <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-xl">
+            <Award className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-blue-700 mb-2">Your NEW IEP is Ready!</h2>
           <p className="text-gray-600">{complianceScore}% compliance on first draft</p>
         </div>
       </div>
@@ -741,65 +756,99 @@ function ReviewStep({
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header with score */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 hover-title">Review Your New IEP</h1>
-        <p className="text-gray-600">We generated a compliant IEP based on the previous one and your notes</p>
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
+          <ClipboardCheck className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-3xl font-bold text-foreground mb-2 hover-title">Review Your New IEP</h1>
+        <p className="text-muted-foreground">We generated a compliant IEP based on the previous one and your notes</p>
       </div>
 
-      {/* Score badge */}
-      <div className="bg-gradient-to-r from-teal-500 to-blue-500 rounded-2xl p-6 mb-6 text-white text-center">
+      {/* Score badge - updated to blue gradient */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 mb-6 text-white text-center">
         <div className="text-5xl font-bold mb-2">{complianceScore}%</div>
-        <div className="text-teal-100">Compliance Score</div>
-        <div className="mt-2 text-sm opacity-80">Estimated {timeSavedMinutes} minutes saved</div>
+        <div className="text-blue-100 font-medium">{stateName} Compliant</div>
+        <div className="text-sm text-blue-200 mt-1">Validated against {stateName} regulations and federal IDEA</div>
+        <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1">
+          <Clock className="w-4 h-4" />
+          <span className="text-sm">Estimated {timeSavedMinutes} minutes saved</span>
+        </div>
       </div>
 
       {/* What we verified section */}
-      <div className="mb-6">
+      <div className="bg-card rounded-xl border border-border mb-6 overflow-hidden">
         <button
           onClick={() => setShowVerified(!showVerified)}
-          className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
         >
-          <span className="font-medium text-gray-700">
-            What we verified ({remediation?.passed_count || checksPassed.length}/
-            {remediation?.total_checks || checksPassed.length + checksFailed.length} checks passed)
-          </span>
-          <ChevronDown className={`w-5 h-5 transition-transform ${showVerified ? "rotate-180" : ""}`} />
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-blue-600" />
+            <span className="font-medium text-foreground">
+              What we verified ({passedCount}/{totalChecks} checks passed)
+            </span>
+          </div>
+          {showVerified ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
         </button>
+
         {showVerified && (
-          <div className="mt-2 p-4 bg-gray-50 rounded-lg space-y-2">
-            {checksPassed.map((check, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-green-700">
-                <Check className="w-4 h-4" />
-                <span className="text-sm">{check.name}</span>
-              </div>
-            ))}
-            {checksFailed.map((check, idx) => (
-              <button
-                key={idx}
-                onClick={() => setActiveTab("compliance")}
-                className="flex items-center gap-2 text-amber-700 hover:text-amber-800 text-left"
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span className="text-sm underline">{check.name}</span>
-              </button>
-            ))}
+          <div className="px-4 pb-4 space-y-2 border-t border-border pt-4">
+            {/* Passed checks */}
+            {checksPassed.map(
+              (
+                check: any,
+                i: number, // Changed type to any for simplicity based on provided code
+              ) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg p-2">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{check.name}</span>
+                </div>
+              ),
+            )}
+            {/* Failed checks */}
+            {checksFailed.map(
+              (
+                check: any,
+                i: number, // Changed type to any for simplicity based on provided code
+              ) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setActiveTab("compliance")
+                  }}
+                  className="w-full flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-2 hover:bg-amber-100 transition-colors text-left"
+                >
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{check.name}</span>
+                  <ArrowRight className="w-3 h-3 ml-auto" />
+                </button>
+              ),
+            )}
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
-        {["overview", "goals", "services", "compliance"].map((tab) => (
+      {/* Tabs - updated to blue */}
+      <div className="flex border-b border-border mb-6">
+        {[
+          { id: "overview", label: "Overview", icon: BarChart3 },
+          { id: "goals", label: "Goals", icon: Target },
+          { id: "services", label: "Services", icon: Users },
+          { id: "compliance", label: "Compliance", icon: Shield },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => {
-              setActiveTab(tab)
-              logEvent("TAB_CHANGED", { tab })
-            }}
-            className={`px-4 py-2 font-medium capitalize transition-colors ${
-              activeTab === tab ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500 hover:text-gray-700"
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)} // Removed 'as any'
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab}
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
           </button>
         ))}
       </div>
@@ -808,41 +857,41 @@ function ReviewStep({
       <div className="mb-8">
         {activeTab === "overview" && (
           <div className="space-y-4">
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Student Information</h3>
+            <div className="bg-card border rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Student Information</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-gray-500">Name:</span>{" "}
-                  <span className="font-medium">{iep?.student?.name || "Not specified"}</span>
+                  <span className="text-muted-foreground">Name:</span>{" "}
+                  <span className="font-medium text-foreground">{iep?.student?.name || "Not specified"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Grade:</span>{" "}
-                  <span className="font-medium">{iep?.student?.grade || "Not specified"}</span>
+                  <span className="text-muted-foreground">Grade:</span>{" "}
+                  <span className="font-medium text-foreground">{iep?.student?.grade || "Not specified"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">School:</span>{" "}
-                  <span className="font-medium">{iep?.student?.school || "Not specified"}</span>
+                  <span className="text-muted-foreground">School:</span>{" "}
+                  <span className="font-medium text-foreground">{iep?.student?.school || "Not specified"}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">District:</span>{" "}
-                  <span className="font-medium">{iep?.student?.district || "Not specified"}</span>
+                  <span className="text-muted-foreground">District:</span>{" "}
+                  <span className="font-medium text-foreground">{iep?.student?.district || "Not specified"}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Eligibility</h3>
+            <div className="bg-card border rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Eligibility</h3>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-gray-500">Primary Disability:</span>{" "}
-                  <span className="font-medium">
+                  <span className="text-muted-foreground">Primary Disability:</span>{" "}
+                  <span className="font-medium text-foreground">
                     {iep?.eligibility?.primary_disability || iep?.eligibility?.primaryDisability || "Not specified"}
                   </span>
                 </div>
                 {(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability) && (
                   <div>
-                    <span className="text-gray-500">Secondary Disability:</span>{" "}
-                    <span className="font-medium">
+                    <span className="text-muted-foreground">Secondary Disability:</span>{" "}
+                    <span className="font-medium text-foreground">
                       {iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability}
                     </span>
                   </div>
@@ -850,31 +899,31 @@ function ReviewStep({
               </div>
             </div>
 
-            <div className="bg-white border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Present Levels (PLAAFP)</h3>
+            <div className="bg-card border rounded-lg p-4">
+              <h3 className="font-semibold text-foreground mb-3">Present Levels (PLAAFP)</h3>
               <div className="space-y-3 text-sm">
                 {iep?.plaafp?.strengths && (
                   <div>
-                    <span className="text-gray-500 block">Strengths:</span>
-                    <p className="text-gray-900">{iep.plaafp.strengths}</p>
+                    <span className="text-muted-foreground block">Strengths:</span>
+                    <p className="text-foreground">{iep.plaafp.strengths}</p>
                   </div>
                 )}
                 {iep?.plaafp?.concerns && (
                   <div>
-                    <span className="text-gray-500 block">Concerns:</span>
-                    <p className="text-gray-900">{iep.plaafp.concerns}</p>
+                    <span className="text-muted-foreground block">Concerns:</span>
+                    <p className="text-foreground">{iep.plaafp.concerns}</p>
                   </div>
                 )}
                 {iep?.plaafp?.academic && (
                   <div>
-                    <span className="text-gray-500 block">Academic:</span>
-                    <p className="text-gray-900">{iep.plaafp.academic}</p>
+                    <span className="text-muted-foreground block">Academic:</span>
+                    <p className="text-foreground">{iep.plaafp.academic}</p>
                   </div>
                 )}
                 {iep?.plaafp?.functional && (
                   <div>
-                    <span className="text-gray-500 block">Functional:</span>
-                    <p className="text-gray-900">{iep.plaafp.functional}</p>
+                    <span className="text-muted-foreground block">Functional:</span>
+                    <p className="text-foreground">{iep.plaafp.functional}</p>
                   </div>
                 )}
               </div>
@@ -885,12 +934,12 @@ function ReviewStep({
         {activeTab === "goals" && (
           <div className="space-y-4">
             {goals.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No goals found in the IEP</p>
+              <p className="text-muted-foreground text-center py-8">No goals found in the IEP</p>
             ) : (
               goals.map((goal, idx) => (
-                <div key={goal.id || idx} className="bg-white border rounded-lg p-4">
+                <div key={goal.id || idx} className="bg-card border rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <span className="text-xs font-medium px-2 py-1 bg-teal-100 text-teal-700 rounded">
+                    <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">
                       {goal.area || goal.goal_area || `Goal ${idx + 1}`}
                     </span>
                     {goal.zpd_score !== undefined && (
@@ -907,15 +956,17 @@ function ReviewStep({
                       </span>
                     )}
                   </div>
-                  <p className="text-gray-900 mb-3">
+                  <p className="text-foreground mb-3">
                     {goal.goal_text || goal.description || goal.text || "No goal text"}
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-gray-500">Baseline:</span> <span>{goal.baseline || "Not specified"}</span>
+                      <span className="text-muted-foreground">Baseline:</span>{" "}
+                      <span>{goal.baseline || "Not specified"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Target:</span> <span>{goal.target || "Not specified"}</span>
+                      <span className="text-muted-foreground">Target:</span>{" "}
+                      <span>{goal.target || "Not specified"}</span>
                     </div>
                   </div>
                   {goal.clinical_notes && (
@@ -930,28 +981,28 @@ function ReviewStep({
         {activeTab === "services" && (
           <div className="space-y-4">
             {services.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No services found in the IEP</p>
+              <p className="text-muted-foreground text-center py-8">No services found in the IEP</p>
             ) : (
               services.map((service, idx) => (
-                <div key={idx} className="bg-white border rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">
+                <div key={idx} className="bg-card border rounded-lg p-4">
+                  <h4 className="font-semibold text-foreground mb-2">
                     {service.type || service.service_type || service.name || `Service ${idx + 1}`}
                   </h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-gray-500">Frequency:</span>{" "}
+                      <span className="text-muted-foreground">Frequency:</span>{" "}
                       <span>{service.frequency || "Not specified"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Duration:</span>{" "}
+                      <span className="text-muted-foreground">Duration:</span>{" "}
                       <span>{service.duration || service.minutes_per_week || "Not specified"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Provider:</span>{" "}
+                      <span className="text-muted-foreground">Provider:</span>{" "}
                       <span>{service.provider || "Not specified"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Setting:</span>{" "}
+                      <span className="text-muted-foreground">Setting:</span>{" "}
                       <span>{service.setting || service.location || "Not specified"}</span>
                     </div>
                   </div>
@@ -960,16 +1011,16 @@ function ReviewStep({
             )}
 
             {accommodations.length > 0 && (
-              <div className="bg-white border rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-3">Accommodations ({accommodations.length})</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+              <div className="bg-card border rounded-lg p-4">
+                <h4 className="font-semibold text-foreground mb-3">Accommodations ({accommodations.length})</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   {accommodations.slice(0, 10).map((acc, idx) => (
                     <li key={idx}>
                       {typeof acc === "string" ? acc : acc.description || acc.name || acc.text || "Accommodation"}
                     </li>
                   ))}
                   {accommodations.length > 10 && (
-                    <li className="text-gray-500">...and {accommodations.length - 10} more</li>
+                    <li className="text-muted-foreground">...and {accommodations.length - 10} more</li>
                   )}
                 </ul>
               </div>
@@ -987,7 +1038,7 @@ function ReviewStep({
             ) : (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-600">{unfixedIssues.length} items need attention</span>
+                  <span className="text-muted-foreground">{unfixedIssues.length} items need attention</span>
                   <Button onClick={onApplyAll} disabled={isFixing} size="sm" variant="outline">
                     {isFixing ? "Fixing..." : "Fix All"}
                   </Button>
@@ -1004,18 +1055,18 @@ function ReviewStep({
                           <AlertCircle className="w-4 h-4 text-amber-600" />
                           <span className="font-medium text-amber-800">Quick Question</span>
                         </div>
-                        <p className="text-gray-900 mb-2">{issue.description || issue.message}</p>
+                        <p className="text-foreground mb-2">{issue.description || issue.message}</p>
                         <button
                           onClick={() => {
                             setExpandedIssue(expandedIssue === issue.id ? null : issue.id)
                             logEvent("ISSUE_VIEWED", { issueId: issue.id })
                           }}
-                          className="text-sm text-teal-600 hover:underline"
+                          className="text-sm text-blue-600 hover:underline"
                         >
                           {expandedIssue === issue.id ? "Hide details" : "Why this matters"}
                         </button>
                         {expandedIssue === issue.id && (
-                          <div className="mt-2 text-sm text-gray-600 bg-white p-2 rounded">
+                          <div className="mt-2 text-sm text-muted-foreground bg-card p-2 rounded">
                             {issue.citation || issue.legal_citation || "IDEA compliance requirement"}
                           </div>
                         )}
@@ -1024,7 +1075,7 @@ function ReviewStep({
                         onClick={() => onApplyFix(issue)}
                         disabled={isFixing}
                         size="sm"
-                        className="bg-teal-600 hover:bg-teal-700"
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         Fix it for me
                       </Button>
@@ -1037,24 +1088,30 @@ function ReviewStep({
         )}
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-4">
-        <Button onClick={onBack} variant="outline" className="flex-1 bg-transparent">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+      {/* Action buttons - updated to blue */}
+      <div className="flex gap-3 mt-8">
+        <button
+          onClick={onBack}
+          className="flex-1 py-4 rounded-xl font-semibold border border-border hover:bg-muted transition-colors flex items-center justify-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
           Back
-        </Button>
-        <Button onClick={onDownload} variant="outline" className="flex-1 bg-transparent">
-          <Download className="w-4 h-4 mr-2" />
+        </button>
+        <button
+          onClick={onDownload}
+          className="flex-1 py-4 rounded-xl font-semibold border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+        >
+          <Download className="w-5 h-5" />
           Download Draft
-        </Button>
-        <Button onClick={onFinish} disabled={hasCriticalIssues} className="flex-1 bg-teal-600 hover:bg-teal-700">
-          Looks Good — Continue
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Button>
+        </button>
+        <button
+          onClick={() => onFinish()}
+          className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+        >
+          Looks Good
+          <ArrowRight className="w-5 h-5" />
+        </button>
       </div>
-      {hasCriticalIssues && (
-        <p className="text-center text-sm text-amber-600 mt-2">Please resolve critical issues before continuing</p>
-      )}
     </div>
   )
 }
@@ -1092,6 +1149,7 @@ function ClinicalReviewStep({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Update colors from teal to blue
   const [loadingSteps, setLoadingSteps] = useState([
     { id: "goals", label: "Checking goal appropriateness", status: "running" as const },
     { id: "services", label: "Verifying service alignment", status: "pending" as const },
@@ -1316,7 +1374,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
     return (
       <div className="space-y-8 animate-fade-in">
         <div className="text-center space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center animate-pulse">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
             <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
           <h2 className="text-2xl font-semibold text-foreground">MySLP Clinical Review</h2>
@@ -1328,16 +1386,16 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
             {loadingSteps.map((step) => (
               <div key={step.id} className="flex items-center gap-3">
                 {step.status === "complete" ? (
-                  <CheckCircle2 className="w-5 h-5 text-teal-600" />
+                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
                 ) : step.status === "running" ? (
-                  <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
                 ) : (
                   <div className="w-5 h-5 rounded-full border-2 border-muted" />
                 )}
                 <span className={step.status === "pending" ? "text-muted-foreground" : "text-foreground"}>
                   {step.label}
                 </span>
-                {step.status === "complete" && <span className="ml-auto text-sm text-teal-600">Done</span>}
+                {step.status === "complete" && <span className="ml-auto text-sm text-blue-600">Done</span>}
               </div>
             ))}
           </CardContent>
@@ -1358,7 +1416,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
           <p className="text-muted-foreground">{error}</p>
         </div>
         <div className="flex flex-col gap-3">
-          <Button onClick={onDownload} className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+          <Button onClick={onDownload} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
             <Download className="w-4 h-4 mr-2" />
             Download IEP Anyway
           </Button>
@@ -1376,39 +1434,31 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
     <div className="space-y-6 animate-fade-in">
       {/* Header with score */}
       <div className="text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-white" />
+        <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
+          <GraduationCap className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-semibold text-foreground">Clinical Review Complete</h2>
 
         {/* Score ring */}
         <div className="flex justify-center">
-          <div className="relative w-24 h-24">
-            <svg className="w-24 h-24 transform -rotate-90">
+          <div className="relative w-32 h-32">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none" className="text-muted" />
               <circle
-                cx="48"
-                cy="48"
-                r="40"
+                cx="64"
+                cy="64"
+                r="56"
                 stroke="currentColor"
                 strokeWidth="8"
                 fill="none"
-                className="text-muted/20"
-              />
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={`${(review?.score || 75) * 2.51} 251`}
-                className="text-teal-600"
+                strokeDasharray={`${(review?.score / 100) * 352} 352`}
+                className="text-blue-600"
                 strokeLinecap="round"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-foreground">{review?.score || 75}%</span>
-              <span className="text-xs text-muted-foreground">Clinical</span>
+              <span className="text-3xl font-bold text-foreground">{review?.score || 75}%</span>
+              <span className="text-xs text-muted-foreground">Compliance</span>
             </div>
           </div>
         </div>
@@ -1417,34 +1467,38 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
       {/* Compliance checks */}
       {review?.complianceChecks && (
         <div className="grid grid-cols-2 gap-2">
-          {Object.entries(review.complianceChecks).map(([key, check]: [string, any]) => (
-            <div
-              key={key}
-              className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
-                check.passed ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"
-              }`}
-            >
-              {check.passed ? (
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              )}
-              <span className="truncate">
-                {key === "fape" ? "FAPE" : key === "lre" ? "LRE" : key === "measurableGoals" ? "Measurable" : "Aligned"}
-              </span>
-            </div>
-          ))}
+          {Object.entries(review.complianceChecks).map(
+            (
+              [key, check]: [string, any], // Changed type to any for simplicity based on provided code
+            ) => (
+              <div
+                key={key}
+                className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
+                  check.passed ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
+                }`}
+              >
+                {check.passed ? (
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                )}
+                <span className="truncate">
+                  {key === "fape"
+                    ? "FAPE"
+                    : key === "lre"
+                      ? "LRE"
+                      : key === "measurableGoals"
+                        ? "Measurable"
+                        : "Aligned"}
+                </span>
+              </div>
+            ),
+          )}
         </div>
       )}
 
       {/* Chat interface */}
-      <Card className="border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Chat with MySLP
-          </CardTitle>
-        </CardHeader>
+      <Card>
         <CardContent className="p-0">
           {/* Messages container */}
           <div className="h-64 overflow-y-auto p-4 space-y-4 border-t border-b border-border">
@@ -1452,7 +1506,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                    message.role === "user" ? "bg-teal-600 text-white" : "bg-muted text-foreground"
+                    message.role === "user" ? "bg-blue-600 text-white" : "bg-muted text-foreground"
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -1481,14 +1535,14 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about the IEP... (e.g., 'Explain the math goal')"
-              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 bg-background text-foreground"
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-background text-foreground"
               disabled={isSending}
             />
             <Button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isSending}
               size="icon"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -1496,9 +1550,9 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
         </CardContent>
       </Card>
 
-      {/* Action buttons */}
+      {/* Action buttons - updated to blue */}
       <div className="space-y-3">
-        <Button onClick={onDownload} className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+        <Button onClick={onDownload} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
           <Download className="w-4 h-4 mr-2" />
           Download Final IEP
         </Button>
@@ -1507,6 +1561,7 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
           Download Compliance Report
         </Button>
         <Button onClick={onStartNew} variant="ghost" className="w-full">
+          <Star className="w-4 h-4 mr-2" />
           Start Another IEP
         </Button>
         <Button onClick={onBack} variant="ghost" className="w-full text-muted-foreground">
@@ -1526,7 +1581,7 @@ export function IEPWizard() {
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [studentUpdate, setStudentUpdate] = useState("")
-  const [selectedState, setSelectedState] = useState("")
+  const [selectedState, setSelectedState] = useState("CA") // Default to CA
   const [iepDate, setIEPDate] = useState("")
   const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
   const [remediation, setRemediation] = useState<RemediationData | null>(null)
@@ -1605,7 +1660,7 @@ export function IEPWizard() {
         throw new Error(data.error || "Failed to extract IEP")
       }
 
-      // Update tasks progressively
+      // Update remaining tasks
       setBuildTasks((tasks) => tasks.map((t) => (t.id === "1" ? { ...t, status: "complete" as const } : t)))
       setBuildTasks((tasks) => tasks.map((t) => (t.id === "2" ? { ...t, status: "running" as const } : t)))
 
@@ -1760,7 +1815,7 @@ export function IEPWizard() {
     // Logic to reset and start a new IEP
     setFiles([])
     setStudentUpdate("")
-    setSelectedState("")
+    setSelectedState("CA") // Reset to default state
     setIEPDate("")
     setExtractedIEP(null)
     setRemediation(null)
