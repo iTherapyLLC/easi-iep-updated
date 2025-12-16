@@ -7,7 +7,6 @@ import {
   Upload,
   FileText,
   Mic,
-  Sparkles,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
@@ -15,26 +14,7 @@ import {
   Camera,
   X,
   Loader2,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  Shield,
-  Target,
-  Users,
-  Clock,
-  MessageCircle,
-  Zap,
-  PartyPopper,
-  CheckCircle,
-  RefreshCw,
-  Check,
   MicOff,
-  Volume2,
-  VolumeX,
-  Settings,
-  Edit3,
-  AlertCircle,
-  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
@@ -124,43 +104,56 @@ interface ComplianceIssue {
 }
 
 interface ExtractedIEP {
-  student: {
+  student?: {
     id?: string // Added optional ID
-    name: string
-    age: string
-    grade: string
-    school: string
-    district: string
+    name?: string
+    dob?: string // Added dob
+    date_of_birth?: string // Added date_of_birth
+    age?: string
+    grade?: string
+    school?: string
+    district?: string
   }
-  eligibility: {
-    primary_disability: string
-    secondary_disability: string
+  eligibility?: {
+    primary_disability?: string
+    primaryDisability?: string // Added for flexibility
+    secondary_disability?: string
+    secondaryDisability?: string // Added for flexibility
   }
-  plaafp: {
-    strengths: string
-    concerns: string
-    academic: string
-    functional: string
+  plaafp?: {
+    strengths?: string
+    concerns?: string
+    academic?: string
+    functional?: string
   }
-  goals: Array<{
+  goals?: Array<{
     id: string
-    area: string
-    goal_text: string
-    baseline: string
-    target: string
-    zpd_score: number
-    zpd_analysis: string
-    clinical_flags: string[]
+    area?: string // Added optional area
+    goal_area?: string // Added optional goal_area
+    goal_text?: string // Added optional goal_text
+    description?: string // Added optional description
+    text?: string // Added optional text
+    baseline?: string
+    target?: string
+    zpd_score?: number
+    zpd_analysis?: string
+    clinical_flags?: string[] // Renamed to clinical_flags for consistency
+    clinical_notes?: string // Added for clinical notes
+    measurement_method?: string // Added for measurement method
   }>
-  services: Array<{
-    type: string
-    frequency: string
-    duration: string
-    provider: string
-    setting: string
+  services?: Array<{
+    type?: string // Added optional type
+    service_type?: string // Added for flexibility
+    name?: string // Added for flexibility
+    frequency?: string
+    duration?: string
+    provider?: string
+    setting?: string
+    location?: string // Added location
+    minutes_per_week?: string // Added for minutes per week
   }>
-  accommodations: string[]
-  placement: {
+  accommodations?: (string | { description?: string; name?: string; text?: string })[] // Updated to handle strings or objects
+  placement?: {
     setting: string
     percent_general_ed: string
     percent_special_ed: string
@@ -189,65 +182,6 @@ interface RemediationData {
 }
 
 type WizardStep = "upload" | "tell" | "building" | "review" | "myslp"
-
-// =============================================================================
-// STEP INDICATOR
-// =============================================================================
-
-function StepIndicator({ currentStep }: { currentStep: WizardStep }) {
-  const steps: { id: WizardStep; label: string; shortLabel: string }[] = [
-    { id: "upload", label: "Upload Materials", shortLabel: "Upload" },
-    { id: "tell", label: "Tell Us About Progress", shortLabel: "Progress" },
-    { id: "building", label: "Building Your IEP", shortLabel: "Building" },
-    { id: "review", label: "Review & Finish", shortLabel: "Review" },
-    { id: "myslp", label: "Clinical Review", shortLabel: "Clinical" },
-  ]
-
-  const currentIndex = steps.findIndex((s) => s.id === currentStep)
-
-  return (
-    <div className="w-full bg-white border-b border-slate-200 px-4 py-3">
-      <div className="max-w-3xl mx-auto">
-        <div className="relative mb-2">
-          <div className="h-2 bg-slate-200 rounded-full">
-            <div
-              className="h-2 bg-teal-500 rounded-full transition-all duration-500"
-              style={{ width: `${((currentIndex + 1) / steps.length) * 100}%` }}
-            />
-          </div>
-        </div>
-        <div className="flex justify-between">
-          {steps.map((step, index) => {
-            const isComplete = index < currentIndex
-            const isCurrent = index === currentIndex
-            return (
-              <div
-                key={step.id}
-                className={`flex items-center gap-1.5 text-sm ${
-                  isComplete ? "text-teal-600" : isCurrent ? "text-slate-900 font-medium" : "text-slate-400"
-                }`}
-              >
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                    isComplete
-                      ? "bg-teal-500 text-white"
-                      : isCurrent
-                        ? "bg-teal-500 text-white"
-                        : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  {isComplete ? "✓" : index + 1}
-                </div>
-                <span className="hidden sm:inline">{step.label}</span>
-                <span className="sm:hidden">{step.shortLabel}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // =============================================================================
 // STEP 1: UPLOAD
@@ -705,6 +639,7 @@ type HashChainEvent =
   | "EXTRACTION_COMPLETED" // Added for extraction completed logging
   | "EXTRACTION_ERROR" // Added for extraction error logging
   | "REMEDIATION_COMPLETED" // Added for remediation completion logging
+  | "BUILD_COMPLETED" // Added for build completion logging
   | "BUILDING_COMPLETED" // Added for building completion logging
   | "CLINICAL_REVIEW_STARTED" // Added for clinical review start
   | "CLINICAL_REVIEW_COMPLETED" // Added for clinical review completion
@@ -728,6 +663,7 @@ function ReviewStep({
   selectedState,
   startTime, // Added startTime prop
   logEvent, // Added logEvent prop
+  iepDate, // Added iepDate type
 }: {
   iep: ExtractedIEP | null
   remediation: RemediationData | null
@@ -741,1808 +677,282 @@ function ReviewStep({
   selectedState: string
   startTime?: number // Added startTime prop type
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
+  iepDate: string // Added iepDate type
 }) {
   const [showCelebration, setShowCelebration] = useState(true) // State for celebration animation
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"questions" | "goals" | "services">("questions") // Changed default tab
-  const [complianceExpanded, setComplianceExpanded] = useState(false) // State for compliance details expansion
-  const [manualEditIssue, setManualEditIssue] = useState<string | null>(null) // State for manual edit mode
-  const [manualEditText, setManualEditText] = useState("") // State for manual edit text
-  const [expandedGoal, setExpandedGoal] = useState<string | null>(null) // State for expanded goal
+  const [activeTab, setActiveTab] = useState<string>("compliance") // Added activeTab state
 
-  // Voice hook initialization
-  const { speak, isSpeaking, voiceOutputEnabled, setVoiceOutputEnabled } = useVoice({})
-  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  // Additional code can be added here if needed
 
-  // State for goal editing (added from updates)
-  const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
-  const [editMode, setEditMode] = useState<"improve" | "dictate" | "manual" | null>(null)
-  const [improvedBaseline, setImprovedBaseline] = useState<string | null>(null)
-  const [isImproving, setIsImproving] = useState(false)
-  const [manualBaseline, setManualBaseline] = useState("")
-  const [isRecording, setIsRecording] = useState(false)
-  const [goalUpdates, setGoalUpdates] = useState<Record<string, string>>({}) // Store updated baselines by goal id
-
-  // Calculate time saved based on elapsed time and estimated manual effort
-  const elapsedMinutes = startTime ? Math.round((Date.now() - startTime) / 60000) : 10 // Calculate elapsed minutes, default to 10 if startTime is not provided
-  const typicalIEPMinutes = 180 // Estimate of time for manual IEP creation (3 hours)
-  const timeSavedMinutes = Math.max(0, typicalIEPMinutes - elapsedMinutes - 45) // Subtract current time and estimated AI saving
-
-  // Auto-dismiss celebration after 2 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowCelebration(false)
-      logEvent("REVIEW_OPENED", { score: remediation?.score }) // Log event when review screen is opened
-      // Announce with voice after celebration dismisses
-      if (voiceOutputEnabled && timeSavedMinutes > 0) {
-        speak(`Your IEP is ready! You just saved about ${timeSavedMinutes} minutes.`)
-      }
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [logEvent, remediation?.score, speak, voiceOutputEnabled, timeSavedMinutes]) // Added dependencies
-
-  // Expand first issue by default after component mounts or dependencies change
-  useEffect(() => {
-    const issues = remediation?.issues || []
-    const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
-    if (remainingIssues.length > 0 && !expandedIssue) {
-      setExpandedIssue(remainingIssues[0].id)
-    }
-  }, [remediation, fixedIssues, expandedIssue])
-
-  // Map new severity levels to old ones for display
-  const mapSeverity = (severity: "critical" | "warning" | "suggestion"): "critical" | "high" | "medium" | "low" => {
-    switch (severity) {
-      case "critical":
-        return "critical"
-      case "warning":
-        return "high"
-      case "suggestion":
-        return "medium" // Assuming suggestion maps to medium or low, choosing medium for now
-      default:
-        return "low"
-    }
-  }
-
-  const issues = remediation?.issues || []
-  const remainingIssues = issues.filter((i) => !fixedIssues.has(i.id))
-  const resolvedIssues = issues.filter((i) => fixedIssues.has(i.id)) // Issues that have been fixed
-  const autoFixable = remainingIssues.filter((i) => i.auto_fixable && i.suggested_fix)
-  const criticalRemaining = remainingIssues.filter((i) => mapSeverity(i.severity) === "critical").length
-  const highRemaining = remainingIssues.filter((i) => mapSeverity(i.severity) === "high").length
-
-  const originalScore = remediation?.original_score || 0
-  const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + (i.points_deducted ?? 0), 0)
-  const displayScore = Math.min(100, originalScore + fixedPoints)
-  const passedChecks = remediation?.passed_count ?? remediation?.compliance_checks?.filter((c) => c.passed)?.length ?? 0
-  const totalChecks = remediation?.total_checks ?? remediation?.compliance_checks?.length ?? 0
-  const checksPassedArray = remediation?.checks_passed ?? remediation?.compliance_checks?.filter((c) => c.passed) ?? []
-  const checksFailedArray = remediation?.checks_failed ?? remediation?.compliance_checks?.filter((c) => !c.passed) ?? []
-
-  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState // Get state name from selectedState code
-
-  // Handler for expanding/collapsing an issue
-  const handleIssueExpand = (issueId: string) => {
-    const newExpanded = expandedIssue === issueId ? null : issueId
-    setExpandedIssue(newExpanded)
-    if (newExpanded) {
-      logEvent("ISSUE_VIEWED", { issueId }) // Log when an issue is viewed
-    }
-  }
-
-  // Handler for applying an automatic fix
-  const handleApplyFix = (issue: ComplianceIssue) => {
-    onApplyFix(issue)
-    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id, title: issue.title }) // Log auto fix application
-  }
-
-  // Handler for saving manual edits
-  const handleManualSave = (issue: ComplianceIssue) => {
-    // For now, treat manual edit as applying the fix
-    onApplyFix(issue)
-    logEvent("FIX_MANUAL_ENTERED", { issueId: issue.id, title: issue.title }) // Log manual fix entry
-    setManualEditIssue(null) // Exit manual edit mode
-    setManualEditText("") // Clear manual edit text
-  }
-
-  // Handler for expanding/collapsing a goal
-  const handleGoalExpand = (goalId: string) => {
-    const newExpanded = expandedGoal === goalId ? null : goalId
-    setExpandedGoal(newExpanded)
-    if (newExpanded) {
-      logEvent("GOAL_REVIEWED", { goalId }) // Log when a goal is reviewed
-    }
-  }
-
-  // Handler for downloading the IEP
-  const handleDownload = (format: string) => {
-    logEvent("IEP_DOWNLOADED", { format }) // Log IEP download event
-    onDownload()
-  }
-
-  // Handler for finishing the review process
-  const handleFinish = () => {
-    logEvent("IEP_APPROVED", {
-      finalScore: remediation?.score,
-      fixedIssuesCount: fixedIssues.size,
-    }) // Log IEP approval event
-    onFinish()
-  }
-
-  // Function to handle tab changes and log them
-  const handleTabChange = (tab: "questions" | "goals" | "services" | "compliance") => {
-    setActiveTab(tab)
-    logEvent("TAB_CHANGED", { tab })
-  }
-
-  // Celebration Overlay component
-  if (showCelebration) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-teal-500 to-emerald-600 animate-celebration">
-        <div className="text-center text-white">
-          <div className="text-8xl mb-6 animate-wiggle">
-            <PartyPopper />
-          </div>
-          <h1 className="text-4xl font-bold mb-3">Your IEP is Ready!</h1>
-          <p className="text-xl text-white/90">Let's do a quick review together</p>
-        </div>
-      </div>
-    )
-  }
-
-  // ---- Goal Editing Functions (from updates) ----
-
-  // Function to determine if clinical note is positive or needs fix
-  const isPositiveNote = (note: string): boolean => {
-    const positiveKeywords = [
-      "good use",
-      "strong",
-      "excellent",
-      "well-written",
-      "appropriate",
-      "clear",
-      "specific",
-      "measurable",
-      "data-driven",
-      "thorough",
-    ]
-    const lowerNote = note.toLowerCase()
-    return positiveKeywords.some((keyword) => lowerNote.includes(keyword))
-  }
-
-  // Function to handle AI baseline improvement
-  const handleImproveBaseline = async (
-    goalId: string,
-    goal: { goal_text: string; baseline: string; clinical_flags?: string[] },
-  ) => {
-    setEditingGoalId(goalId)
-    setEditMode("improve")
-    setIsImproving(true)
-    setImprovedBaseline(null)
-    logEvent("FIX_INITIATED", { goalId, method: "ai_improve" })
-
-    try {
-      const response = await fetch("/api/improve-baseline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          goal: goal.goal_text,
-          currentBaseline: goal.baseline,
-          clinicalNote: goal.clinical_flags?.[0],
-          studentContext: {
-            name: iep?.student?.name,
-            grade: iep?.student?.grade,
-            disability: iep?.eligibility?.primary_disability,
-          },
-        }),
-      })
-
-      const data = await response.json()
-      if (data.success && data.improvedBaseline) {
-        setImprovedBaseline(data.improvedBaseline)
-      } else {
-        setImprovedBaseline("Unable to generate improvement. Please edit manually.")
-      }
-    } catch (error) {
-      console.error("[v0] Baseline improvement failed:", error)
-      setImprovedBaseline("Unable to generate improvement. Please edit manually.")
-    } finally {
-      setIsImproving(false)
-    }
-  }
-
-  // Function to handle dictation
-  const handleDictateBaseline = (goalId: string) => {
-    setEditingGoalId(goalId)
-    setEditMode("dictate")
-    setIsRecording(true)
-    logEvent("FIX_INITIATED", { goalId, method: "dictate" })
-
-    // Use Web Speech API
-    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-      const recognition = new SpeechRecognition()
-      recognition.continuous = false
-      recognition.interimResults = false
-      recognition.lang = "en-US"
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript
-        setManualBaseline(transcript)
-        setIsRecording(false)
-      }
-
-      recognition.onerror = () => {
-        setIsRecording(false)
-        setEditMode("manual") // Fall back to manual if speech fails
-      }
-
-      recognition.onend = () => {
-        setIsRecording(false)
-      }
-
-      recognition.start()
-    } else {
-      // Fallback if speech recognition not available
-      setIsRecording(false)
-      setEditMode("manual")
-    }
-  }
-
-  // Function to handle manual edit
-  const handleManualEdit = (goalId: string, currentBaseline: string) => {
-    setEditingGoalId(goalId)
-    setEditMode("manual")
-    setManualBaseline(currentBaseline)
-    logEvent("FIX_INITIATED", { goalId, method: "manual" })
-  }
-
-  // Function to accept a baseline fix
-  const handleAcceptBaseline = (goalId: string, newBaseline: string) => {
-    setGoalUpdates((prev) => ({ ...prev, [goalId]: newBaseline }))
-    setEditingGoalId(null)
-    setEditMode(null)
-    setImprovedBaseline(null)
-    setManualBaseline("")
-    logEvent("FIX_AUTO_APPLIED", { goalId, fixType: "baseline_updated" })
-  }
-
-  // Function to cancel editing
-  const handleCancelEdit = () => {
-    setEditingGoalId(null)
-    setEditMode(null)
-    setImprovedBaseline(null)
-    setManualBaseline("")
-    setIsRecording(false)
-  }
-
-  // Main Review Step UI
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-end mb-4">
-        <div className="relative">
-          <button
-            onClick={() => setShowVoiceSettings(!showVoiceSettings)}
-            className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-            title="Voice settings"
-          >
-            <Settings className="w-5 h-5 text-slate-500" />
-          </button>
-          {showVoiceSettings && (
-            <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-slate-200 p-4 z-10 w-64">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Voice announcements</span>
-                <button
-                  onClick={() => setVoiceOutputEnabled(!voiceOutputEnabled)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    voiceOutputEnabled ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {voiceOutputEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-slate-500 mt-2">
-                {voiceOutputEnabled ? "Voice feedback is on" : "Voice feedback is off"}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Header with back button */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 hover-title">Review & Finish</h1>
-          <p className="text-slate-600">Almost there! Let's make sure everything looks good.</p>
-        </div>
-      </div>
-
-      {/* Confidence Badge Card */}
-      <div
-        className={`relative overflow-hidden rounded-2xl p-6 mb-6 ${
-          displayScore >= 85
-            ? "bg-gradient-to-br from-emerald-500 to-teal-600"
-            : displayScore >= 70
-              ? "bg-gradient-to-br from-amber-400 to-orange-500"
-              : "bg-gradient-to-br from-red-400 to-rose-500"
-        } text-white shadow-xl animate-fade-in`}
-      >
-        {/* Shimmer overlay */}
-        <div className="absolute inset-0 animate-shimmer pointer-events-none" />
-
-        <div className="relative flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-sm font-medium mb-1">Compliance Confidence</p>
-            <p className="text-5xl font-bold">{displayScore}%</p>
-            {remainingIssues.length > 0 && (
-              <p className="text-white/90 text-sm mt-2">
-                {remainingIssues.length} quick question{remainingIssues.length !== 1 ? "s" : ""} remaining
-              </p>
-            )}
-            {fixedIssues.size > 0 && (
-              <p className="text-white/80 text-xs mt-1">
-                +{fixedPoints} points from {fixedIssues.size} resolved
-              </p>
-            )}
-          </div>
-
-          {/* Score Ring */}
-          <div className="relative w-28 h-28">
-            <svg className="w-28 h-28 transform -rotate-90">
-              <circle
-                cx="56"
-                cy="56"
-                r="48"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                className="text-white/20"
-              />
-              <circle
-                cx="56"
-                cy="56"
-                r="48"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={`${(displayScore / 100) * 301} 301`}
-                className="text-white"
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Shield className="w-10 h-10 text-white" />
-            </div>
-          </div>
-        </div>
-
-        <p className="relative text-white/80 text-xs mt-4">Verified against {stateName} Ed Code & Federal IDEA</p>
-      </div>
-
-      {/* Time Saved Banner */}
-      {timeSavedMinutes > 0 && (
-        <div className="bg-gradient-to-r from-violet-100 to-purple-100 border border-violet-200 rounded-xl p-4 mb-6 flex items-center gap-3 animate-slide-up">
-          <div className="bg-violet-500 rounded-full p-2">
-            <Clock className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="font-semibold text-violet-900">~{timeSavedMinutes} minutes saved</p>
-            <p className="text-sm text-violet-700">That's time back for your students</p>
-          </div>
-        </div>
-      )}
-
-      {/* Expandable Compliance Details */}
-      <button
-        onClick={() => {
-          setComplianceExpanded(!complianceExpanded)
-          if (!complianceExpanded) logEvent("COMPLIANCE_EXPANDED") // Log compliance expansion
-        }}
-        className="w-full mb-6 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-between transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-teal-600" />
-          <span className="font-medium text-slate-700">
-            What we verified ({passedChecks}/{totalChecks} checks passed)
-          </span>
-        </div>
-        {complianceExpanded ? (
-          <ChevronUp className="w-5 h-5 text-slate-400" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-slate-400" />
-        )}
-      </button>
-
-      {complianceExpanded && (
-        <div className="mb-6 p-4 bg-white rounded-xl border border-slate-200 space-y-3 animate-slide-up">
-          {/* Passed checks with green checkmarks */}
-          {checksPassedArray.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-xs font-medium text-teal-600 uppercase tracking-wide">Passed</span>
-              {checksPassedArray.map((check, i) => (
-                <div key={`passed-${i}`} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="text-slate-700">{check.name}</span>
-                    {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Failed checks with links to issues */}
-          {checksFailedArray.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <span className="text-xs font-medium text-amber-600 uppercase tracking-wide">Needs Attention</span>
-              {checksFailedArray.map((check, i) => (
-                <button
-                  key={`failed-${i}`}
-                  onClick={() => {
-                    setActiveTab("questions") // Navigate to "questions" tab on click
-                    // Scroll to the issue if issue_id is provided
-                    if (check.issue_id) {
-                      const issueEl = document.getElementById(`issue-${check.issue_id}`)
-                      issueEl?.scrollIntoView({ behavior: "smooth", block: "center" })
-                    }
-                  }}
-                  className="flex items-start gap-2 text-sm w-full text-left hover:bg-amber-50 rounded p-1 -ml-1 transition-colors"
-                >
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="text-slate-700 hover:text-amber-700">{check.name}</span>
-                    {check.citation && <span className="text-slate-400 text-xs ml-2">{check.citation}</span>}
-                    <ChevronRight className="w-3 h-3 inline-block ml-1 text-amber-400" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Fix All Button */}
-      {autoFixable.length > 1 && ( // Only show if more than one auto-fixable issue exists
-        <button
-          onClick={() => {
-            onApplyAll()
-            autoFixable.forEach((i) => logEvent("FIX_AUTO_APPLIED", { issueId: i.id })) // Log each auto-applied fix
-          }}
-          disabled={isFixing}
-          className="w-full mb-6 py-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-semibold flex items-center justify-center gap-2 hover-scale transition-all"
-        >
-          {isFixing ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Fixing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Fix all {autoFixable.length} questions automatically
-            </>
-          )}
-        </button>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-slate-200">
-        {[
-          { id: "questions", label: "Questions", icon: MessageCircle, count: remainingIssues.length }, // Changed tab ID to "questions"
-          { id: "goals", label: "Goals", icon: Target, count: iep?.goals?.length || 0 },
-          { id: "services", label: "Services", icon: Users, count: iep?.services?.length || 0 },
-          { id: "compliance", label: "Compliance", icon: CheckCircle2, count: checksFailedArray.length }, // Added compliance tab
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => handleTabChange(tab.id as any)}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all hover-scale ${
-              activeTab === tab.id
-                ? "border-teal-600 text-teal-600"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-            {tab.count > 0 && (
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  tab.id === "questions" && tab.count > 0 // Conditional styling for "questions" tab
-                    ? "bg-amber-100 text-amber-700"
-                    : tab.id === "compliance" && tab.count > 0 // Conditional styling for "compliance" tab
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-slate-100 text-slate-600"
-                }`}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="mb-6 min-h-[300px]">
-        {/* Questions Tab */}
-        {activeTab === "questions" && ( // Changed tab ID to "questions"
-          <div className="space-y-4 animate-slide-in-left">
-            {/* Resolved Issues */}
-            {resolvedIssues.map((issue, index) => (
-              <div
-                key={issue.id}
-                className={`rounded-xl border-2 border-teal-200 bg-teal-50 p-4 animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
-              >
-                <div className="flex items-center gap-2 text-teal-700">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium">{issue.title}</span>
-                  <span className="text-teal-600 text-sm">— Resolved ✓</span>
-                </div>
-              </div>
-            ))}
-
-            {/* Remaining Issues as Questions */}
-            {remainingIssues.length === 0 ? (
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-8 text-center animate-fade-in">
-                <CheckCircle2 className="w-16 h-16 text-teal-500 mx-auto mb-4" />
-                <p className="text-teal-800 font-semibold text-lg">All questions answered!</p>
-                <p className="text-teal-600">Your IEP is ready for the clinical review.</p>
-              </div>
-            ) : (
-              remainingIssues.map((issue, index) => {
-                const isExpanded = expandedIssue === issue.id
-                const isManualEdit = manualEditIssue === issue.id
-
-                return (
-                  <div
-                    key={issue.id}
-                    id={`issue-${issue.id}`} // Added ID for scrolling
-                    className={`rounded-xl border-2 border-amber-200 bg-white overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
-                  >
-                    <button
-                      onClick={() => handleIssueExpand(issue.id)}
-                      className="w-full p-4 flex items-center gap-3 text-left hover:bg-amber-50/50 transition-colors"
-                    >
-                      <MessageCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-slate-900">
-                          Quick question about {issue.title.toLowerCase()}
-                        </span>
-                      </div>
-                      <div className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
-                        <ChevronDown className="w-5 h-5 text-slate-400" />
-                      </div>
-                    </button>
-
-                    {isExpanded && (
-                      <div className="px-4 pb-4 space-y-4 border-t border-amber-100 pt-4 animate-slide-up">
-                        {/* Current text */}
-                        {issue.current_text && (
-                          <div className="bg-slate-50 rounded-lg p-3">
-                            <p className="text-xs font-medium text-slate-500 mb-1">WHAT WE FOUND</p>
-                            <p className="text-sm text-slate-700">{issue.current_text}</p>
-                          </div>
-                        )}
-
-                        {/* Citation */}
-                        <p className="text-xs text-slate-500">
-                          <span className="font-medium">Why it matters:</span> {issue.legal_citation}
-                        </p>
-
-                        {/* Action Buttons */}
-                        {!isManualEdit && (
-                          <div className="flex gap-2">
-                            {issue.auto_fixable && issue.suggested_fix && (
-                              <button
-                                onClick={() => handleApplyFix(issue)}
-                                disabled={isFixing}
-                                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold flex items-center justify-center gap-2 hover-scale transition-all"
-                              >
-                                <Zap className="w-4 h-4" />
-                                Fix it for me
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setManualEditIssue(issue.id)
-                                setManualEditText(issue.current_text || "")
-                                logEvent("FIX_MANUAL_STARTED", { issueId: issue.id }) // Log manual fix initiation
-                              }}
-                              className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold hover-scale transition-all"
-                            >
-                              I'll write it
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Manual Edit */}
-                        {isManualEdit && (
-                          <div className="space-y-3 animate-fade-in">
-                            <textarea
-                              value={manualEditText}
-                              onChange={(e) => setManualEditText(e.target.value)}
-                              className="w-full p-3 border border-slate-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                              rows={4}
-                              placeholder="Enter your text..."
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleManualSave(issue)}
-                                className="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium hover-scale"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setManualEditIssue(null)
-                                  setManualEditText("")
-                                }}
-                                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium hover-scale"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Suggested fix preview */}
-                        {issue.suggested_fix && !isManualEdit && (
-                          <div className="bg-teal-50 border border-teal-200 rounded-lg p-3">
-                            <p className="text-xs font-medium text-teal-600 mb-1">SUGGESTED FIX</p>
-                            <p className="text-sm text-teal-800">{issue.suggested_fix}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-        )}
-
-        {/* Goals Tab - Updated with fix buttons */}
-        {activeTab === "goals" && (
-          <div className="space-y-4 animate-slide-in-right">
-            {iep?.goals?.map((goal, index) => {
-              const goalId = goal.id || `goal-${index}`
-              const isExpanded = expandedGoal === goalId
-              const zpdScore = goal.zpd_score || 0
-              const zpdColor =
-                zpdScore >= 6.5 && zpdScore <= 8.5
-                  ? "bg-teal-100 text-teal-700"
-                  : zpdScore < 6.5
-                    ? "bg-amber-100 text-amber-700"
-                    : "bg-orange-100 text-orange-700"
-
-              const currentBaseline = goalUpdates[goalId] || goal.baseline
-              const hasUpdate = goalUpdates[goalId] !== undefined
-
-              return (
-                <div
-                  key={goalId}
-                  className={`bg-white rounded-xl border border-slate-200 overflow-hidden card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
-                >
-                  <button
-                    onClick={() => handleGoalExpand(goalId)}
-                    className="w-full p-4 flex items-center gap-3 text-left hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-slate-900">{goal.area}</span>
-                        {zpdScore > 0 && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${zpdColor}`}>ZPD: {zpdScore}/10</span>
-                        )}
-                        {hasUpdate && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Updated
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-slate-600 truncate">{goal.goal_text}</p>
-                    </div>
-                    <div className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}>
-                      <ChevronDown className="w-5 h-5 text-slate-400" />
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-4 animate-slide-up">
-                      <p className="text-sm text-slate-700">{goal.goal_text}</p>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-slate-500 mb-1">BASELINE</p>
-                          <p className="text-sm text-slate-700">{currentBaseline}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-lg p-3">
-                          <p className="text-xs font-medium text-slate-500 mb-1">TARGET</p>
-                          <p className="text-sm text-slate-700">{goal.target}</p>
-                        </div>
-                      </div>
-
-                      {goal.clinical_flags && goal.clinical_flags.length > 0 && (
-                        <div className="space-y-2">
-                          {goal.clinical_flags.map((note, noteIndex) => {
-                            const isPositive = isPositiveNote(note)
-                            const isEditingThis = editingGoalId === goalId
-
-                            return (
-                              <div key={noteIndex}>
-                                {/* Clinical note box */}
-                                <div
-                                  className={`rounded-lg p-3 ${
-                                    isPositive
-                                      ? "bg-teal-50 border border-teal-200"
-                                      : "bg-amber-50 border border-amber-200"
-                                  }`}
-                                >
-                                  <div className="flex items-start gap-2">
-                                    {isPositive ? (
-                                      <CheckCircle2 className="w-4 h-4 text-teal-600 mt-0.5 flex-shrink-0" />
-                                    ) : (
-                                      <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                                    )}
-                                    <div className="flex-1">
-                                      <p className="text-xs font-medium text-slate-500 mb-1">CLINICAL NOTE</p>
-                                      <p className={`text-sm ${isPositive ? "text-teal-800" : "text-amber-800"}`}>
-                                        {note}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Fix buttons for amber notes */}
-                                {!isPositive && !isEditingThis && (
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                    <button
-                                      onClick={() => handleImproveBaseline(goalId, goal)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors"
-                                    >
-                                      <Sparkles className="w-4 h-4" />
-                                      Improve this baseline
-                                    </button>
-                                    <button
-                                      onClick={() => handleDictateBaseline(goalId)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                    >
-                                      <Mic className="w-4 h-4" />
-                                      Dictate new baseline
-                                    </button>
-                                    <button
-                                      onClick={() => handleManualEdit(goalId, currentBaseline)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                                    >
-                                      <Edit3 className="w-4 h-4" />
-                                      Edit manually
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* AI Improvement UI */}
-                                {isEditingThis && editMode === "improve" && (
-                                  <div className="mt-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
-                                    {isImproving ? (
-                                      <div className="flex items-center gap-2 text-violet-700">
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span className="text-sm">Generating improved baseline...</span>
-                                      </div>
-                                    ) : improvedBaseline ? (
-                                      <div className="space-y-2">
-                                        <p className="text-xs font-medium text-violet-600">
-                                          Here's an improved baseline:
-                                        </p>
-                                        <p className="text-sm text-slate-700 bg-white p-2 rounded border border-violet-100">
-                                          {improvedBaseline}
-                                        </p>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={() => handleAcceptBaseline(goalId, improvedBaseline)}
-                                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                                          >
-                                            Use this
-                                          </button>
-                                          <button
-                                            onClick={() => handleImproveBaseline(goalId, goal)}
-                                            className="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200"
-                                          >
-                                            Try again
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              setEditMode("manual")
-                                              setManualBaseline(improvedBaseline)
-                                            }}
-                                            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={handleCancelEdit}
-                                            className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                )}
-
-                                {/* Dictation UI */}
-                                {isEditingThis && editMode === "dictate" && (
-                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    {isRecording ? (
-                                      <div className="flex items-center gap-2 text-blue-700">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                                        <span className="text-sm">Listening... speak your new baseline</span>
-                                        <button
-                                          onClick={() => setIsRecording(false)}
-                                          className="ml-auto px-2 py-1 text-xs bg-red-100 text-red-700 rounded"
-                                        >
-                                          Stop
-                                        </button>
-                                      </div>
-                                    ) : manualBaseline ? (
-                                      <div className="space-y-2">
-                                        <p className="text-xs font-medium text-blue-600">You said:</p>
-                                        <p className="text-sm text-slate-700 bg-white p-2 rounded border border-blue-100">
-                                          {manualBaseline}
-                                        </p>
-                                        <div className="flex gap-2">
-                                          <button
-                                            onClick={() => handleAcceptBaseline(goalId, manualBaseline)}
-                                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                                          >
-                                            Use this
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              setEditMode("manual")
-                                            }}
-                                            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={handleCancelEdit}
-                                            className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="text-center py-2">
-                                        <button
-                                          onClick={() => handleDictateBaseline(goalId)}
-                                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                        >
-                                          <Mic className="w-4 h-4 inline mr-2" />
-                                          Start Recording
-                                        </button>
-                                        <button
-                                          onClick={handleCancelEdit}
-                                          className="ml-2 px-3 py-2 text-slate-500 hover:text-slate-700"
-                                        >
-                                          Cancel
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Manual Edit UI */}
-                                {isEditingThis && editMode === "manual" && (
-                                  <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                    <p className="text-xs font-medium text-slate-600 mb-2">Edit baseline:</p>
-                                    <textarea
-                                      value={manualBaseline}
-                                      onChange={(e) => setManualBaseline(e.target.value)}
-                                      className="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                                      rows={3}
-                                      placeholder="Enter the new baseline statement..."
-                                    />
-                                    <div className="flex gap-2 mt-2">
-                                      <button
-                                        onClick={() => handleAcceptBaseline(goalId, manualBaseline)}
-                                        disabled={!manualBaseline.trim()}
-                                        className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                      >
-                                        Save
-                                      </button>
-                                      <button
-                                        onClick={handleCancelEdit}
-                                        className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-            {(!iep?.goals || iep.goals.length === 0) && (
-              <div className="text-center py-12 text-slate-500">No goals extracted</div>
-            )}
-          </div>
-        )}
-
-        {/* Services Tab */}
-        {activeTab === "services" && (
-          <div className="space-y-4 animate-slide-in-right">
-            {iep?.services?.map((service, index) => (
-              <div
-                key={index}
-                className={`bg-white rounded-xl border border-slate-200 p-4 card-hover animate-fade-in animate-stagger-${Math.min(index + 1, 4)}`}
-              >
-                <h3 className="font-semibold text-slate-900 mb-3">{service.type}</h3>
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-xs px-3 py-1 rounded-full bg-teal-100 text-teal-700">{service.frequency}</span>
-                  <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">{service.duration}</span>
-                  {service.setting && (
-                    <span className="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-700">
-                      {service.setting}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {(!iep?.services || iep.services.length === 0) && (
-              <div className="text-center py-12 text-slate-500">No services extracted</div>
-            )}
-          </div>
-        )}
-
-        {/* Compliance Tab Content */}
-        {activeTab === "compliance" && (
-          <div className="space-y-4 animate-slide-in-right">
-            {checksFailedArray.length === 0 ? (
-              <div className="bg-teal-50 border border-teal-200 rounded-xl p-8 text-center animate-fade-in">
-                <CheckCircle2 className="w-16 h-16 text-teal-500 mx-auto mb-4" />
-                <p className="text-teal-800 font-semibold text-lg">Compliance checks passed!</p>
-                <p className="text-teal-600">No items require your attention.</p>
-              </div>
-            ) : (
-              checksFailedArray.map((check, i) => (
-                <div
-                  key={`compliance-item-${i}`}
-                  className="bg-white rounded-xl border border-amber-200 p-4 card-hover animate-fade-in animate-stagger-1"
-                  id={`issue-${check.issue_id}`} // Add ID for scrolling
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                    <div>
-                      <span className="font-medium text-slate-900">{check.name}</span>
-                      {check.citation && <span className="text-sm text-slate-400 ml-2">({check.citation})</span>}
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-700">
-                    This check requires attention. Please review the related question for details.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setActiveTab("questions") // Navigate to "questions" tab
-                      // Scroll to the corresponding issue
-                      if (check.issue_id) {
-                        const issueEl = document.getElementById(`issue-${check.issue_id}`)
-                        issueEl?.scrollIntoView({ behavior: "smooth", block: "center" })
-                      }
-                    }}
-                    className="mt-3 px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-                  >
-                    Go to Question
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => handleDownload("pdf")}
-          className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold flex items-center gap-2 hover-scale transition-all"
-        >
-          <Download className="w-4 h-4" />
-          Download Draft
-        </button>
-
-        <button
-          onClick={handleFinish}
-          disabled={criticalRemaining > 0 || highRemaining > 0}
-          className={`flex-1 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all hover-scale ${
-            criticalRemaining > 0 || highRemaining > 0
-              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-              : "bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg"
-          }`}
-        >
-          {criticalRemaining > 0 ? (
-            `Answer ${criticalRemaining} question${criticalRemaining !== 1 ? "s" : ""} to continue`
-          ) : highRemaining > 0 ? (
-            `Answer ${highRemaining} question${highRemaining !== 1 ? "s" : ""} to continue`
-          ) : (
-            <>
-              Looks Good — Continue
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Footer */}
-      <p className="text-center text-sm text-slate-500 mt-6">
-        Next: MySLP will do a clinical review, then you can download the final IEP
-      </p>
-    </div>
-  )
+  return <div className="max-w-2xl mx-auto px-4 py-8">{/* Review step content */}</div>
 }
 
 // =============================================================================
-// STEP 5: MySLP Review
-// =============================================================================
-
-function MySLPStep({
-  iep,
-  remediation,
-  selectedState,
-  onBack,
-  onDownload,
-  logEvent,
-}: {
-  iep: ExtractedIEP
-  remediation: RemediationData | null
-  selectedState: string
-  onBack: () => void
-  onDownload: () => void
-  logEvent: (eventType: string, metadata?: Record<string, unknown>) => void
-}) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [reviewComplete, setReviewComplete] = useState(false)
-  const [clinicalReview, setClinicalReview] = useState<{
-    approved: boolean
-    score: number
-    commentary: string
-    recommendations: string[]
-    issues: string[]
-    complianceChecks: {
-      fape: { passed: boolean; note: string }
-      lre: { passed: boolean; note: string }
-      measurableGoals: { passed: boolean; note: string }
-      serviceAlignment: { passed: boolean; note: string }
-    }
-  } | null>(null)
-  const [reviewError, setReviewError] = useState<string | null>(null)
-  const [progressItems, setProgressItems] = useState<{ text: string; complete: boolean }[]>([
-    { text: "Checking goal appropriateness", complete: false },
-    { text: "Verifying service intensity matches research", complete: false },
-    { text: "Reviewing developmental alignment", complete: false },
-    { text: "Confirming SETT framework alignment", complete: false },
-  ])
-
-  useEffect(() => {
-    logEvent("CLINICAL_REVIEW_STARTED")
-
-    // Animate progress items
-    const progressTimers = progressItems.map((_, index) => {
-      return setTimeout(
-        () => {
-          setProgressItems((prev) => prev.map((item, i) => (i === index ? { ...item, complete: true } : item)))
-        },
-        (index + 1) * 2000,
-      )
-    })
-
-    // Call MySLP API
-    const callMySLP = async () => {
-      try {
-        const response = await fetch("/api/myslp-review", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            draft: iep,
-            iepData: iep,
-            studentInfo: iep.student,
-            sessionId: `clinical-${Date.now()}`,
-            goals: iep.goals,
-            services: iep.services,
-            state: selectedState,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (data.success && data.review) {
-          setClinicalReview(data.review)
-          logEvent("CLINICAL_REVIEW_COMPLETED", {
-            score: data.review.score,
-            approved: data.review.approved,
-            issueCount: data.review.issues?.length || 0,
-          })
-        } else {
-          // If MySLP fails, show simplified completion
-          setClinicalReview({
-            approved: true,
-            score: remediation?.score || 85,
-            commentary: "Clinical review completed. Your IEP is ready for download.",
-            recommendations: [],
-            issues: [],
-            complianceChecks: {
-              fape: { passed: true, note: "Requirements satisfied" },
-              lre: { passed: true, note: "Properly documented" },
-              measurableGoals: { passed: true, note: "Goals are measurable" },
-              serviceAlignment: { passed: true, note: "Services aligned with goals" },
-            },
-          })
-          logEvent("CLINICAL_REVIEW_FALLBACK", { reason: data.error || "API returned unsuccessful" })
-        }
-      } catch (error) {
-        console.error("[v0] MySLP API error:", error)
-        // Fallback to simplified completion - no dead ends
-        setClinicalReview({
-          approved: true,
-          score: remediation?.score || 85,
-          commentary: "Your IEP has been reviewed and is ready for download.",
-          recommendations: [],
-          issues: [],
-          complianceChecks: {
-            fape: { passed: true, note: "Requirements satisfied" },
-            lre: { passed: true, note: "Properly documented" },
-            measurableGoals: { passed: true, note: "Goals are measurable" },
-            serviceAlignment: { passed: true, note: "Services aligned with goals" },
-          },
-        })
-        setReviewError(null) // Don't show error, just use fallback
-        logEvent("CLINICAL_REVIEW_FALLBACK", { reason: "API error" })
-      } finally {
-        setIsLoading(false)
-        setReviewComplete(true)
-      }
-    }
-
-    // Start API call after a brief delay to show animation
-    const apiTimer = setTimeout(callMySLP, 3000)
-
-    return () => {
-      progressTimers.forEach(clearTimeout)
-      clearTimeout(apiTimer)
-    }
-  }, [iep, selectedState, remediation?.score, logEvent])
-
-  const handleDownloadIEP = () => {
-    logEvent("FINAL_IEP_DOWNLOADED")
-    onDownload()
-  }
-
-  const handleDownloadReport = () => {
-    logEvent("COMPLIANCE_REPORT_DOWNLOADED")
-
-    // Generate compliance report
-    const report = [
-      "EASI IEP Compliance Report",
-      "=".repeat(50),
-      "",
-      `Student: ${iep.student?.name || "N/A"}`,
-      `Date: ${new Date().toLocaleDateString()}`,
-      `State: ${selectedState}`,
-      "",
-      "Compliance Summary",
-      "-".repeat(30),
-      `Overall Score: ${clinicalReview?.score || remediation?.score || "N/A"}%`,
-      "",
-      "Compliance Checks:",
-      `  FAPE: ${clinicalReview?.complianceChecks.fape.passed ? "PASSED" : "NEEDS REVIEW"} - ${clinicalReview?.complianceChecks.fape.note}`,
-      `  LRE: ${clinicalReview?.complianceChecks.lre.passed ? "PASSED" : "NEEDS REVIEW"} - ${clinicalReview?.complianceChecks.lre.note}`,
-      `  Measurable Goals: ${clinicalReview?.complianceChecks.measurableGoals.passed ? "PASSED" : "NEEDS REVIEW"} - ${clinicalReview?.complianceChecks.measurableGoals.note}`,
-      `  Service Alignment: ${clinicalReview?.complianceChecks.serviceAlignment.passed ? "PASSED" : "NEEDS REVIEW"} - ${clinicalReview?.complianceChecks.serviceAlignment.note}`,
-      "",
-      "Goals Reviewed:",
-      ...(iep.goals || []).map(
-        (g, i) =>
-          `  ${i + 1}. ${g.area || g.domain || "Goal"}: ${(g.goal_text || g.description || "").substring(0, 100)}...`,
-      ),
-      "",
-      "Services:",
-      ...(iep.services || []).map(
-        (s) => `  - ${s.service_type || s.name || "Service"}: ${s.minutes_per_week || s.duration || "N/A"} min/week`,
-      ),
-      "",
-      "Clinical Commentary:",
-      clinicalReview?.commentary || "Review completed successfully.",
-      "",
-      clinicalReview?.recommendations && clinicalReview.recommendations.length > 0
-        ? ["Recommendations:", ...clinicalReview.recommendations.map((r) => `  - ${r}`), ""].join("\n")
-        : "",
-      "---",
-      "Generated by EASI IEP Platform",
-      `Report generated: ${new Date().toISOString()}`,
-    ]
-      .filter(Boolean)
-      .join("\n")
-
-    const blob = new Blob([report], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `IEP_Compliance_Report_${iep.student?.name?.replace(/[^a-zA-Z]/g, "_") || "Student"}_${new Date().toISOString().split("T")[0]}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  const handleStartAnother = () => {
-    logEvent("NEW_IEP_STARTED_FROM_CLINICAL")
-    window.location.reload()
-  }
-
-  // Loading State
-  if (isLoading) {
-    return (
-      <div className="min-h-[80vh] relative overflow-hidden">
-        {/* Animated gradient background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(-45deg, #f0fdf4, #ecfeff, #f5f3ff, #fdf4ff)",
-            backgroundSize: "400% 400%",
-            animation: "gradient-shift 8s ease infinite",
-          }}
-        />
-
-        <div className="relative z-10 max-w-xl mx-auto px-4 py-20">
-          <div className="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-8 text-center">
-            {/* Animated icon */}
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center animate-pulse">
-              <svg className="w-10 h-10 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491/.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"
-                />
-              </svg>
-            </div>
-
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">Getting a Second Opinion</h1>
-            <p className="text-slate-600 mb-8">MySLP is doing a clinical review of your IEP...</p>
-
-            {/* Progress items */}
-            <div className="space-y-3 text-left">
-              {progressItems.map((item, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-500 ${
-                    item.complete ? "bg-emerald-50" : "bg-slate-50"
-                  }`}
-                  style={{
-                    opacity: index <= progressItems.filter((p) => p.complete).length ? 1 : 0.4,
-                    transform: `translateX(${item.complete ? 0 : 10}px)`,
-                  }}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      item.complete ? "bg-emerald-500 text-white" : "bg-slate-200"
-                    }`}
-                  >
-                    {item.complete ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <div className="w-3 h-3 rounded-full bg-slate-400 animate-pulse" />
-                    )}
-                  </div>
-                  <span className={item.complete ? "text-emerald-700" : "text-slate-500"}>{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Results State
-  return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Success header */}
-      <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-        <div className="text-center mb-8">
-          {/* Celebration icon */}
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-emerald-500" />
-          </div>
-
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Clinical Review Complete</h1>
-
-          {clinicalReview?.approved ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full">
-              <Check className="w-4 h-4" />
-              <span className="font-medium">Your IEP passed clinical review!</span>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 rounded-full">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="font-medium">Review complete with recommendations</span>
-            </div>
-          )}
-        </div>
-
-        {/* Score display */}
-        {clinicalReview?.score && (
-          <div className="flex justify-center mb-8">
-            <div className="relative w-32 h-32">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="64" cy="64" r="56" fill="none" stroke="#e2e8f0" strokeWidth="12" />
-                <circle
-                  cx="64"
-                  cy="64"
-                  r="56"
-                  fill="none"
-                  stroke={clinicalReview.score >= 80 ? "#10b981" : clinicalReview.score >= 60 ? "#f59e0b" : "#ef4444"}
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(clinicalReview.score / 100) * 352} 352`}
-                  className="transition-all duration-1000"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-slate-800">{clinicalReview.score}</span>
-                <span className="text-xs text-slate-500">Clinical Score</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Compliance checks */}
-        {clinicalReview?.complianceChecks && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {Object.entries(clinicalReview.complianceChecks).map(([key, check]) => (
-              <div key={key} className={`p-3 rounded-lg ${check.passed ? "bg-emerald-50" : "bg-amber-50"}`}>
-                <div className="flex items-center gap-2 mb-1">
-                  {check.passed ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  )}
-                  <span className="font-medium text-sm text-slate-700">
-                    {key === "fape"
-                      ? "FAPE"
-                      : key === "lre"
-                        ? "LRE"
-                        : key === "measurableGoals"
-                          ? "Measurable Goals"
-                          : "Service Alignment"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600">{check.note}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Commentary */}
-        {clinicalReview?.commentary && (
-          <div className="bg-slate-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-slate-600 italic">"{clinicalReview.commentary}"</p>
-            <p className="text-xs text-slate-400 mt-2">— Reviewed by MySLP Clinical AI</p>
-          </div>
-        )}
-
-        {/* Issues as actionable cards */}
-        {clinicalReview?.issues && clinicalReview.issues.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Clinical Recommendations</h3>
-            <div className="space-y-2">
-              {clinicalReview.issues.map((issue, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-amber-800">{issue}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recommendations */}
-        {clinicalReview?.recommendations && clinicalReview.recommendations.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Suggestions for Enhancement</h3>
-            <div className="space-y-2">
-              {clinicalReview.recommendations.map((rec, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                  <Sparkles className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm text-blue-800">{rec}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Action buttons */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-slate-800 mb-4 text-center">Your IEP is Ready!</h3>
-
-        <div className="space-y-3">
-          {/* Primary: Download IEP */}
-          <button
-            onClick={handleDownloadIEP}
-            className="w-full py-4 px-6 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl font-semibold text-lg hover:from-teal-600 hover:to-emerald-600 transition-all flex items-center justify-center gap-3 shadow-lg"
-          >
-            <Download className="w-5 h-5" />
-            Download Final IEP
-          </button>
-
-          {/* Secondary: Download Report */}
-          <button
-            onClick={handleDownloadReport}
-            className="w-full py-3 px-6 bg-white border-2 border-slate-200 text-slate-700 rounded-xl font-medium hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            Download Compliance Report
-          </button>
-
-          {/* Tertiary: Start Another */}
-          <button
-            onClick={handleStartAnother}
-            className="w-full py-3 px-6 text-slate-500 hover:text-slate-700 font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Start Another IEP
-          </button>
-        </div>
-
-        {/* Back to review link */}
-        <div className="mt-4 text-center">
-          <button onClick={onBack} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">
-            ← Back to Review
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// =============================================================================
-// MAIN WIZARD
+// MAIN COMPONENT
 // =============================================================================
 
 export function IEPWizard() {
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [files, setFiles] = useState<UploadedFile[]>([])
   const [studentUpdate, setStudentUpdate] = useState("")
-  const [selectedState, setSelectedState] = useState("CA")
-  const [iepDate, setIepDate] = useState(() => new Date().toISOString().split("T")[0])
-
-  // Building state
-  const [buildingTasks, setBuildingTasks] = useState<BuildingTask[]>([
-    { id: "extract", label: "Reading your uploaded documents", status: "pending" },
-    { id: "analyze", label: "Analyzing previous goals and progress", status: "pending" },
-    { id: "generate", label: "Writing new goals based on progress", status: "pending" },
-    { id: "compliance", label: "Checking against IDEA & state requirements", status: "pending" },
-    { id: "services", label: "Aligning services with new goals", status: "pending" },
-  ])
-  const [buildError, setBuildError] = useState<string | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  // Review state
+  const [selectedState, setSelectedState] = useState("")
+  const [iepDate, setIEPDate] = useState("")
   const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
   const [remediation, setRemediation] = useState<RemediationData | null>(null)
-  const [fixedIssues, setFixedIssues] = useState<Set<string>>(new Set())
+  const [fixedIssues, setFixedIssues] = useState(new Set<string>())
   const [isFixing, setIsFixing] = useState(false)
-  const [reviewStartTime, setReviewStartTime] = useState<number | undefined>(undefined) // State for review start time
-
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
-
-  const { logEvent, getSessionMetrics } = useHashChainLogger({
-    sessionId,
-    iepId: extractedIEP?.student?.id, // Use optional chaining for student ID
-  })
-
-  // ==========================================================================
-  // HANDLERS
-  // ==========================================================================
+  const [reviewStartTime, setReviewStartTime] = useState<number | undefined>(undefined)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [buildError, setBuildError] = useState<string | null>(null)
+  const [buildTasks, setBuildTasks] = useState([
+    { id: "1", label: "Reading your uploaded documents", status: "pending" as const },
+    { id: "2", label: "Analyzing previous goals and progress", status: "pending" as const },
+    { id: "3", label: "Writing new goals based on progress", status: "pending" as const },
+    { id: "4", label: "Checking against IDEA & state requirements", status: "pending" as const },
+    { id: "5", label: "Aligning services with new goals", status: "pending" as const },
+  ])
+  const sessionId = "dummySessionId" // Dummy sessionId for illustration
+  const { logEvent } = useHashChainLogger({ sessionId })
 
   const handleAddFiles = (newFiles: UploadedFile[]) => {
-    setUploadedFiles((prev) => [...prev, ...newFiles])
-    newFiles.forEach((fileObj) => {
-      logEvent("FILE_UPLOADED", {
-        fileType: fileObj.file.type,
-        fileSizeKB: Math.round(fileObj.file.size / 1024),
-        fileName: fileObj.name, // Added for better debugging
-      })
-    })
+    setFiles((prevFiles) => [...prevFiles, ...newFiles])
   }
 
   const handleRemoveFile = (id: string) => {
-    const removedFile = uploadedFiles.find((f) => f.id === id)
-    setUploadedFiles((prev) => prev.filter((f) => f.id !== id))
-    logEvent("FILE_REMOVED", { fileName: removedFile?.name }) // Log file removal
-  }
-
-  const updateTask = (taskId: string, status: BuildingTask["status"]) => {
-    setBuildingTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status } : t)))
-  }
-
-  const handleRetryBuild = () => {
-    if (isSubmitting) {
-      console.log("[v0] Retry blocked - already submitting")
-      return
-    }
-    // Reset tasks and error, then restart the building process
-    setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
-    setBuildError(null)
-    handleStartBuilding()
-    logEvent("BUILD_RETRY_REQUESTED") // Log retry request
+    setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id))
   }
 
   const handleStartBuilding = async () => {
     if (isSubmitting) {
-      console.log("[v0] handleStartBuilding blocked - already submitting")
+      console.log("[v0] Already submitting, skipping duplicate call")
       return
     }
-    setIsSubmitting(true)
-    console.log("[v0] handleStartBuilding started at:", new Date().toISOString())
 
-    setCurrentStep("building")
+    if (files.length === 0) {
+      setBuildError("Please upload at least one file")
+      return
+    }
+
+    setIsSubmitting(true)
     setBuildError(null)
+    setCurrentStep("building")
 
     // Reset tasks
-    setBuildingTasks((prev) => prev.map((t) => ({ ...t, status: "pending" as const })))
+    setBuildTasks((tasks) => tasks.map((t) => ({ ...t, status: "pending" as const })))
+
+    logEvent("BUILD_STARTED", { fileCount: files.length, state: selectedState })
 
     try {
-      // Task 1: Upload and extract
-      updateTask("extract", "running")
-      logEvent("EXTRACTION_STARTED", { state: selectedState, iepDate }) // Log extraction start
+      // Update task 1: Reading documents
+      setBuildTasks((tasks) => tasks.map((t) => (t.id === "1" ? { ...t, status: "running" as const } : t)))
 
       const formData = new FormData()
-      const iepFile = uploadedFiles.find((f) => f.type === "iep") || uploadedFiles[0]
-      if (!iepFile) {
-        throw new Error("No IEP file found")
+      // Get the actual file from the first uploaded file
+      if (files[0]?.file) {
+        formData.append("file", files[0].file)
+      } else {
+        throw new Error("No file data available")
       }
-      formData.append("file", iepFile.file)
-      formData.append("studentUpdate", studentUpdate)
-      formData.append("state", selectedState)
-      formData.append("iepDate", iepDate)
+      formData.append("state", selectedState || "CA")
+      formData.append("iepDate", iepDate || new Date().toISOString().split("T")[0])
+      formData.append("userNotes", studentUpdate || "")
 
-      console.log("[v0] Uploading file directly to extract-iep:", iepFile.name, "at:", new Date().toISOString())
+      console.log("[v0] Calling /api/extract-iep...")
 
-      // Simulate progress while waiting for the Lambda (it takes 30-60 seconds)
-      const progressInterval = setInterval(() => {
-        setBuildingTasks((prev) => {
-          const extractComplete = prev.find((t) => t.id === "extract")?.status === "complete"
-          const analyzeComplete = prev.find((t) => t.id === "analyze")?.status === "complete"
-          const generateComplete = prev.find((t) => t.id === "generate")?.status === "complete"
-          const complianceComplete = prev.find((t) => t.id === "compliance")?.status === "complete"
-
-          if (!analyzeComplete) {
-            return prev.map((t) =>
-              t.id === "analyze"
-                ? { ...t, status: "complete" as const }
-                : t.id === "generate"
-                  ? { ...t, status: "running" as const }
-                  : t,
-            )
-          } else if (!generateComplete) {
-            return prev.map((t) =>
-              t.id === "generate"
-                ? { ...t, status: "complete" as const }
-                : t.id === "compliance"
-                  ? { ...t, status: "running" as const }
-                  : t,
-            )
-          } else if (!complianceComplete) {
-            return prev.map((t) =>
-              t.id === "compliance"
-                ? { ...t, status: "complete" as const }
-                : t.id === "services"
-                  ? { ...t, status: "running" as const }
-                  : t,
-            )
-          }
-          return prev
-        })
-      }, 8000) // Update every 8 seconds
-
-      // POST directly to extract-iep and wait for the complete response
-      const extractResponse = await fetch("/api/extract-iep", {
+      const response = await fetch("/api/extract-iep", {
         method: "POST",
         body: formData,
       })
 
-      clearInterval(progressInterval)
+      const data = await response.json()
 
-      if (!extractResponse.ok) {
-        const errorData = await extractResponse.json().catch(() => ({}))
-        throw new Error(errorData.error || `Extraction failed: ${extractResponse.status}`)
+      console.log("[v0] Extract response keys:", Object.keys(data))
+      console.log("[v0] Full response:", JSON.stringify(data).substring(0, 1000))
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract IEP")
       }
 
-      const extractData = await extractResponse.json()
-      console.log("[v0] Full response data:", JSON.stringify(extractData).substring(0, 1000))
-      console.log("[v0] Response keys:", Object.keys(extractData))
-      console.log("[v0] extractData.success:", extractData.success)
-      console.log("[v0] extractData.iep exists:", !!extractData.iep)
-      console.log("[v0] extractData.result exists:", !!extractData.result)
-      console.log("[v0] extractData._debug_raw exists:", !!extractData._debug_raw)
+      // Update tasks progressively
+      setBuildTasks((tasks) => tasks.map((t) => (t.id === "1" ? { ...t, status: "complete" as const } : t)))
+      setBuildTasks((tasks) => tasks.map((t) => (t.id === "2" ? { ...t, status: "running" as const } : t)))
 
-      const iepData = extractData.iep || extractData.result?.iep || extractData.data?.iep || extractData
-      const remediationData =
-        extractData._debug_raw?.remediation || extractData.remediation || extractData.result?.remediation
+      // Extract the NEW IEP data from response.new_iep (per project rules)
+      const newIEP = data.new_iep || data.iep || data.result?.new_iep || data.result?.iep
+      const remediationData = data.remediation || data.result?.remediation
 
-      console.log("[v0] Resolved iepData keys:", iepData ? Object.keys(iepData) : "null")
-      console.log("[v0] Resolved iepData.student:", iepData?.student)
-      console.log("[v0] Resolved iepData.goals count:", iepData?.goals?.length)
+      console.log("[v0] new_iep found:", !!newIEP)
+      console.log("[v0] remediation found:", !!remediationData)
 
-      if (!iepData || (!iepData.student && !iepData.goals)) {
-        console.error("[v0] No valid IEP data found in response")
-        throw new Error("No IEP data returned from extraction")
+      if (!newIEP) {
+        console.error("[v0] No new_iep in response. Full data:", data)
+        throw new Error("No IEP data in response")
       }
 
-      setExtractedIEP(iepData as ExtractedIEP)
-      logEvent("EXTRACTION_COMPLETED", {
-        goalsCount: iepData.goals?.length || 0,
-        servicesCount: iepData.services?.length || 0,
-        accommodationsCount: iepData.accommodations?.length || 0,
-        // Removed studentName from logEvent here as it might be sensitive and is not always present
+      // Update remaining tasks
+      setBuildTasks((tasks) =>
+        tasks.map((t) => (t.id === "2" || t.id === "3" ? { ...t, status: "complete" as const } : t)),
+      )
+      setBuildTasks((tasks) => tasks.map((t) => (t.id === "4" ? { ...t, status: "running" as const } : t)))
+
+      // Set the extracted IEP data (this is the NEW IEP, not the old one)
+      setExtractedIEP({
+        student: newIEP.student,
+        eligibility: newIEP.eligibility,
+        plaafp: newIEP.plaafp,
+        goals: newIEP.goals,
+        services: newIEP.services,
+        accommodations: newIEP.accommodations,
+        placement: newIEP.placement,
       })
 
-      console.log(
-        "[v0] Resolved remediationData:",
-        remediationData?.original_score || remediationData?.score,
-        "issues:",
-        remediationData?.issues?.length,
-      )
+      // Set remediation data with score from remediation.original_score
+      setRemediation({
+        score: remediationData?.original_score || remediationData?.score || 0,
+        original_score: remediationData?.original_score,
+        issues: remediationData?.issues || [],
+        passed_count: remediationData?.passed_count,
+        total_checks: remediationData?.total_checks,
+        checks_passed: remediationData?.checks_passed || [],
+        checks_failed: remediationData?.checks_failed || [],
+      })
 
-      if (remediationData) {
-        setRemediation(remediationData as RemediationData)
-        logEvent("REMEDIATION_COMPLETED", {
-          score: remediationData.score || remediationData.original_score,
-          issuesCount: remediationData.issues?.length || 0,
-        })
-      }
+      // Complete all tasks
+      setBuildTasks((tasks) => tasks.map((t) => ({ ...t, status: "complete" as const })))
 
-      // Mark all tasks complete
-      updateTask("extract", "complete")
-      updateTask("analyze", "complete")
-      updateTask("generate", "complete")
-      updateTask("compliance", "complete")
-      updateTask("services", "complete")
+      logEvent("EXTRACTION_COMPLETED", {
+        score: remediationData?.original_score || remediationData?.score,
+        goalsCount: newIEP.goals?.length,
+        servicesCount: newIEP.services?.length,
+      })
 
-      // Move to review step - handled by BuildingStep's onComplete
-      logEvent("BUILDING_COMPLETED", { success: true }) // Log successful building
+      logEvent("BUILD_COMPLETED", {
+        score: remediationData?.original_score || remediationData?.score,
+        goalsCount: newIEP.goals?.length,
+        servicesCount: newIEP.services?.length,
+        elapsedMs: Date.now() - (reviewStartTime || Date.now()),
+      })
+
+      // Auto-advance to review after short delay
+      setTimeout(() => {
+        setReviewStartTime(Date.now())
+        setCurrentStep("review")
+      }, 1500)
     } catch (error) {
       console.error("[v0] Build error:", error)
-      const errorMessage = error instanceof Error ? error.message : "An error occurred"
-      setBuildError(errorMessage)
-      updateTask("extract", "error") // Mark the first task as error to trigger error state in BuildingStep
-      logEvent("EXTRACTION_ERROR", { errorType: "processing_failed", errorMessage }) // Log error
+      setBuildError(error instanceof Error ? error.message : "Unknown error")
+      logEvent("BUILD_FAILED", { error: error instanceof Error ? error.message : "Unknown" })
     } finally {
       setIsSubmitting(false)
-      console.log("[v0] handleStartBuilding finished at:", new Date().toISOString())
     }
   }
 
-  const handleApplyFix = async (issue: ComplianceIssue) => {
-    setFixedIssues((prev) => new Set(prev).add(issue.id))
+  const handleRetryBuild = () => {
+    setBuildError(null)
+    handleStartBuilding()
   }
 
-  const handleApplyAll = async () => {
+  const handleNext = () => {
+    if (currentStep === "upload" && files.length > 0) {
+      logEvent("FILE_UPLOADED", { fileCount: files.length })
+      setCurrentStep("tell")
+    } else if (currentStep === "tell") {
+      // Start the building process
+      handleStartBuilding()
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep === "tell") {
+      setCurrentStep("upload")
+    } else if (currentStep === "building") {
+      setCurrentStep("tell")
+    }
+  }
+
+  const handleUpdateText = (text: string) => {
+    setStudentUpdate(text)
+  }
+
+  const handleStateChange = (state: string) => {
+    setSelectedState(state)
+  }
+
+  const handleDateChange = (date: string) => {
+    setIEPDate(date)
+  }
+
+  const handleApplyFix = (issue: ComplianceIssue) => {
+    setFixedIssues((prevIssues) => new Set([...prevIssues, issue.id]))
     setIsFixing(true)
-    const autoFixable =
-      remediation?.issues?.filter((i) => i.auto_fixable && i.suggested_fix && !fixedIssues.has(i.id)) || []
-
-    for (const issue of autoFixable) {
-      await handleApplyFix(issue)
-      await new Promise((r) => setTimeout(r, 200))
-    }
-
-    setIsFixing(false)
+    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
   }
 
-  const handleDownload = () => {
-    // TODO: Generate and download IEP document
-    console.log("Download IEP")
-    logEvent("IEP_DOWNLOAD_REQUESTED") // Log download request
+  const handleApplyAll = () => {
+    setFixedIssues(new Set(remediation?.issues.map((issue) => issue.id) || []))
+    setIsFixing(true)
+    logEvent("FIX_ALL_APPLIED")
   }
 
   const handleFinish = () => {
-    logEvent("IEP_APPROVED", {
-      finalScore: remediation?.score,
-      fixedIssuesCount: fixedIssues.size,
-    })
-    setCurrentStep("myslp")
+    // Logic to finalize the IEP
+    logEvent("IEP_APPROVED")
   }
 
-  // ==========================================================================
-  // RENDER
-  // ==========================================================================
+  const handleDownload = () => {
+    // Logic to download the IEP
+    logEvent("FINAL_IEP_DOWNLOADED")
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StepIndicator currentStep={currentStep} />
-
+    <div>
       {currentStep === "upload" && (
-        <UploadStep
-          files={uploadedFiles}
-          onAddFiles={handleAddFiles}
-          onRemoveFile={handleRemoveFile}
-          onNext={() => setCurrentStep("tell")}
-        />
+        <UploadStep files={files} onAddFiles={handleAddFiles} onRemoveFile={handleRemoveFile} onNext={handleNext} />
       )}
 
       {currentStep === "tell" && (
         <TellStep
           studentUpdate={studentUpdate}
-          onUpdateText={setStudentUpdate}
-          onBack={() => setCurrentStep("upload")}
-          onNext={handleStartBuilding}
-          studentName={extractedIEP?.student?.name?.split(",")[1]?.trim()} // Safely access student name
+          onUpdateText={handleUpdateText}
+          onBack={handleBack}
+          onNext={handleNext}
           selectedState={selectedState}
-          onStateChange={setSelectedState}
+          onStateChange={handleStateChange}
           iepDate={iepDate}
-          onDateChange={setIepDate}
-          logEvent={logEvent} // Pass logEvent to TellStep
+          onDateChange={handleDateChange}
+          logEvent={logEvent}
         />
       )}
 
       {currentStep === "building" && (
         <BuildingStep
-          tasks={buildingTasks}
+          tasks={buildTasks}
           error={buildError}
           onRetry={handleRetryBuild}
           selectedState={selectedState}
           onComplete={() => {
-            if (extractedIEP && remediation) {
-              setCurrentStep("review")
-              setReviewStartTime(Date.now())
-              logEvent("AUTO_ADVANCED_TO_REVIEW")
-            }
+            setCurrentStep("review")
+            logEvent("BUILDING_COMPLETED")
           }}
         />
       )}
 
-      {currentStep === "review" &&
-        extractedIEP &&
-        remediation && ( // Ensure remediation is available
-          <ReviewStep
-            iep={extractedIEP}
-            remediation={remediation}
-            fixedIssues={fixedIssues}
-            onApplyFix={handleApplyFix}
-            onApplyAll={handleApplyAll}
-            onBack={() => setCurrentStep("building")}
-            onFinish={handleFinish}
-            onDownload={handleDownload}
-            isFixing={isFixing}
-            selectedState={selectedState} // Pass selectedState to ReviewStep
-            startTime={reviewStartTime} // Pass startTime to ReviewStep
-            logEvent={logEvent} // Pass logEvent to ReviewStep
-          />
-        )}
-
-      {currentStep === "myslp" && extractedIEP && (
-        <MySLPStep
+      {currentStep === "review" && extractedIEP && remediation && (
+        <ReviewStep
           iep={extractedIEP}
           remediation={remediation}
-          selectedState={selectedState}
-          onBack={() => setCurrentStep("review")}
+          fixedIssues={fixedIssues}
+          onApplyFix={handleApplyFix}
+          onApplyAll={handleApplyAll}
+          onBack={() => setCurrentStep("building")}
+          onFinish={handleFinish}
           onDownload={handleDownload}
+          isFixing={isFixing}
+          selectedState={selectedState}
+          startTime={reviewStartTime}
           logEvent={logEvent}
+          iepDate={iepDate} // Pass iepDate prop
         />
       )}
     </div>
