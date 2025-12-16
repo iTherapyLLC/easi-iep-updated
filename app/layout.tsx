@@ -1,12 +1,20 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Nunito, Nunito_Sans } from "next/font/google"
+import { Quicksand, Poppins } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { IEPProvider } from "@/lib/iep-context"
 
-const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" })
-const nunitoSans = Nunito_Sans({ subsets: ["latin"], variable: "--font-nunito-sans" })
+const quicksand = Quicksand({
+  subsets: ["latin"],
+  variable: "--font-quicksand",
+  weight: ["400", "500", "600", "700"],
+})
+const poppins = Poppins({
+  subsets: ["latin"],
+  variable: "--font-poppins",
+  weight: ["300", "400", "500", "600"],
+})
 
 export const metadata: Metadata = {
   title: "EASI - IEP Compliance Platform",
@@ -31,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${nunito.variable} ${nunitoSans.variable} font-sans antialiased`}>
+      <body className={`${quicksand.variable} ${poppins.variable} font-sans antialiased`}>
         <IEPProvider>{children}</IEPProvider>
         <Analytics />
       </body>

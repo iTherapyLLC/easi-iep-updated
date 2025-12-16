@@ -85,6 +85,8 @@
 
 @theme inline {
   /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --font-sans: "Poppins", "Poppins Fallback", system-ui, sans-serif;
+  --font-serif: "Quicksand", "Quicksand Fallback", system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
