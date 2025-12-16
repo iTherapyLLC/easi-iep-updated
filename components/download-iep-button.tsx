@@ -18,12 +18,14 @@ interface IEPData {
     primary_disability?: string
     secondary_disability?: string
   }
-  plaafp?: {
-    academic?: string
-    functional?: string
-    strengths?: string
-    concerns?: string
-  }
+  plaafp?:
+    | {
+        academic?: string
+        functional?: string
+        strengths?: string
+        concerns?: string
+      }
+    | string
   goals?: Array<{
     area?: string
     goal?: string
@@ -39,38 +41,55 @@ interface IEPData {
     location?: string
     provider?: string
   }>
-  accommodations?: string[]
+  accommodations?: string[] | Array<{ accommodation?: string; description?: string }>
   lre?: {
     placement?: string
     justification?: string
     time_general_ed?: string
+    setting?: string
+    percent_general_ed?: string
   }
 }
 
 interface DownloadIEPButtonProps {
-  iepData: IEPData
+  iep?: IEPData
+  iepData?: IEPData
   complianceScore?: number
   state?: string
   stateName?: string
   variant?: "default" | "outline" | "ghost"
   className?: string
+  onDownloadComplete?: () => void
 }
 
 export function DownloadIEPButton({
+  iep,
   iepData,
   complianceScore,
   state,
   stateName,
   variant = "default",
   className = "",
+  onDownloadComplete,
 }: DownloadIEPButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false)
 
+  const data = iep || iepData
+
   const generateDocument = async () => {
+    console.log("[v0] DownloadIEPButton - data received:", JSON.stringify(data, null, 2).substring(0, 1000))
+    console.log("[v0] DownloadIEPButton - data keys:", data ? Object.keys(data) : "NO DATA")
+
+    if (!data) {
+      console.error("[v0] DownloadIEPButton - No IEP data provided")
+      alert("No IEP data available to download.")
+      return
+    }
+
     setIsGenerating(true)
 
     try {
-      const studentName = iepData.student?.name || "Student"
+      const studentName = data.student?.name || "Student"
       const today = new Date().toLocaleDateString()
 
       // Create document sections
@@ -127,13 +146,13 @@ export function DownloadIEPButton({
       )
 
       const studentInfo = [
-        { label: "Student Name", value: iepData.student?.name },
-        { label: "Date of Birth", value: iepData.student?.dob },
-        { label: "Grade", value: iepData.student?.grade },
-        { label: "School", value: iepData.student?.school },
-        { label: "District", value: iepData.student?.district },
-        { label: "Primary Disability", value: iepData.eligibility?.primary_disability },
-        { label: "Secondary Disability", value: iepData.eligibility?.secondary_disability },
+        { label: "Student Name", value: data.student?.name },
+        { label: "Date of Birth", value: data.student?.dob },
+        { label: "Grade", value: data.student?.grade },
+        { label: "School", value: data.student?.school },
+        { label: "District", value: data.student?.district },
+        { label: "Primary Disability", value: data.eligibility?.primary_disability },
+        { label: "Secondary Disability", value: data.eligibility?.secondary_disability },
       ]
 
       studentInfo.forEach(({ label, value }) => {
@@ -156,56 +175,63 @@ export function DownloadIEPButton({
         }),
       )
 
-      if (iepData.plaafp?.strengths) {
+      const plaafp = data.plaafp
+      if (typeof plaafp === "string") {
         children.push(
           new Paragraph({
             spacing: { after: 100 },
-            children: [
-              new TextRun({ text: "Strengths: ", bold: true }),
-              new TextRun({ text: iepData.plaafp.strengths }),
-            ],
+            children: [new TextRun({ text: plaafp })],
           }),
         )
-      }
+      } else if (plaafp) {
+        if (plaafp.strengths) {
+          children.push(
+            new Paragraph({
+              spacing: { after: 100 },
+              children: [new TextRun({ text: "Strengths: ", bold: true }), new TextRun({ text: plaafp.strengths })],
+            }),
+          )
+        }
 
-      if (iepData.plaafp?.concerns) {
-        children.push(
-          new Paragraph({
-            spacing: { after: 100 },
-            children: [
-              new TextRun({ text: "Areas of Concern: ", bold: true }),
-              new TextRun({ text: iepData.plaafp.concerns }),
-            ],
-          }),
-        )
-      }
+        if (plaafp.concerns) {
+          children.push(
+            new Paragraph({
+              spacing: { after: 100 },
+              children: [
+                new TextRun({ text: "Areas of Concern: ", bold: true }),
+                new TextRun({ text: plaafp.concerns }),
+              ],
+            }),
+          )
+        }
 
-      if (iepData.plaafp?.academic) {
-        children.push(
-          new Paragraph({
-            spacing: { after: 100 },
-            children: [
-              new TextRun({ text: "Academic Performance: ", bold: true }),
-              new TextRun({ text: iepData.plaafp.academic }),
-            ],
-          }),
-        )
-      }
+        if (plaafp.academic) {
+          children.push(
+            new Paragraph({
+              spacing: { after: 100 },
+              children: [
+                new TextRun({ text: "Academic Performance: ", bold: true }),
+                new TextRun({ text: plaafp.academic }),
+              ],
+            }),
+          )
+        }
 
-      if (iepData.plaafp?.functional) {
-        children.push(
-          new Paragraph({
-            spacing: { after: 100 },
-            children: [
-              new TextRun({ text: "Functional Performance: ", bold: true }),
-              new TextRun({ text: iepData.plaafp.functional }),
-            ],
-          }),
-        )
+        if (plaafp.functional) {
+          children.push(
+            new Paragraph({
+              spacing: { after: 100 },
+              children: [
+                new TextRun({ text: "Functional Performance: ", bold: true }),
+                new TextRun({ text: plaafp.functional }),
+              ],
+            }),
+          )
+        }
       }
 
       // Goals Section
-      if (iepData.goals && iepData.goals.length > 0) {
+      if (data.goals && data.goals.length > 0) {
         children.push(
           new Paragraph({
             text: "ANNUAL GOALS",
@@ -214,7 +240,7 @@ export function DownloadIEPButton({
           }),
         )
 
-        iepData.goals.forEach((goal, index) => {
+        data.goals.forEach((goal, index) => {
           children.push(
             new Paragraph({
               text: `Goal ${index + 1}: ${goal.area || "General"}`,
@@ -271,7 +297,7 @@ export function DownloadIEPButton({
       }
 
       // Services Section
-      if (iepData.services && iepData.services.length > 0) {
+      if (data.services && data.services.length > 0) {
         children.push(
           new Paragraph({
             text: "SPECIAL EDUCATION AND RELATED SERVICES",
@@ -280,7 +306,7 @@ export function DownloadIEPButton({
           }),
         )
 
-        iepData.services.forEach((service, index) => {
+        data.services.forEach((service, index) => {
           children.push(
             new Paragraph({
               text: `Service ${index + 1}: ${service.service || "Service"}`,
@@ -310,7 +336,7 @@ export function DownloadIEPButton({
       }
 
       // Accommodations Section
-      if (iepData.accommodations && iepData.accommodations.length > 0) {
+      if (data.accommodations && data.accommodations.length > 0) {
         children.push(
           new Paragraph({
             text: "ACCOMMODATIONS AND MODIFICATIONS",
@@ -319,19 +345,25 @@ export function DownloadIEPButton({
           }),
         )
 
-        iepData.accommodations.forEach((accommodation, index) => {
-          children.push(
-            new Paragraph({
-              spacing: { after: 50 },
-              bullet: { level: 0 },
-              children: [new TextRun({ text: accommodation })],
-            }),
-          )
+        data.accommodations.forEach((accommodation) => {
+          const text =
+            typeof accommodation === "string"
+              ? accommodation
+              : accommodation.accommodation || accommodation.description || ""
+          if (text) {
+            children.push(
+              new Paragraph({
+                spacing: { after: 50 },
+                bullet: { level: 0 },
+                children: [new TextRun({ text })],
+              }),
+            )
+          }
         })
       }
 
       // LRE Section
-      if (iepData.lre) {
+      if (data.lre) {
         children.push(
           new Paragraph({
             text: "LEAST RESTRICTIVE ENVIRONMENT (LRE)",
@@ -340,37 +372,36 @@ export function DownloadIEPButton({
           }),
         )
 
-        if (iepData.lre.placement) {
+        const placement = data.lre.placement || data.lre.setting
+        if (placement) {
           children.push(
             new Paragraph({
               spacing: { after: 100 },
-              children: [
-                new TextRun({ text: "Placement: ", bold: true }),
-                new TextRun({ text: iepData.lre.placement }),
-              ],
+              children: [new TextRun({ text: "Placement: ", bold: true }), new TextRun({ text: placement })],
             }),
           )
         }
 
-        if (iepData.lre.time_general_ed) {
+        const timeInGenEd = data.lre.time_general_ed || data.lre.percent_general_ed
+        if (timeInGenEd) {
           children.push(
             new Paragraph({
               spacing: { after: 100 },
               children: [
                 new TextRun({ text: "Time in General Education: ", bold: true }),
-                new TextRun({ text: iepData.lre.time_general_ed }),
+                new TextRun({ text: timeInGenEd }),
               ],
             }),
           )
         }
 
-        if (iepData.lre.justification) {
+        if (data.lre.justification) {
           children.push(
             new Paragraph({
               spacing: { after: 100 },
               children: [
                 new TextRun({ text: "Justification: ", bold: true }),
-                new TextRun({ text: iepData.lre.justification }),
+                new TextRun({ text: data.lre.justification }),
               ],
             }),
           )
@@ -411,6 +442,10 @@ export function DownloadIEPButton({
       const blob = await Packer.toBlob(doc)
       const fileName = `IEP_${studentName.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.docx`
       saveAs(blob, fileName)
+
+      if (onDownloadComplete) {
+        onDownloadComplete()
+      }
     } catch (error) {
       console.error("[v0] Error generating document:", error)
       alert("Failed to generate document. Please try again.")
