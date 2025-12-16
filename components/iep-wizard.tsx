@@ -6,30 +6,35 @@ import { useState, useRef, useEffect } from "react"
 import {
   Upload,
   FileText,
-  Mic,
   CheckCircle2,
-  AlertTriangle,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Download,
   ArrowRight,
   ArrowLeft,
-  Camera,
-  X,
   Loader2,
-  MicOff,
-  ChevronDown,
-  AlertCircle,
   Check,
-  Download,
-  Send,
-  ChevronUp,
-  BarChart3,
+  X,
+  Shield,
   Target,
   Users,
-  Shield,
-  Award,
-  Clock,
-  Star,
-  GraduationCap,
+  Mic,
+  MicOff,
+  BarChart3,
+  Send,
   ClipboardCheck,
+  Award,
+  GraduationCap,
+  Edit3,
+  Pencil,
+  Wand2,
+  ListChecks,
+  Building2,
+  AlertTriangle,
+  Camera,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card" // Added for chat interface
@@ -177,6 +182,14 @@ interface ExtractedIEP {
     percent_special_ed: string
     lre_justification: string
   }
+  lre?: {
+    // Added for LRE section in EditIEPStep
+    setting?: string
+    percent_general_ed?: string
+    percent_special_ed?: string
+    justification?: string
+    placement?: string
+  }
 }
 
 interface RemediationData {
@@ -206,7 +219,7 @@ interface ChatMessage {
   timestamp: Date
 }
 
-type WizardStep = "upload" | "tell" | "building" | "review" | "myslp"
+type WizardStep = "upload" | "tell" | "building" | "review" | "edit" | "myslp"
 
 // =============================================================================
 // STEP 1: UPLOAD
@@ -674,6 +687,11 @@ type HashChainEvent =
   | "NEW_IEP_STARTED_FROM_CLINICAL" // Added for starting a new IEP from clinical review
   | "FIX_INITIATED" // Added for initiating a fix
   | "AUTO_ADVANCED_TO_REVIEW" // Added for auto-advance log
+  | "EDIT_STEP_STARTED" // Added for starting edit step
+  | "FIELD_EDIT_STARTED" // Added for starting field edit
+  | "FIELD_EDIT_SAVED" // Added for saving field edit
+  | "FIELD_EDIT_CANCELLED" // Added for cancelling field edit
+  | "EDIT_STEP_COMPLETED" // Added for completing edit step
 
 function ReviewStep({
   iep,
@@ -1112,6 +1130,861 @@ function ReviewStep({
         >
           Looks Good
           <ArrowRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function EditIEPStep({
+  iep,
+  setIep,
+  remediation,
+  fixedIssues,
+  setFixedIssues,
+  onApplyFix,
+  onBack,
+  onContinue,
+  isFixing,
+  selectedState,
+  logEvent,
+}: {
+  iep: ExtractedIEP
+  setIep: React.Dispatch<React.SetStateAction<ExtractedIEP | null>>
+  remediation: RemediationData | null
+  fixedIssues: Set<string>
+  setFixedIssues: React.Dispatch<React.SetStateAction<Set<string>>>
+  onApplyFix: (issue: any) => void
+  onBack: () => void
+  onContinue: () => void
+  isFixing: boolean
+  selectedState: string
+  logEvent: (eventType: string, metadata?: Record<string, any>) => void
+}) {
+  const [activeSection, setActiveSection] = useState<string>("plaafp")
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState<string>("")
+
+  const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
+
+  // Get issues grouped by section
+  const issues = remediation?.issues || []
+  const unfixedIssues = issues.filter((i) => !fixedIssues.has(i.id))
+  const criticalIssues = unfixedIssues.filter((i) => i.severity === "critical")
+  const warningIssues = unfixedIssues.filter((i) => i.severity === "warning")
+
+  // Calculate live compliance score
+  const baseScore = remediation?.original_score || remediation?.score || 0
+  const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + (i.points_deducted || 0), 0)
+  const currentScore = Math.min(100, baseScore + fixedPoints)
+
+  const canProceed = criticalIssues.length === 0
+
+  const sections = [
+    { id: "plaafp", label: "Present Levels", icon: FileText },
+    { id: "goals", label: "Goals", icon: Target },
+    { id: "services", label: "Services", icon: Users },
+    { id: "accommodations", label: "Accommodations", icon: ListChecks },
+    { id: "lre", label: "LRE Placement", icon: Building2 },
+  ]
+
+  const getIssuesForSection = (sectionId: string) => {
+    return unfixedIssues.filter((issue) => {
+      const issueSection = issue.id?.toLowerCase() || ""
+      const issueTitle = issue.title?.toLowerCase() || ""
+      if (sectionId === "plaafp") return issueSection.includes("plaafp") || issueTitle.includes("present level")
+      if (sectionId === "goals") return issueSection.includes("goal") || issueTitle.includes("goal")
+      if (sectionId === "services") return issueSection.includes("service") || issueTitle.includes("service")
+      if (sectionId === "accommodations")
+        return issueSection.includes("accommodation") || issueTitle.includes("accommodation")
+      if (sectionId === "lre") return issueSection.includes("lre") || issueTitle.includes("placement")
+      return false
+    })
+  }
+
+  const handleStartEdit = (fieldId: string, currentValue: string) => {
+    setEditingField(fieldId)
+    setEditValue(currentValue)
+    logEvent("FIELD_EDIT_STARTED", { fieldId })
+  }
+
+  const handleSaveEdit = (fieldId: string, updateFn: (value: string) => void) => {
+    updateFn(editValue)
+    setEditingField(null)
+    setEditValue("")
+    logEvent("FIELD_EDIT_SAVED", { fieldId })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingField(null)
+    setEditValue("")
+    logEvent("FIELD_EDIT_CANCELLED")
+  }
+
+  const handleManualFix = (issueId: string) => {
+    setFixedIssues((prev) => new Set([...prev, issueId]))
+    logEvent("FIX_MANUAL_ENTERED", { issueId })
+  }
+
+  useEffect(() => {
+    logEvent("EDIT_STEP_STARTED")
+  }, [])
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
+          <Edit3 className="w-8 h-8 text-white" />
+        </div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Review & Edit Your IEP</h1>
+        <p className="text-muted-foreground">
+          Fix compliance issues and make any needed changes before clinical review
+        </p>
+      </div>
+
+      {/* Live Compliance Score */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 mb-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-4xl font-bold">{currentScore}%</div>
+            <div className="text-blue-100">{stateName} Compliance Score</div>
+          </div>
+          <div className="text-right">
+            {criticalIssues.length > 0 ? (
+              <div className="flex items-center gap-2 text-red-200">
+                <AlertTriangle className="w-5 h-5" />
+                <span>{criticalIssues.length} critical issues remaining</span>
+              </div>
+            ) : warningIssues.length > 0 ? (
+              <div className="flex items-center gap-2 text-amber-200">
+                <AlertCircle className="w-5 h-5" />
+                <span>{warningIssues.length} warnings to review</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-200">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>All issues resolved!</span>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="mt-4 bg-white/20 rounded-full h-2">
+          <div
+            className="bg-white rounded-full h-2 transition-all duration-500"
+            style={{ width: `${((issues.length - unfixedIssues.length) / Math.max(issues.length, 1)) * 100}%` }}
+          />
+        </div>
+        <div className="mt-2 text-sm text-blue-200">
+          {issues.length - unfixedIssues.length} of {issues.length} issues fixed
+        </div>
+      </div>
+
+      {/* Section Navigation */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {sections.map((section) => {
+          const sectionIssues = getIssuesForSection(section.id)
+          const hasCritical = sectionIssues.some((i) => i.severity === "critical")
+          const hasWarning = sectionIssues.some((i) => i.severity === "warning")
+
+          return (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                activeSection === section.id
+                  ? "bg-blue-600 text-white"
+                  : "bg-card border border-border text-foreground hover:bg-muted"
+              }`}
+            >
+              <section.icon className="w-4 h-4" />
+              {section.label}
+              {sectionIssues.length > 0 && (
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                    hasCritical
+                      ? "bg-red-100 text-red-700"
+                      : hasWarning
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  {sectionIssues.length}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Section Content */}
+      <div className="bg-card border border-border rounded-xl p-6 mb-6">
+        {/* PLAAFP Section */}
+        {activeSection === "plaafp" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              Present Levels of Academic Achievement and Functional Performance
+            </h2>
+
+            {/* Issues for this section */}
+            {getIssuesForSection("plaafp").map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-lg p-4 ${
+                  issue.severity === "critical"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {issue.severity === "critical" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span
+                        className={`font-medium ${issue.severity === "critical" ? "text-red-800" : "text-amber-800"}`}
+                      >
+                        {issue.title}
+                      </span>
+                    </div>
+                    <p className="text-foreground text-sm mb-2">{issue.description}</p>
+                    {issue.citation && <p className="text-xs text-muted-foreground">Citation: {issue.citation}</p>}
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    {issue.suggested_fix && (
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Fix it for me
+                      </Button>
+                    )}
+                    <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
+                      Mark as Fixed
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Editable PLAAFP fields */}
+            <div className="space-y-4">
+              {/* Strengths */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-foreground">Strengths</label>
+                  {editingField !== "plaafp-strengths" && (
+                    <button
+                      onClick={() => handleStartEdit("plaafp-strengths", iep.plaafp?.strengths || "")}
+                      className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingField === "plaafp-strengths" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSaveEdit("plaafp-strengths", (value) => {
+                            setIep((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    plaafp: { ...prev.plaafp, strengths: value },
+                                  }
+                                : null,
+                            )
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">{iep.plaafp?.strengths || "No strengths documented"}</p>
+                )}
+              </div>
+
+              {/* Concerns */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-foreground">Areas of Concern</label>
+                  {editingField !== "plaafp-concerns" && (
+                    <button
+                      onClick={() => handleStartEdit("plaafp-concerns", iep.plaafp?.concerns || "")}
+                      className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingField === "plaafp-concerns" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSaveEdit("plaafp-concerns", (value) => {
+                            setIep((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    plaafp: { ...prev.plaafp, concerns: value },
+                                  }
+                                : null,
+                            )
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">{iep.plaafp?.concerns || "No concerns documented"}</p>
+                )}
+              </div>
+
+              {/* Academic Performance */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-foreground">Academic Performance</label>
+                  {editingField !== "plaafp-academic" && (
+                    <button
+                      onClick={() => handleStartEdit("plaafp-academic", iep.plaafp?.academic || "")}
+                      className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingField === "plaafp-academic" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSaveEdit("plaafp-academic", (value) => {
+                            setIep((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    plaafp: { ...prev.plaafp, academic: value },
+                                  }
+                                : null,
+                            )
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    {iep.plaafp?.academic || "No academic performance documented"}
+                  </p>
+                )}
+              </div>
+
+              {/* Functional Performance */}
+              <div className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="font-medium text-foreground">Functional Performance</label>
+                  {editingField !== "plaafp-functional" && (
+                    <button
+                      onClick={() => handleStartEdit("plaafp-functional", iep.plaafp?.functional || "")}
+                      className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingField === "plaafp-functional" ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSaveEdit("plaafp-functional", (value) => {
+                            setIep((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    plaafp: { ...prev.plaafp, functional: value },
+                                  }
+                                : null,
+                            )
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    {iep.plaafp?.functional || "No functional performance documented"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Goals Section */}
+        {activeSection === "goals" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Target className="w-5 h-5 text-blue-600" />
+              Annual Goals
+            </h2>
+
+            {/* Issues for this section */}
+            {getIssuesForSection("goals").map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-lg p-4 ${
+                  issue.severity === "critical"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {issue.severity === "critical" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span
+                        className={`font-medium ${issue.severity === "critical" ? "text-red-800" : "text-amber-800"}`}
+                      >
+                        {issue.title}
+                      </span>
+                    </div>
+                    <p className="text-foreground text-sm mb-2">{issue.description}</p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    {issue.suggested_fix && (
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Fix it for me
+                      </Button>
+                    )}
+                    <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
+                      Mark as Fixed
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Goals list */}
+            {(iep.goals || []).map((goal, idx) => (
+              <div key={goal.id || idx} className="border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                    {goal.area || goal.goal_area || `Goal ${idx + 1}`}
+                  </span>
+                  <button
+                    onClick={() =>
+                      handleStartEdit(`goal-${idx}`, goal.goal_text || goal.description || goal.text || "")
+                    }
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit
+                  </button>
+                </div>
+
+                {editingField === `goal-${idx}` ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleSaveEdit(`goal-${idx}`, (value) => {
+                            setIep((prev) => {
+                              if (!prev) return null
+                              const newGoals = [...(prev.goals || [])]
+                              newGoals[idx] = { ...newGoals[idx], goal_text: value, text: value, description: value }
+                              return { ...prev, goals: newGoals }
+                            })
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-foreground mb-3">
+                      {goal.goal_text || goal.description || goal.text || "No goal text"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Baseline:</span>{" "}
+                        <span>{goal.baseline || "Not specified"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Target:</span>{" "}
+                        <span>{goal.target || "Not specified"}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Services Section */}
+        {activeSection === "services" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Special Education Services
+            </h2>
+
+            {/* Issues for this section */}
+            {getIssuesForSection("services").map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-lg p-4 ${
+                  issue.severity === "critical"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {issue.severity === "critical" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span
+                        className={`font-medium ${issue.severity === "critical" ? "text-red-800" : "text-amber-800"}`}
+                      >
+                        {issue.title}
+                      </span>
+                    </div>
+                    <p className="text-foreground text-sm">{issue.description}</p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    {issue.suggested_fix && (
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Fix it for me
+                      </Button>
+                    )}
+                    <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
+                      Mark as Fixed
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Services list */}
+            {(iep.services || []).map((service, idx) => (
+              <div key={idx} className="border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="font-semibold text-foreground">
+                    {service.type || service.service_type || service.name || `Service ${idx + 1}`}
+                  </h4>
+                  <button
+                    onClick={() => handleStartEdit(`service-${idx}-frequency`, service.frequency || "")}
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Frequency:</span>{" "}
+                    <span>{service.frequency || "Not specified"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Duration:</span>{" "}
+                    <span>{service.duration || service.minutes_per_week || "Not specified"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Provider:</span>{" "}
+                    <span>{service.provider || "Not specified"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Setting:</span>{" "}
+                    <span>{service.setting || service.location || "Not specified"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Accommodations Section */}
+        {activeSection === "accommodations" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <ListChecks className="w-5 h-5 text-blue-600" />
+              Accommodations & Modifications
+            </h2>
+
+            {/* Issues for this section */}
+            {getIssuesForSection("accommodations").map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-lg p-4 ${
+                  issue.severity === "critical"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {issue.severity === "critical" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span
+                        className={`font-medium ${issue.severity === "critical" ? "text-red-800" : "text-amber-800"}`}
+                      >
+                        {issue.title}
+                      </span>
+                    </div>
+                    <p className="text-foreground text-sm">{issue.description}</p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    {issue.suggested_fix && (
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Fix it for me
+                      </Button>
+                    )}
+                    <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
+                      Mark as Fixed
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Accommodations list */}
+            <div className="border border-border rounded-lg p-4">
+              <ul className="space-y-2">
+                {(iep.accommodations || []).map((acc, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span>
+                      {typeof acc === "string" ? acc : acc.description || acc.name || acc.text || "Accommodation"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {(iep.accommodations || []).length === 0 && (
+                <p className="text-muted-foreground text-sm">No accommodations documented</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* LRE Section */}
+        {activeSection === "lre" && (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              Least Restrictive Environment (LRE)
+            </h2>
+
+            {/* Issues for this section */}
+            {getIssuesForSection("lre").map((issue) => (
+              <div
+                key={issue.id}
+                className={`rounded-lg p-4 ${
+                  issue.severity === "critical"
+                    ? "bg-red-50 border border-red-200"
+                    : "bg-amber-50 border border-amber-200"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {issue.severity === "critical" ? (
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-amber-600" />
+                      )}
+                      <span
+                        className={`font-medium ${issue.severity === "critical" ? "text-red-800" : "text-amber-800"}`}
+                      >
+                        {issue.title}
+                      </span>
+                    </div>
+                    <p className="text-foreground text-sm">{issue.description}</p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    {issue.suggested_fix && (
+                      <Button
+                        onClick={() => onApplyFix(issue)}
+                        disabled={isFixing}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Wand2 className="w-4 h-4 mr-1" />
+                        Fix it for me
+                      </Button>
+                    )}
+                    <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
+                      Mark as Fixed
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* LRE details */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <div>
+                <span className="text-muted-foreground text-sm">Placement Setting:</span>
+                <p className="font-medium text-foreground">
+                  {iep.placement?.setting || iep.lre?.setting || iep.lre?.placement || "Not specified"}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-muted-foreground text-sm">Time in General Education:</span>
+                  <p className="font-medium text-foreground">
+                    {iep.placement?.percent_general_ed || iep.lre?.percent_general_ed || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Time in Special Education:</span>
+                  <p className="font-medium text-foreground">
+                    {iep.placement?.percent_special_ed || iep.lre?.percent_special_ed || "Not specified"}
+                  </p>
+                </div>
+              </div>
+              {(iep.lre?.justification || iep.placement?.justification) && (
+                <div>
+                  <span className="text-muted-foreground text-sm">Justification:</span>
+                  <p className="text-foreground text-sm mt-1">
+                    {iep.lre?.justification || iep.placement?.justification}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 mt-8">
+        <button
+          onClick={onBack}
+          className="flex-1 py-4 rounded-xl font-semibold border border-border hover:bg-muted transition-colors flex items-center justify-center gap-2"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Back to Review
+        </button>
+        <button
+          onClick={onContinue}
+          disabled={!canProceed}
+          className={`flex-1 py-4 rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2 ${
+            canProceed
+              ? "bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+        >
+          {canProceed ? (
+            <>
+              Continue to Clinical Review
+              <ArrowRight className="w-5 h-5" />
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-5 h-5" />
+              Resolve {criticalIssues.length} Critical Issues First
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -1750,13 +2623,14 @@ export function IEPWizard() {
       logEvent("FILE_UPLOADED", { fileCount: files.length })
       setCurrentStep("tell")
     } else if (currentStep === "tell") {
-      // Start the building process
       handleStartBuilding()
     } else if (currentStep === "review") {
-      // If we are in review and clicked next, it means we completed all steps
-      // Now we should proceed to clinical review if it exists
+      // Go to edit step instead of myslp
+      setCurrentStep("edit")
+      logEvent("EDIT_STEP_STARTED")
+    } else if (currentStep === "edit") {
       setCurrentStep("myslp")
-      logEvent("AUTO_ADVANCED_TO_REVIEW")
+      logEvent("CLINICAL_REVIEW_STARTED")
     }
   }
 
@@ -1767,8 +2641,10 @@ export function IEPWizard() {
       setCurrentStep("tell")
     } else if (currentStep === "review") {
       setCurrentStep("building")
-    } else if (currentStep === "myslp") {
+    } else if (currentStep === "edit") {
       setCurrentStep("review")
+    } else if (currentStep === "myslp") {
+      setCurrentStep("edit")
     }
   }
 
@@ -1801,9 +2677,10 @@ export function IEPWizard() {
   }
 
   const handleFinish = () => {
-    console.log("[v0] handleFinish called - advancing to Clinical Review")
-    logEvent("IEP_APPROVED", { complianceScore: remediation?.original_score })
-    setCurrentStep("myslp")
+    logEvent("IEP_APPROVED", {
+      finalScore: remediation?.original_score || remediation?.score,
+    })
+    setCurrentStep("edit") // Go to edit step first
   }
 
   const handleDownloadDraft = () => {
@@ -1839,8 +2716,53 @@ export function IEPWizard() {
     setCurrentStep("upload")
   }
 
+  // Find the step indicator section and update it:
   return (
     <div>
+      {/* Step Indicator */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between max-w-3xl mx-auto">
+          {[
+            { step: "upload", label: "Upload Materials", num: 1 },
+            { step: "tell", label: "Tell Us About Progress", num: 2 },
+            { step: "building", label: "Building Your IEP", num: 3 },
+            { step: "review", label: "Review Draft", num: 4 },
+            { step: "edit", label: "Edit & Fix", num: 5 },
+            { step: "myslp", label: "Clinical Review", num: 6 },
+          ].map(({ step, label, num }) => {
+            const stepOrder = ["upload", "tell", "building", "review", "edit", "myslp"]
+            const currentIndex = stepOrder.indexOf(currentStep)
+            const stepIndex = stepOrder.indexOf(step)
+            const isComplete = stepIndex < currentIndex
+            const isCurrent = step === currentStep
+
+            return (
+              <div key={step} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                      isComplete
+                        ? "bg-blue-600 text-white"
+                        : isCurrent
+                          ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {isComplete ? <Check className="w-4 h-4" /> : num}
+                  </div>
+                  <span
+                    className={`mt-1 text-xs hidden sm:block ${isCurrent ? "text-blue-600 font-medium" : "text-muted-foreground"}`}
+                  >
+                    {label}
+                  </span>
+                </div>
+                {num < 6 && <div className={`w-12 h-0.5 mx-2 ${isComplete ? "bg-blue-600" : "bg-muted"}`} />}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {currentStep === "upload" && (
         <UploadStep files={files} onAddFiles={handleAddFiles} onRemoveFile={handleRemoveFile} onNext={handleNext} />
       )}
@@ -1888,6 +2810,25 @@ export function IEPWizard() {
           startTime={reviewStartTime}
           logEvent={logEvent}
           iepDate={iepDate} // Pass iepDate prop
+        />
+      )}
+
+      {currentStep === "edit" && extractedIEP && (
+        <EditIEPStep
+          iep={extractedIEP}
+          setIep={setExtractedIEP}
+          remediation={remediation}
+          fixedIssues={fixedIssues}
+          setFixedIssues={setFixedIssues}
+          onApplyFix={handleApplyFix}
+          onBack={handleBack}
+          onContinue={() => {
+            logEvent("EDIT_STEP_COMPLETED", { fixedCount: fixedIssues.size })
+            setCurrentStep("myslp")
+          }}
+          isFixing={isFixing}
+          selectedState={selectedState}
+          logEvent={logEvent}
         />
       )}
 
