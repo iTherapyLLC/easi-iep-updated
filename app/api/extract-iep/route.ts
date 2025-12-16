@@ -8,23 +8,31 @@ const IEP_GUARDIAN_URL =
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[extract-iep] Request content-type:", request.headers.get("content-type"))
+
     const formData = await request.formData()
 
+    console.log(
+      "[extract-iep] FormData entries:",
+      [...formData.entries()].map(
+        ([k, v]) => `${k}: ${typeof v === "object" ? (v as object).constructor.name : typeof v}`,
+      ),
+    )
+
     const file = formData.get("file") as File | null
+
+    console.log("[extract-iep] File received:", file ? `${file.name}, ${file.size} bytes` : "NO FILE")
+
     const state = (formData.get("state") as string) || "CA"
     const iepDate = (formData.get("iepDate") as string) || new Date().toISOString().split("T")[0]
     const userNotes = (formData.get("userNotes") as string) || ""
 
-    console.log("[extract-iep] Received request")
-    console.log("[extract-iep] File present:", !!file)
-    console.log("[extract-iep] File name:", file?.name)
-    console.log("[extract-iep] File size:", file?.size)
-    console.log("[extract-iep] File type:", file?.type)
     console.log("[extract-iep] State:", state)
     console.log("[extract-iep] IEP Date:", iepDate)
     console.log("[extract-iep] User Notes length:", userNotes?.length)
 
     if (!file) {
+      console.log("[extract-iep] ERROR: No file in FormData")
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
@@ -38,7 +46,7 @@ export async function POST(request: NextRequest) {
     const payload = {
       action: "analyze",
       pdf_base64: base64,
-      document: base64, // Alternative field name
+      document: base64,
       state: state,
       iep_date: iepDate,
       user_notes: userNotes,
@@ -46,7 +54,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[extract-iep] Sending to Lambda:", IEP_GUARDIAN_URL)
     console.log("[extract-iep] Payload keys:", Object.keys(payload))
-    console.log("[extract-iep] pdf_base64 present:", !!payload.pdf_base64)
     console.log("[extract-iep] pdf_base64 length:", payload.pdf_base64?.length)
 
     const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
