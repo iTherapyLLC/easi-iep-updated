@@ -1603,7 +1603,8 @@ function EditIEPStep({
     }
     
     // TODO: Update the actual IEP data based on the issue type
-    // For now, we at least require text input before marking fixed
+    // For now, we require text input before marking fixed to prevent bypassing compliance.
+    // Future enhancement: Apply newText to the corresponding IEP field based on issue.id
     
     setFixedIssues((prev) => new Set([...prev, issueId]))
     logEvent("FIX_MANUAL_ENTERED", { issueId, textLength: newText.length })
@@ -1697,6 +1698,9 @@ function EditIEPStep({
               placeholder="Enter the corrected information..."
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               autoFocus
+              aria-label="Enter corrected information for this compliance issue"
+              aria-required="true"
+              aria-invalid={editText.trim().length === 0}
             />
             <div className="flex gap-2">
               <Button 
@@ -1726,7 +1730,9 @@ function EditIEPStep({
               </Button>
             </div>
             {editText.trim().length === 0 && (
-              <p className="text-xs text-red-600">Please enter the required information</p>
+              <p className="text-xs text-red-600" role="alert" aria-live="polite">
+                Please enter the required information
+              </p>
             )}
           </div>
         ) : (
