@@ -378,6 +378,14 @@ function UploadStep({
 // STEP 2: TELL US
 // =============================================================================
 
+// Find the TellStep component and update the button disabled condition
+
+// Inside TellStep component props, add isFileReady:
+interface TellStepProps {
+  // ... existing props ...
+  isFileReady: boolean
+}
+
 function TellUsStep({
   studentUpdate,
   setStudentUpdate, // Renamed from onUpdateText
@@ -392,21 +400,8 @@ function TellUsStep({
   isListening,
   onStartListening,
   onStopListening,
-}: {
-  studentUpdate: string
-  setStudentUpdate: (text: string) => void // Changed type to reflect setter
-  onBack: () => void
-  onNext: () => void
-  studentName?: string
-  selectedState: string
-  setSelectedState: (state: string) => void // Changed type
-  iepDate: string
-  setIepDate: (date: string) => void // Changed type
-  logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
-  isListening: boolean
-  onStartListening: () => void
-  onStopListening: () => void
-}) {
+  isFileReady, // Added isFileReady prop
+}: TellStepProps) {
   const hasContent = studentUpdate.trim().length > 20
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
@@ -544,7 +539,12 @@ function TellUsStep({
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Button onClick={onNext} disabled={!hasContent} className="flex-1 bg-teal-600 hover:bg-teal-700">
+        {/* Update the Build My IEP button in TellStep */}
+        <Button
+          onClick={onNext}
+          disabled={!hasContent || !isFileReady}
+          className="flex-1 bg-teal-600 hover:bg-teal-700"
+        >
           Build My IEP
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
@@ -554,6 +554,9 @@ function TellUsStep({
         <p className="text-center text-sm text-slate-500 mt-4">
           Please add at least 20 characters about student progress
         </p>
+      )}
+      {hasContent && !isFileReady && (
+        <p className="text-center text-sm text-amber-600 mt-4">Processing uploaded file...</p>
       )}
     </div>
   )
@@ -2802,6 +2805,10 @@ function IEPWizard() {
   // File uploads
   const [files, setFiles] = useState<UploadedFile[]>([]) // Changed type to UploadedFile for consistency
 
+  // State for file upload readiness and retries
+  const [isFileReady, setIsFileReady] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+
   // Form state
   const [selectedState, setSelectedState] = useState("CA")
   const [iepDate, setIepDate] = useState(new Date().toISOString().split("T")[0])
@@ -2851,6 +2858,7 @@ function IEPWizard() {
   // Handle file upload
   const handleFileUpload = (newFiles: FileList | null) => {
     if (!newFiles) return
+    setIsFileReady(false) // Reset ready state when new files are added
     const fileArray = Array.from(newFiles).map((file) => ({
       id: Math.random().toString(36).substr(2, 9), // Generate unique ID
       file,
@@ -2863,46 +2871,72 @@ function IEPWizard() {
     if (fileArray.length > 0) {
       logEvent("FILE_UPLOADED", { fileName: fileArray[0].name, fileSize: fileArray[0].size })
     }
+    setTimeout(() => {
+      setIsFileReady(true)
+    }, 300)
   }
 
   const handleRemoveFile = (id: string) => {
     setFiles((prev) => {
       const removedFile = prev.find((f) => f.id === id)
       if (removedFile) {
-        logEvent("FILE_REMOVED", { fileName: removedFile.name }) // Log file removal
+        logEvent("FILE_REMOVED", { fileName: removedFile.name })
       }
-      return prev.filter((_, i) => i !== id)
+      const newFiles = prev.filter((f) => f.id !== id)
+      if (newFiles.length === 0) {
+        setIsFileReady(false)
+      }
+      return newFiles
     })
   }
 
   // Build IEP - call Lambda
-  const handleStartBuilding = async () => {
-    if (files.length === 0) return
+  const handleStartBuilding = async (isRetry = false) => {
+    if (files.length === 0) {
+      console.error("[v0] No files uploaded")
+      setBuildError("Please upload an IEP document first")
+      return
+    }
 
-    setIsSubmitting(true)
-    setBuildError(null)
-    setBuildStartTime(Date.now())
-    setCurrentStep("building")
-    logEvent("BUILD_STARTED")
+    const primaryFile = files[0]
+    if (!primaryFile || !primaryFile.file) {
+      console.error("[v0] File object not ready, waiting...")
+      if (!isRetry) {
+        // Wait and retry automatically
+        setTimeout(() => handleStartBuilding(true), 500)
+      } else {
+        setBuildError("File not ready. Please try again.")
+      }
+      return
+    }
 
-    setBuildTasks([
-      { id: "upload", label: "Uploading document...", status: "loading" },
-      { id: "extract", label: "Extracting IEP data...", status: "pending" },
-      { id: "generate", label: "Generating new IEP...", status: "pending" },
-      { id: "validate", label: "Validating compliance...", status: "pending" },
-    ])
+    if (!isRetry) {
+      setIsSubmitting(true)
+      setBuildError(null)
+      setBuildStartTime(Date.now())
+      setCurrentStep("building")
+      logEvent("BUILD_STARTED")
+      setRetryCount(0)
+
+      setBuildTasks([
+        { id: "upload", label: "Uploading document...", status: "loading" },
+        { id: "extract", label: "Extracting IEP data...", status: "pending" },
+        { id: "generate", label: "Generating new IEP...", status: "pending" },
+        { id: "validate", label: "Validating compliance...", status: "pending" },
+      ])
+    }
 
     try {
+      await new Promise((r) => setTimeout(r, 500))
+
       const formData = new FormData()
-      files.forEach((fileObj, index) => {
-        formData.append(`file${index}`, fileObj.file, fileObj.name) // Append with unique keys
-      })
+      formData.append("file", primaryFile.file, primaryFile.name)
       formData.append("state", selectedState)
       formData.append("iepDate", iepDate)
       formData.append("userNotes", studentUpdate)
 
-      // Update tasks as we progress
-      await new Promise((r) => setTimeout(r, 500))
+      console.log("[v0] Sending file:", primaryFile.name, primaryFile.file.size, "bytes")
+
       setBuildTasks((prev) =>
         prev.map((t) =>
           t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
@@ -2914,22 +2948,21 @@ function IEPWizard() {
         body: formData,
       })
 
-      setBuildTasks((prev) =>
-        prev.map((t) =>
-          t.id === "extract" ? { ...t, status: "complete" } : t.id === "generate" ? { ...t, status: "loading" } : t,
-        ),
-      )
-      await new Promise((r) => setTimeout(r, 300))
-
       const data = await response.json()
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        if (data.error === "No file provided" && retryCount < 1) {
+          console.log("[v0] No file provided error, retrying in 1 second...")
+          setRetryCount((prev) => prev + 1)
+          await new Promise((r) => setTimeout(r, 1000))
+          return handleStartBuilding(true)
+        }
         throw new Error(data.error || "Failed to process IEP")
       }
 
       setBuildTasks((prev) =>
         prev.map((t) =>
-          t.id === "generate" ? { ...t, status: "complete" } : t.id === "validate" ? { ...t, status: "loading" } : t,
+          t.id === "extract" ? { ...t, status: "complete" } : t.id === "generate" ? { ...t, status: "loading" } : t,
         ),
       )
       await new Promise((r) => setTimeout(r, 300))
@@ -3150,6 +3183,7 @@ function IEPWizard() {
             onBack={handleBack}
             onNext={handleNext}
             logEvent={logEvent}
+            isFileReady={isFileReady} // Pass isFileReady to TellStep
           />
         )}
 
