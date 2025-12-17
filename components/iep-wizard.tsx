@@ -1669,7 +1669,11 @@ function EditIEPStep({
       const functional = iepData?.plaafp?.functional || ''
       
       if (strengths || academic || functional) {
-        return `Strengths: ${strengths || 'To be documented'}. Academic: ${academic || 'To be documented'}. Functional: ${functional || 'To be documented'}.`
+        const parts = []
+        if (strengths) parts.push(`Strengths: ${strengths}`)
+        if (academic) parts.push(`Academic: ${academic}`)
+        if (functional) parts.push(`Functional: ${functional}`)
+        return parts.length > 0 ? parts.join('. ') + '.' : '[Enter Present Levels of Academic and Functional Performance]'
       }
       return '[Enter Present Levels of Academic and Functional Performance]'
     }
