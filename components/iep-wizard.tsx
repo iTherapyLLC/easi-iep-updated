@@ -148,6 +148,82 @@ const getSecondaryDisability = (iep: ExtractedIEP | null): string => {
   )
 }
 
+/**
+ * Extracts IEP data from Lambda response, checking multiple possible paths.
+ * The Lambda may return data in different structures depending on the processing pipeline.
+ */
+const extractIEPFromResponse = (data: any): ExtractedIEP => {
+  // Try to find the IEP object from various possible locations
+  const iepSource = data?.new_iep || data?.result?.new_iep || data?.result?.iep || data?.iep || data
+
+  // Extract goals from multiple possible paths
+  const goals = 
+    iepSource?.goals ||
+    iepSource?.annual_goals ||
+    iepSource?.iep_goals ||
+    data?.goals ||
+    data?.result?.goals ||
+    []
+
+  // Extract services from multiple possible paths
+  const services = 
+    iepSource?.services ||
+    iepSource?.related_services ||
+    iepSource?.special_education_services ||
+    data?.services ||
+    data?.result?.services ||
+    []
+
+  // Extract student info from multiple possible paths
+  const student = 
+    iepSource?.student ||
+    iepSource?.student_info ||
+    iepSource?.student_information ||
+    data?.student ||
+    data?.result?.student ||
+    {}
+
+  // Extract other fields
+  const eligibility = iepSource?.eligibility || data?.eligibility || {}
+  const plaafp = iepSource?.plaafp || iepSource?.present_levels || data?.plaafp || {}
+  const accommodations = iepSource?.accommodations || data?.accommodations || []
+  const placement = iepSource?.placement || data?.placement || {}
+  const lre = iepSource?.lre || data?.lre || {}
+
+  // Log which paths actually contained data
+  console.log('[DEBUG] Data extraction results:', {
+    goalsSource: iepSource?.goals ? 'iepSource.goals' : 
+                 iepSource?.annual_goals ? 'iepSource.annual_goals' :
+                 iepSource?.iep_goals ? 'iepSource.iep_goals' :
+                 data?.goals ? 'data.goals' :
+                 data?.result?.goals ? 'data.result.goals' : 'none',
+    goalsCount: goals?.length || 0,
+    servicesSource: iepSource?.services ? 'iepSource.services' :
+                    iepSource?.related_services ? 'iepSource.related_services' :
+                    iepSource?.special_education_services ? 'iepSource.special_education_services' :
+                    data?.services ? 'data.services' :
+                    data?.result?.services ? 'data.result.services' : 'none',
+    servicesCount: services?.length || 0,
+    studentSource: iepSource?.student ? 'iepSource.student' :
+                   iepSource?.student_info ? 'iepSource.student_info' :
+                   iepSource?.student_information ? 'iepSource.student_information' :
+                   data?.student ? 'data.student' :
+                   data?.result?.student ? 'data.result.student' : 'none',
+    studentName: student?.name || student?.full_name || 'not found',
+  })
+
+  return {
+    student,
+    eligibility,
+    plaafp,
+    goals,
+    services,
+    accommodations,
+    placement,
+    lre,
+  }
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -3508,11 +3584,78 @@ function IEPWizard() {
         ),
       )
 
-      const newIEP = data.new_iep || data.result?.new_iep || data.result?.iep
-      const remediationData = data.remediation || data.result?.remediation
+      // Debug logging to see exact Lambda response structure
+      console.log('[DEBUG] ========== LAMBDA RESPONSE DEBUG ==========')
+      console.log('[DEBUG] Full API response:', JSON.stringify(data, null, 2))
+      console.log('[DEBUG] data.new_iep:', JSON.stringify(data?.new_iep, null, 2))
+      console.log('[DEBUG] data.result:', JSON.stringify(data?.result, null, 2))
+      console.log('[DEBUG] Goals location check:', {
+        'data.goals': data?.goals,
+        'data.new_iep?.goals': data?.new_iep?.goals,
+        'data.new_iep?.annual_goals': data?.new_iep?.annual_goals,
+        'data.new_iep?.iep_goals': data?.new_iep?.iep_goals,
+        'data.result?.goals': data?.result?.goals,
+        'data.result?.new_iep?.goals': data?.result?.new_iep?.goals,
+      })
+      console.log('[DEBUG] Services location check:', {
+        'data.services': data?.services,
+        'data.new_iep?.services': data?.new_iep?.services,
+        'data.new_iep?.related_services': data?.new_iep?.related_services,
+        'data.new_iep?.special_education_services': data?.new_iep?.special_education_services,
+        'data.result?.services': data?.result?.services,
+        'data.result?.new_iep?.services': data?.result?.new_iep?.services,
+      })
+      console.log('[DEBUG] Student location check:', {
+        'data.student': data?.student,
+        'data.new_iep?.student': data?.new_iep?.student,
+        'data.new_iep?.student_info': data?.new_iep?.student_info,
+        'data.new_iep?.student_information': data?.new_iep?.student_information,
+        'data.result?.student': data?.result?.student,
+        'data.result?.new_iep?.student': data?.result?.new_iep?.student,
+      })
+      console.log('[DEBUG] ========== END LAMBDA RESPONSE DEBUG ==========')
 
       // Debug logging to see exact Lambda response structure
-      console.log('[DEBUG] Full IEP data structure:', JSON.stringify(newIEP, null, 2))
+      console.log('[DEBUG] ========== LAMBDA RESPONSE DEBUG ==========')
+      console.log('[DEBUG] Full API response keys:', Object.keys(data))
+      console.log('[DEBUG] data.new_iep exists:', !!data?.new_iep)
+      console.log('[DEBUG] data.result exists:', !!data?.result)
+      if (data?.new_iep) {
+        console.log('[DEBUG] data.new_iep keys:', Object.keys(data.new_iep))
+      }
+      if (data?.result) {
+        console.log('[DEBUG] data.result keys:', Object.keys(data.result))
+      }
+      console.log('[DEBUG] ========== END LAMBDA RESPONSE DEBUG ==========')
+
+      // Use the helper function to extract IEP data from various possible paths
+      const newIEP = extractIEPFromResponse(data)
+      console.log('[DEBUG] Extracted IEP:', {
+        hasStudent: !!newIEP.student,
+        studentName: newIEP.student?.name,
+        goalsCount: newIEP.goals?.length,
+        servicesCount: newIEP.services?.length,
+      })
+
+      // Extract remediation data from multiple paths
+      const remediationData = 
+        data?.remediation || 
+        data?.result?.remediation || 
+        data?.compliance || 
+        data?.result?.compliance ||
+        (data?.result?.compliance_score !== undefined ? {
+          score: data.result.compliance_score,
+          original_score: data.result.compliance_score,
+          issues: data.result.issues || data.result.compliance_issues || [],
+          checks_passed: data.result.checks_passed || [],
+          checks_failed: data.result.checks_failed || [],
+        } : null)
+
+      console.log('[DEBUG] Remediation data:', {
+        found: !!remediationData,
+        score: remediationData?.score || remediationData?.original_score,
+        issuesCount: remediationData?.issues?.length,
+      })
 
       if (newIEP) {
         setExtractedIEP(newIEP)
