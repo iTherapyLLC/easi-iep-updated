@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   Camera,
   User,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
@@ -110,6 +111,19 @@ const IDEA_DISABILITY_CATEGORIES = [
   { code: "speech-language-impairment", label: "Speech or Language Impairment" },
   { code: "traumatic-brain-injury", label: "Traumatic Brain Injury" },
   { code: "visual-impairment", label: "Visual Impairment (including Blindness)" },
+]
+
+const FUN_LOADING_MESSAGES = [
+  "Teaching our AI to read between the lines...",
+  "Cross-referencing with IDEA requirements...",
+  "Making sure every goal is measurable...",
+  "Checking the fine print so you don't have to...",
+  "Our compliance robot is doing its thing...",
+  "Dotting the i's and crossing the t's...",
+  "Brewing a fresh batch of compliant goals...",
+  "Consulting with our digital special ed expert...",
+  "Analyzing patterns from thousands of IEPs...",
+  "Almost there... perfection takes a moment!",
 ]
 
 // =============================================================================
@@ -566,6 +580,79 @@ function TellUsStep({
 // STEP 3: BUILDING
 // =============================================================================
 
+function AnimatedProgressRing({ progress, size = 120 }: { progress: number; size?: number }) {
+  const strokeWidth = 8
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const offset = circumference - (progress / 100) * circumference
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      {/* Background ring */}
+      <svg className="transform -rotate-90" width={size} height={size}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          className="text-blue-100"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="text-blue-500 transition-all duration-500 ease-out"
+        />
+      </svg>
+      {/* Center content */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-2xl font-bold text-blue-600">{Math.round(progress)}%</span>
+      </div>
+    </div>
+  )
+}
+
+function BouncingDots() {
+  return (
+    <div className="flex items-center gap-1">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+          style={{ animationDelay: `${i * 0.15}s`, animationDuration: "0.6s" }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function FloatingParticles() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(12)].map((_, i) => (
+        <div
+          key={i}
+          className="absolute w-2 h-2 bg-blue-200 rounded-full opacity-60"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+            animationDelay: `${Math.random() * 2}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface BuildingTask {
   id: string
   label: string
@@ -589,6 +676,19 @@ function BuildingStep({
   const allComplete = tasks.every((t) => t.status === "complete")
   const currentTask = tasks.find((t) => t.status === "running")
 
+  const completedCount = tasks.filter((t) => t.status === "complete").length
+  const progress = (completedCount / tasks.length) * 100
+
+  const [messageIndex, setMessageIndex] = useState(0)
+  useEffect(() => {
+    if (!allComplete && !error) {
+      const interval = setInterval(() => {
+        setMessageIndex((prev) => (prev + 1) % FUN_LOADING_MESSAGES.length)
+      }, 3500)
+      return () => clearInterval(interval)
+    }
+  }, [allComplete, error])
+
   useEffect(() => {
     if (allComplete && onComplete) {
       const timer = setTimeout(() => {
@@ -599,93 +699,133 @@ function BuildingStep({
   }, [allComplete, onComplete])
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 mx-auto mb-4">
-          <img src="/images/easi-iep-logo.webp" alt="EASI IEP" className="w-full h-full object-contain animate-pulse" />
+    <div className="max-w-2xl mx-auto px-4 py-8 relative">
+      {!allComplete && !error && <FloatingParticles />}
+
+      <div className="text-center mb-8 relative z-10">
+        <div className="flex justify-center mb-6">
+          {allComplete ? (
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200">
+              <CheckCircle2 className="w-12 h-12 text-white" />
+            </div>
+          ) : error ? (
+            <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
+              <AlertTriangle className="w-12 h-12 text-white" />
+            </div>
+          ) : (
+            <AnimatedProgressRing progress={progress} size={120} />
+          )}
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Building Your New IEP</h1>
-        <p className="text-slate-600">
-          {error
-            ? "An error occurred"
-            : allComplete
-              ? "Your draft is ready!"
-              : currentTask
-                ? `${currentTask.label}...`
-                : "Starting..."}
-        </p>
+
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
+        </h1>
+
+        <div className="h-6 overflow-hidden">
+          <p key={messageIndex} className="text-slate-600 animate-fade-in">
+            {error
+              ? "Let's try that again"
+              : allComplete
+                ? "Time to review your compliant draft!"
+                : FUN_LOADING_MESSAGES[messageIndex]}
+          </p>
+        </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
-          <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-800">{error}</p>
-          <button onClick={onRetry} className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg font-medium">
-            Retry
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6 text-center">
+          <p className="text-red-800 mb-4">{error}</p>
+          <button
+            onClick={onRetry}
+            className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200"
+          >
+            Try Again
           </button>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
-        <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm relative z-10">
+        <div className="space-y-3">
           {tasks.map((task, index) => (
-            <div key={task.id} className="flex items-center gap-4">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  task.status === "complete"
-                    ? "bg-teal-500"
-                    : task.status === "running"
-                      ? "bg-teal-100"
-                      : task.status === "error"
-                        ? "bg-red-100"
-                        : "bg-slate-100"
-                }`}
-              >
-                {task.status === "complete" && <CheckCircle2 className="w-5 h-5 text-white" />}
-                {task.status === "running" && <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />}
-                {task.status === "error" && <AlertTriangle className="w-5 h-5 text-red-500" />}
-                {task.status === "pending" && <span className="text-sm text-slate-400">{index + 1}</span>}
+            <div
+              key={task.id}
+              className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
+                task.status === "running"
+                  ? "bg-blue-50 border border-blue-100"
+                  : task.status === "complete"
+                    ? "bg-green-50/50"
+                    : ""
+              }`}
+            >
+              <div className="relative">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                    task.status === "complete"
+                      ? "bg-gradient-to-br from-green-400 to-green-500 shadow-md shadow-green-200"
+                      : task.status === "running"
+                        ? "bg-gradient-to-br from-blue-400 to-blue-500 shadow-md shadow-blue-200"
+                        : task.status === "error"
+                          ? "bg-gradient-to-br from-red-400 to-red-500 shadow-md shadow-red-200"
+                          : "bg-slate-100"
+                  }`}
+                >
+                  {task.status === "complete" && <CheckCircle2 className="w-5 h-5 text-white animate-scale-in" />}
+                  {task.status === "running" && <Loader2 className="w-5 h-5 text-white animate-spin" />}
+                  {task.status === "error" && <AlertTriangle className="w-5 h-5 text-white" />}
+                  {task.status === "pending" && <span className="text-sm font-medium text-slate-400">{index + 1}</span>}
+                </div>
+                {/* Pulse ring for running task */}
+                {task.status === "running" && (
+                  <div className="absolute inset-0 rounded-xl bg-blue-400 animate-ping opacity-20" />
+                )}
               </div>
 
               <span
-                className={`flex-1 ${
+                className={`flex-1 font-medium transition-all duration-300 ${
                   task.status === "complete"
-                    ? "text-slate-600"
+                    ? "text-green-700"
                     : task.status === "running"
-                      ? "text-slate-900 font-medium"
+                      ? "text-blue-700"
                       : "text-slate-400"
                 }`}
               >
                 {task.label}
               </span>
 
-              {task.status === "complete" && <span className="text-sm text-teal-600">Done</span>}
+              {task.status === "complete" && (
+                <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full animate-scale-in">
+                  Done
+                </span>
+              )}
+              {task.status === "running" && <BouncingDots />}
             </div>
           ))}
         </div>
       </div>
 
       {!allComplete && !error && (
-        <div className="bg-slate-50 rounded-xl p-4 text-center">
-          <p className="text-sm text-slate-600">
-            We're comparing the previous IEP with your notes, checking compliance against federal and state
-            requirements, and identifying any issues.
+        <div className="relative z-10">
+          <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+            <div
+              className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out relative"
+              style={{ width: `${progress}%` }}
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+            </div>
+          </div>
+          <p className="text-center text-sm text-slate-500">
+            Validating against {stateName} regulations and federal IDEA requirements
           </p>
         </div>
       )}
 
-      {allComplete && !error && (
-        <div className="text-center mt-6 animate-fade-in">
-          <p className="text-sm text-slate-500 mb-3">Advancing to review in a moment...</p>
-          {onComplete && (
-            <button
-              onClick={onComplete}
-              className="px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors"
-            >
-              Continue to Review
-              <ArrowRight className="w-4 h-4 inline ml-2" />
-            </button>
-          )}
+      {allComplete && (
+        <div className="text-center relative z-10">
+          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium animate-bounce">
+            <Sparkles className="w-4 h-4" />
+            Draft ready for review!
+          </div>
         </div>
       )}
     </div>
