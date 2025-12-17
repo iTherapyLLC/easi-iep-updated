@@ -995,6 +995,11 @@ function ReviewStep({
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
   iepDate: string // Added iepDate type
 }) {
+  // Compliance score thresholds
+  const MINIMUM_PASSING_SCORE = 80
+  const EXCELLENT_SCORE = 90
+  const GOOD_SCORE = 70
+
   const [showCelebration, setShowCelebration] = useState(false)
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("overview") // Changed default to overview
@@ -1047,14 +1052,14 @@ function ReviewStep({
 
   // Helper functions for score-based styling
   const getScoreColors = (score: number) => {
-    if (score >= 90) return "from-green-600 to-green-800"
-    if (score >= 70) return "from-orange-500 to-orange-700"
+    if (score >= EXCELLENT_SCORE) return "from-green-600 to-green-800"
+    if (score >= GOOD_SCORE) return "from-orange-500 to-orange-700"
     return "from-red-600 to-red-800"
   }
 
   const getScoreTextColor = (score: number) => {
-    if (score >= 90) return "text-green-100"
-    if (score >= 70) return "text-orange-100"
+    if (score >= EXCELLENT_SCORE) return "text-green-100"
+    if (score >= GOOD_SCORE) return "text-orange-100"
     return "text-red-100"
   }
 
@@ -1081,7 +1086,7 @@ function ReviewStep({
       </div>
 
       {/* Warning message for low compliance scores */}
-      {complianceScore < 80 && (
+      {complianceScore < MINIMUM_PASSING_SCORE && (
         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 mb-6">
           <AlertTriangle className="w-5 h-5 text-amber-600" />
           <span className="text-amber-800 font-medium">
@@ -1448,7 +1453,7 @@ function ReviewStep({
           }}
           className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
-          Review &amp; Edit IEP
+          Review & Edit IEP
           <ArrowRight className="w-5 h-5" />
         </Button>
       </div>
@@ -1489,6 +1494,9 @@ function EditIEPStep({
   selectedState: string
   logEvent: (eventType: string, metadata?: Record<string, any>) => void
 }) {
+  // Compliance score threshold
+  const MINIMUM_PASSING_SCORE = 80
+
   const [activeSection, setActiveSection] = useState<string>("issues")
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>("")
@@ -1518,7 +1526,7 @@ function EditIEPStep({
   const currentScore = Math.min(100, baseScore + fixedPoints)
   const targetScore = 100
 
-  const canProceed = criticalIssues.length === 0 && currentScore >= 80
+  const canProceed = criticalIssues.length === 0 && currentScore >= MINIMUM_PASSING_SCORE
 
   const sections = [
     { id: "issues", label: "All Issues", icon: AlertTriangle },
@@ -2626,7 +2634,7 @@ function EditIEPStep({
           {!canProceed 
             ? criticalIssues.length > 0
               ? `Fix ${criticalIssues.length} critical issue${criticalIssues.length !== 1 ? 's' : ''} to continue`
-              : `Improve score to 80%+ to continue (currently ${currentScore}%)`
+              : `Improve score to ${MINIMUM_PASSING_SCORE}%+ to continue (currently ${currentScore}%)`
             : "Continue to MySLP Review"}
           <ArrowRight className="w-5 h-5" />
         </Button>
