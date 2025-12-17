@@ -125,6 +125,11 @@ const FUN_LOADING_MESSAGES = [
   "Almost there... perfection takes a moment!",
 ]
 
+// Compliance score thresholds
+const MINIMUM_PASSING_SCORE = 80
+const EXCELLENT_SCORE = 90
+const GOOD_SCORE = 70
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -995,11 +1000,6 @@ function ReviewStep({
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
   iepDate: string // Added iepDate type
 }) {
-  // Compliance score thresholds
-  const MINIMUM_PASSING_SCORE = 80
-  const EXCELLENT_SCORE = 90
-  const GOOD_SCORE = 70
-
   const [showCelebration, setShowCelebration] = useState(false)
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("overview") // Changed default to overview
@@ -1494,9 +1494,6 @@ function EditIEPStep({
   selectedState: string
   logEvent: (eventType: string, metadata?: Record<string, any>) => void
 }) {
-  // Compliance score threshold
-  const MINIMUM_PASSING_SCORE = 80
-
   const [activeSection, setActiveSection] = useState<string>("issues")
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>("")
