@@ -1045,6 +1045,19 @@ function ReviewStep({
     )
   }
 
+  // Helper functions for score-based styling
+  const getScoreColors = (score: number) => {
+    if (score >= 90) return "from-green-600 to-green-800"
+    if (score >= 70) return "from-orange-500 to-orange-700"
+    return "from-red-600 to-red-800"
+  }
+
+  const getScoreTextColor = (score: number) => {
+    if (score >= 90) return "text-green-100"
+    if (score >= 70) return "text-orange-100"
+    return "text-red-100"
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header with score */}
@@ -1056,16 +1069,26 @@ function ReviewStep({
         <p className="text-muted-foreground">We generated a compliant IEP based on the previous one and your notes</p>
       </div>
 
-      {/* Score badge - updated to blue gradient */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 mb-6 text-white text-center">
+      {/* Score badge - dynamic color based on score */}
+      <div className={`bg-gradient-to-r ${getScoreColors(complianceScore)} rounded-2xl p-6 mb-6 text-white text-center`}>
         <div className="text-5xl font-bold mb-2">{complianceScore}%</div>
-        <div className="text-blue-100 font-medium">{stateName} Compliant</div>
-        <div className="text-sm text-blue-200 mt-1">Validated against {stateName} regulations and federal IDEA</div>
+        <div className={`${getScoreTextColor(complianceScore)} font-medium`}>{stateName} Compliant</div>
+        <div className={`text-sm ${getScoreTextColor(complianceScore)} mt-1`}>Validated against {stateName} regulations and federal IDEA</div>
         <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1">
           <Clock className="w-4 h-4" />
           <span className="text-sm">Estimated {timeSavedMinutes} minutes saved</span>
         </div>
       </div>
+
+      {/* Warning message for low compliance scores */}
+      {complianceScore < 80 && (
+        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 mb-6">
+          <AlertTriangle className="w-5 h-5 text-amber-600" />
+          <span className="text-amber-800 font-medium">
+            {unfixedIssues.length} issue{unfixedIssues.length !== 1 ? 's' : ''} need attention before proceeding
+          </span>
+        </div>
+      )}
 
       {/* What we verified section */}
       <div className="bg-card rounded-xl border border-border mb-6 overflow-hidden">
@@ -1075,7 +1098,7 @@ function ReviewStep({
         >
           <div className="flex items-center gap-3">
             <Shield className="w-5 h-5 text-blue-600" />
-            <span className="font-medium text-foreground">
+            <span className={`font-medium ${passedCount / totalChecks < 0.8 ? 'text-red-600' : 'text-foreground'}`}>
               What we verified ({passedCount}/{totalChecks} checks passed)
             </span>
           </div>
@@ -1425,7 +1448,7 @@ function ReviewStep({
           }}
           className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
-          Looks Good
+          Review &amp; Edit IEP
           <ArrowRight className="w-5 h-5" />
         </Button>
       </div>
@@ -1495,7 +1518,7 @@ function EditIEPStep({
   const currentScore = Math.min(100, baseScore + fixedPoints)
   const targetScore = 100
 
-  const canProceed = criticalIssues.length === 0
+  const canProceed = criticalIssues.length === 0 && currentScore >= 80
 
   const sections = [
     { id: "issues", label: "All Issues", icon: AlertTriangle },
@@ -2600,7 +2623,11 @@ function EditIEPStep({
           disabled={!canProceed}
           className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
-          Continue to Review
+          {!canProceed 
+            ? criticalIssues.length > 0
+              ? `Fix ${criticalIssues.length} critical issue${criticalIssues.length !== 1 ? 's' : ''} to continue`
+              : `Improve score to 80%+ to continue (currently ${currentScore}%)`
+            : "Continue to MySLP Review"}
           <ArrowRight className="w-5 h-5" />
         </Button>
       </div>
