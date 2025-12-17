@@ -1523,6 +1523,8 @@ function EditIEPStep({
   const [editValue, setEditValue] = useState<string>("")
   const [showCelebration, setShowCelebration] = useState(false)
   const [lastFixedIssue, setLastFixedIssue] = useState<string | null>(null)
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
 
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
@@ -1594,9 +1596,18 @@ function EditIEPStep({
     setEditValue("")
   }
 
-  const handleManualFix = (issueId: string) => {
+  const handleManualFix = (issueId: string, newText?: string) => {
+    if (!newText || newText.trim().length === 0) {
+      // Don't mark as fixed without actual input
+      return
+    }
+    
+    // TODO: Update the actual IEP data based on the issue type
+    // For now, we require text input before marking fixed to prevent bypassing compliance.
+    // Future enhancement: Apply newText to the corresponding IEP field based on issue.id
+    
     setFixedIssues((prev) => new Set([...prev, issueId]))
-    logEvent("FIX_MANUAL_ENTERED", { issueId })
+    logEvent("FIX_MANUAL_ENTERED", { issueId, textLength: newText.length })
     triggerCelebration(issueId)
   }
 
@@ -1679,26 +1690,80 @@ function EditIEPStep({
           </div>
         )}
 
-        <div className="flex gap-2">
-          {issue.suggested_fix && (
-            <Button
+        {editingIssueId === issue.id ? (
+          <div className="mt-3 space-y-2 w-full">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              placeholder="Enter the corrected information..."
+              className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              autoFocus
+              aria-label={`Enter corrected information for: ${issue.title}`}
+              aria-required="true"
+              aria-invalid={editText.trim().length === 0}
+            />
+            <div className="flex gap-2">
+              <Button 
+                size="sm"
+                onClick={() => {
+                  if (editText.trim().length > 0) {
+                    handleManualFix(issue.id, editText.trim())
+                    setEditingIssueId(null)
+                    setEditText('')
+                  }
+                }}
+                disabled={editText.trim().length === 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Check className="w-4 h-4 mr-1" />
+                Save Changes
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditingIssueId(null)
+                  setEditText('')
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+            {editText.trim().length === 0 && (
+              <p className="text-xs text-red-600" role="alert" aria-live="polite">
+                Please enter the corrected text for this compliance issue
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            {issue.suggested_fix && (
+              <Button
+                onClick={() => {
+                  handleApplyFix(issue)
+                  logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+                }}
+                disabled={isFixing}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Wand2 className="w-4 h-4 mr-1" />
+                Fix it for me
+              </Button>
+            )}
+            <Button 
               onClick={() => {
-                handleApplyFix(issue)
-                logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
-              }}
-              disabled={isFixing}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
+                setEditingIssueId(issue.id)
+                setEditText(issue.current_text || '')
+              }} 
+              size="sm" 
+              variant="outline"
             >
-              <Wand2 className="w-4 h-4 mr-1" />
-              Fix it for me
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit manually
             </Button>
-          )}
-          <Button onClick={() => handleManualFix(issue.id)} size="sm" variant="outline">
-            <Pencil className="w-4 h-4 mr-1" />
-            Edit manually
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
     )
   }
