@@ -38,6 +38,30 @@ import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 
 // =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Safely render a value that might be an object.
+ * React Error #31 occurs when trying to render objects directly as React children.
+ */
+const safeRender = (value: unknown, fallback = 'Not specified'): string => {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) {
+    return value.map(v => safeRender(v, '')).filter(Boolean).join(', ') || fallback
+  }
+  if (typeof value === 'object') {
+    // Handle objects like { writing: "...", mathematics: "..." }
+    const vals = Object.values(value as Record<string, unknown>)
+    if (vals.length === 0) return fallback
+    return vals.map(v => safeRender(v, '')).filter(Boolean).join(', ') || fallback
+  }
+  return String(value)
+}
+
+// =============================================================================
 // CONSTANTS
 // =============================================================================
 
@@ -1187,19 +1211,19 @@ function ReviewStep({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Name:</span>{" "}
-                  <span className="font-medium text-foreground">{iep?.student?.name || "Not specified"}</span>
+                  <span className="font-medium text-foreground">{safeRender(iep?.student?.name)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Grade:</span>{" "}
-                  <span className="font-medium text-foreground">{iep?.student?.grade || "Not specified"}</span>
+                  <span className="font-medium text-foreground">{safeRender(iep?.student?.grade)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">School:</span>{" "}
-                  <span className="font-medium text-foreground">{iep?.student?.school || "Not specified"}</span>
+                  <span className="font-medium text-foreground">{safeRender(iep?.student?.school)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">District:</span>{" "}
-                  <span className="font-medium text-foreground">{iep?.student?.district || "Not specified"}</span>
+                  <span className="font-medium text-foreground">{safeRender(iep?.student?.district)}</span>
                 </div>
               </div>
             </div>
@@ -1210,14 +1234,14 @@ function ReviewStep({
                 <div>
                   <span className="text-muted-foreground">Primary Disability:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {iep?.eligibility?.primary_disability || iep?.eligibility?.primaryDisability || "Not specified"}
+                    {safeRender(iep?.eligibility?.primary_disability || iep?.eligibility?.primaryDisability)}
                   </span>
                 </div>
                 {(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability) && (
                   <div>
                     <span className="text-muted-foreground">Secondary Disability:</span>{" "}
                     <span className="font-medium text-foreground">
-                      {iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability}
+                      {safeRender(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability)}
                     </span>
                   </div>
                 )}
@@ -1230,25 +1254,25 @@ function ReviewStep({
                 {iep?.plaafp?.strengths && (
                   <div>
                     <span className="text-muted-foreground block">Strengths:</span>
-                    <p className="text-foreground">{iep.plaafp.strengths}</p>
+                    <p className="text-foreground">{safeRender(iep.plaafp.strengths, "No strengths documented")}</p>
                   </div>
                 )}
                 {iep?.plaafp?.concerns && (
                   <div>
                     <span className="text-muted-foreground block">Concerns:</span>
-                    <p className="text-foreground">{iep.plaafp.concerns}</p>
+                    <p className="text-foreground">{safeRender(iep.plaafp.concerns, "No concerns documented")}</p>
                   </div>
                 )}
                 {iep?.plaafp?.academic && (
                   <div>
                     <span className="text-muted-foreground block">Academic:</span>
-                    <p className="text-foreground">{iep.plaafp.academic}</p>
+                    <p className="text-foreground">{safeRender(iep.plaafp.academic, "No academic performance documented")}</p>
                   </div>
                 )}
                 {iep?.plaafp?.functional && (
                   <div>
                     <span className="text-muted-foreground block">Functional:</span>
-                    <p className="text-foreground">{iep.plaafp.functional}</p>
+                    <p className="text-foreground">{safeRender(iep.plaafp.functional, "No functional performance documented")}</p>
                   </div>
                 )}
               </div>
@@ -1265,7 +1289,7 @@ function ReviewStep({
                 <div key={goal.id || idx} className="bg-card border rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                      {goal.area || goal.goal_area || `Goal ${idx + 1}`}
+                      {safeRender(goal.area || goal.goal_area, `Goal ${idx + 1}`)}
                     </span>
                     {goal.zpd_score !== undefined && (
                       <span
@@ -1282,20 +1306,20 @@ function ReviewStep({
                     )}
                   </div>
                   <p className="text-foreground mb-3">
-                    {goal.goal_text || goal.description || goal.text || "No goal text"}
+                    {safeRender(goal.goal_text || goal.description || goal.text, "No goal text")}
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Baseline:</span>{" "}
-                      <span>{goal.baseline || "Not specified"}</span>
+                      <span>{safeRender(goal.baseline)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Target:</span>{" "}
-                      <span>{goal.target || "Not specified"}</span>
+                      <span>{safeRender(goal.target)}</span>
                     </div>
                   </div>
                   {goal.clinical_notes && (
-                    <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">{goal.clinical_notes}</div>
+                    <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">{safeRender(goal.clinical_notes, "")}</div>
                   )}
                 </div>
               ))
@@ -1311,24 +1335,24 @@ function ReviewStep({
               services.map((service, idx) => (
                 <div key={idx} className="bg-card border rounded-lg p-4">
                   <h4 className="font-semibold text-foreground mb-2">
-                    {service.type || service.service_type || service.name || `Service ${idx + 1}`}
+                    {safeRender(service.type || service.service_type || service.name, `Service ${idx + 1}`)}
                   </h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Frequency:</span>{" "}
-                      <span>{service.frequency || "Not specified"}</span>
+                      <span>{safeRender(service.frequency)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Duration:</span>{" "}
-                      <span>{service.duration || service.minutes_per_week || "Not specified"}</span>
+                      <span>{safeRender(service.duration || service.minutes_per_week)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Provider:</span>{" "}
-                      <span>{service.provider || "Not specified"}</span>
+                      <span>{safeRender(service.provider)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Setting:</span>{" "}
-                      <span>{service.setting || service.location || "Not specified"}</span>
+                      <span>{safeRender(service.setting || service.location)}</span>
                     </div>
                   </div>
                 </div>
@@ -1341,7 +1365,7 @@ function ReviewStep({
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   {accommodations.slice(0, 10).map((acc, idx) => (
                     <li key={idx}>
-                      {typeof acc === "string" ? acc : acc.description || acc.name || acc.text || "Accommodation"}
+                      {safeRender(typeof acc === "string" ? acc : acc.description || acc.name || acc.text, "Accommodation")}
                     </li>
                   ))}
                   {accommodations.length > 10 && (
@@ -1899,7 +1923,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{iep.student?.name || "Not specified"}</p>
+                  <p className="text-foreground">{safeRender(iep.student?.name)}</p>
                 )}
               </div>
 
@@ -1942,7 +1966,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{iep.student?.grade || "Not specified"}</p>
+                  <p className="text-foreground">{safeRender(iep.student?.grade)}</p>
                 )}
               </div>
 
@@ -1985,7 +2009,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{iep.student?.school || "Not specified"}</p>
+                  <p className="text-foreground">{safeRender(iep.student?.school)}</p>
                 )}
               </div>
 
@@ -2028,7 +2052,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{iep.student?.district || "Not specified"}</p>
+                  <p className="text-foreground">{safeRender(iep.student?.district)}</p>
                 )}
               </div>
 
@@ -2411,10 +2435,10 @@ function EditIEPStep({
                   <div key={goal.id || idx} className="border border-border rounded-lg p-4">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-medium text-foreground">
-                        Goal {idx + 1}: {goal.area || goal.domain || "Annual Goal"}
+                        Goal {idx + 1}: {safeRender(goal.area || goal.domain, "Annual Goal")}
                       </h3>
                       <button
-                        onClick={() => handleStartEdit(`goal-${idx}`, goal.text || goal.goal_text || "")}
+                        onClick={() => handleStartEdit(`goal-${idx}`, safeRender(goal.text || goal.goal_text, ""))}
                         className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                       >
                         <Pencil className="w-3 h-3" />
@@ -2452,20 +2476,20 @@ function EditIEPStep({
                       </div>
                     ) : (
                       <>
-                        <p className="text-foreground text-sm mb-3">{goal.text || goal.goal_text}</p>
+                        <p className="text-foreground text-sm mb-3">{safeRender(goal.text || goal.goal_text, "No goal text")}</p>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div className="bg-muted/50 rounded-lg p-3">
                             <p className="text-muted-foreground text-xs mb-1">Baseline</p>
-                            <p className="text-foreground">{goal.baseline || "Not specified"}</p>
+                            <p className="text-foreground">{safeRender(goal.baseline)}</p>
                           </div>
                           <div className="bg-muted/50 rounded-lg p-3">
                             <p className="text-muted-foreground text-xs mb-1">Target</p>
-                            <p className="text-foreground">{goal.target || goal.criteria || "Not specified"}</p>
+                            <p className="text-foreground">{safeRender(goal.target || goal.criteria)}</p>
                           </div>
                           <div className="bg-muted/50 rounded-lg p-3">
                             <p className="text-muted-foreground text-xs mb-1">Measurement</p>
                             <p className="text-foreground">
-                              {goal.measurement || goal.evaluation_method || "Not specified"}
+                              {safeRender(goal.measurement || goal.evaluation_method)}
                             </p>
                           </div>
                         </div>
@@ -2510,12 +2534,12 @@ function EditIEPStep({
                     {(iep.services || []).map((service, idx) => (
                       <tr key={idx} className="border-b hover:bg-muted/30">
                         <td className="p-3 text-foreground">
-                          {service.type || service.service_type || service.name || "Service"}
+                          {safeRender(service.type || service.service_type || service.name, "Service")}
                         </td>
-                        <td className="p-3 text-foreground">{service.frequency || "Not specified"}</td>
-                        <td className="p-3 text-foreground">{service.duration || "Not specified"}</td>
-                        <td className="p-3 text-foreground">{service.location || "Not specified"}</td>
-                        <td className="p-3 text-foreground">{service.provider || "Not specified"}</td>
+                        <td className="p-3 text-foreground">{safeRender(service.frequency)}</td>
+                        <td className="p-3 text-foreground">{safeRender(service.duration)}</td>
+                        <td className="p-3 text-foreground">{safeRender(service.location)}</td>
+                        <td className="p-3 text-foreground">{safeRender(service.provider)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2547,7 +2571,7 @@ function EditIEPStep({
                   <li key={idx} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                     <span className="text-foreground">
-                      {typeof acc === "string" ? acc : acc.description || acc.name}
+                      {safeRender(typeof acc === "string" ? acc : acc.description || acc.name, "Accommodation")}
                     </span>
                   </li>
                 ))}
