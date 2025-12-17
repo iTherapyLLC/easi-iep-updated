@@ -31,7 +31,6 @@ import {
   Building2,
   AlertTriangle,
   User,
-  Sparkles,
   Heart,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -716,7 +715,7 @@ function FloatingParticles() {
 interface BuildingTask {
   id: string
   label: string
-  status: "pending" | "running" | "complete" | "error"
+  status: "pending" | "loading" | "complete" | "error" // Changed "running" to "loading"
 }
 
 function BuildingStep({
@@ -725,38 +724,43 @@ function BuildingStep({
   onRetry,
   selectedState,
   onComplete,
+  onStartBuild,
+  buildStarted,
 }: {
   tasks: BuildingTask[]
   error: string | null
   onRetry: () => void
   selectedState: string
   onComplete?: () => void
+  onStartBuild?: () => void
+  buildStarted?: boolean
 }) {
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
   const allComplete = tasks.every((t) => t.status === "complete")
-  const currentTask = tasks.find((t) => t.status === "running")
+  // Changed condition to check for 'loading' as well
+  const currentTask = tasks.find((t) => t.status === "running" || t.status === "loading")
 
   const completedCount = tasks.filter((t) => t.status === "complete").length
-  const progress = (completedCount / tasks.length) * 100
+  // Added check for tasks.length > 0 to prevent division by zero
+  const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0
 
-  const [messageIndex, setMessageIndex] = useState(0)
-  useEffect(() => {
-    if (!allComplete && !error) {
-      const interval = setInterval(() => {
-        setMessageIndex((prev) => (prev + 1) % FUN_LOADING_MESSAGES.length)
-      }, 3500)
-      return () => clearInterval(interval)
-    }
-  }, [allComplete, error])
+  const currentMessage = error
+    ? "Let's try that again"
+    : allComplete
+      ? "Your IEP is ready for review!"
+      : currentTask
+        ? currentTask.label
+        : "Starting..."
 
   useEffect(() => {
-    if (allComplete && onComplete) {
-      const timer = setTimeout(() => {
-        onComplete()
-      }, 2000)
-      return () => clearTimeout(timer)
+    console.log("[v0] BuildingStep mounted, buildStarted:", buildStarted)
+    if (!buildStarted && onStartBuild) {
+      console.log("[v0] BuildingStep: Triggering onStartBuild")
+      onStartBuild()
     }
-  }, [allComplete, onComplete])
+  }, []) // Empty deps - only run on mount
+
+  // This ensures accurate time tracking for research
 
   return (
     <div className="min-h-[80vh] flex flex-col relative overflow-hidden">
@@ -770,6 +774,7 @@ function BuildingStep({
         <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-slate-50/90 to-white/95" />
       </div>
 
+      {/* FloatingParticles removed when not allComplete and no error */}
       {!allComplete && !error && <FloatingParticles />}
 
       <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 flex-1 flex flex-col justify-center">
@@ -802,15 +807,7 @@ function BuildingStep({
             {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
           </h1>
 
-          <div className="h-6 overflow-hidden">
-            <p key={messageIndex} className="text-slate-600 animate-fade-in">
-              {error
-                ? "Let's try that again"
-                : allComplete
-                  ? "Time to review your compliant draft!"
-                  : FUN_LOADING_MESSAGES[messageIndex]}
-            </p>
-          </div>
+          <p className="text-slate-600">{currentMessage}</p>
         </div>
 
         {error && (
@@ -827,88 +824,80 @@ function BuildingStep({
 
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm relative z-10">
           <div className="space-y-3">
-            {tasks.map((task, index) => (
+            {tasks.map((task) => (
               <div
                 key={task.id}
                 className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
-                  task.status === "running"
+                  task.status === "loading"
                     ? "bg-blue-50 border border-blue-100"
                     : task.status === "complete"
                       ? "bg-green-50/50"
-                      : ""
+                      : task.status === "error"
+                        ? "bg-red-50 border border-red-100"
+                        : "bg-slate-50/50"
                 }`}
               >
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                      task.status === "complete"
-                        ? "bg-gradient-to-br from-green-400 to-green-500 shadow-md shadow-green-200"
-                        : task.status === "running"
-                          ? "bg-gradient-to-br from-blue-400 to-blue-500 shadow-md shadow-blue-200"
-                          : task.status === "error"
-                            ? "bg-gradient-to-br from-red-400 to-red-500 shadow-md shadow-red-200"
-                            : "bg-slate-100"
-                    }`}
-                  >
-                    {task.status === "complete" && <CheckCircle2 className="w-5 h-5 text-white animate-scale-in" />}
-                    {task.status === "running" && <Loader2 className="w-5 h-5 text-white animate-spin" />}
-                    {task.status === "error" && <AlertTriangle className="w-5 h-5 text-white" />}
-                    {task.status === "pending" && (
-                      <span className="text-sm font-medium text-slate-400">{index + 1}</span>
-                    )}
-                  </div>
-                  {/* Pulse ring for running task */}
-                  {task.status === "running" && (
-                    <div className="absolute inset-0 rounded-xl bg-blue-400 animate-ping opacity-20" />
+                <div className="flex-shrink-0">
+                  {task.status === "complete" ? (
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <Check className="w-5 h-5 text-white" />
+                    </div>
+                  ) : task.status === "loading" ? (
+                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    </div>
+                  ) : task.status === "error" ? (
+                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5 text-white" />
+                    </div>
+                  ) : (
+                    // Changed to show task index + 1 for pending tasks
+                    <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                      <span className="text-slate-500 text-sm font-medium">
+                        {tasks.findIndex((t) => t.id === task.id) + 1}
+                      </span>
+                    </div>
                   )}
                 </div>
-
                 <span
-                  className={`flex-1 font-medium transition-all duration-300 ${
+                  className={`flex-1 font-medium ${
                     task.status === "complete"
                       ? "text-green-700"
-                      : task.status === "running"
+                      : task.status === "loading"
                         ? "text-blue-700"
-                        : "text-slate-400"
+                        : task.status === "error"
+                          ? "text-red-700"
+                          : "text-slate-400"
                   }`}
                 >
                   {task.label}
                 </span>
-
-                {task.status === "complete" && (
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full animate-scale-in">
-                    Done
-                  </span>
-                )}
-                {task.status === "running" && <BouncingDots />}
+                {task.status === "complete" && <span className="text-green-600 text-sm font-medium">Done</span>}
+                {task.status === "loading" && <span className="text-blue-600 text-sm">Processing...</span>}
+                {task.status === "error" && <span className="text-red-600 text-sm">Failed</span>}
               </div>
             ))}
           </div>
         </div>
 
-        {!allComplete && !error && (
-          <div className="relative z-10">
-            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
-              <div
-                className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out relative"
-                style={{ width: `${progress}%` }}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-              </div>
-            </div>
-            <p className="text-center text-sm text-slate-500">
-              Validating against {stateName} regulations and federal IDEA requirements
-            </p>
+        {allComplete && onComplete && (
+          <div className="text-center">
+            <button
+              onClick={onComplete}
+              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg shadow-blue-200 text-lg"
+            >
+              Review Your IEP
+            </button>
           </div>
         )}
 
-        {allComplete && (
-          <div className="text-center relative z-10">
-            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium animate-bounce">
-              <Sparkles className="w-4 h-4" />
-              Draft ready for review!
-            </div>
+        {/* State validation info */}
+        {!error && (
+          <div className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-100">
+            <p className="text-blue-700 text-sm">
+              Validating against <span className="font-semibold">{stateName}</span> regulations and federal IDEA
+              requirements
+            </p>
           </div>
         )}
       </div>
@@ -3029,6 +3018,8 @@ function IEPWizard() {
   // File uploads
   const [files, setFiles] = useState<UploadedFile[]>([]) // Changed type to UploadedFile for consistency
 
+  const [buildApiCalled, setBuildApiCalled] = useState(false)
+
   // State for file upload readiness and retries
   const [isFileReady, setIsFileReady] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -3167,54 +3158,29 @@ function IEPWizard() {
   // Build IEP - call Lambda
   const handleStartBuilding = async (isRetry = false) => {
     console.log("[v0] BUILD: handleStartBuilding called, isRetry:", isRetry)
-    console.log("[v0] BUILD: files array:", files)
-    console.log("[v0] BUILD: files.length:", files.length)
 
-    if (files.length === 0) {
-      console.error("[v0] BUILD: No files uploaded - ABORTING")
-      setBuildError("Please upload an IEP document first")
+    if (buildApiCalled && !isRetry) {
+      console.log("[v0] BUILD: API already called, skipping")
       return
     }
 
-    const primaryFile = files[0]
-    console.log("[v0] BUILD: primaryFile:", primaryFile)
-    console.log("[v0] BUILD: primaryFile.file:", primaryFile?.file)
-    console.log("[v0] BUILD: primaryFile.file instanceof File:", primaryFile?.file instanceof File)
+    setBuildApiCalled(true)
 
-    if (!primaryFile || !primaryFile.file) {
-      console.error("[v0] BUILD: File object not ready")
-      if (!isRetry) {
-        console.log("[v0] BUILD: Scheduling retry in 500ms")
-        setTimeout(() => handleStartBuilding(true), 500)
-      } else {
-        console.log("[v0] BUILD: Retry failed - showing error")
-        setBuildError("File not ready. Please try again.")
-      }
+    const primaryFile = files.find((f) => f.type === "iep") || files[0]
+    if (!primaryFile) {
+      console.log("[v0] BUILD: No file found!")
+      setBuildError("No file uploaded")
       return
     }
 
-    console.log("[v0] BUILD: File validated, proceeding with build")
-
-    if (!isRetry) {
-      console.log("[v0] BUILD: Setting up build state (not a retry)")
-      setIsSubmitting(true)
-      setBuildError(null)
-      setBuildStartTime(Date.now())
-      setCurrentStep("building")
-      logEvent("BUILD_STARTED")
-      setRetryCount(0)
-
-      setBuildTasks([
-        { id: "upload", label: "Uploading document...", status: "loading" },
-        { id: "extract", label: "Extracting IEP data...", status: "pending" },
-        { id: "generate", label: "Generating new IEP...", status: "pending" },
-        { id: "validate", label: "Validating compliance...", status: "pending" },
-      ])
-    }
+    console.log("[v0] BUILD: Starting API call with file:", primaryFile.name)
 
     try {
-      console.log("[v0] BUILD: Waiting 500ms before API call")
-      await new Promise((r) => setTimeout(r, 500))
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
+        ),
+      )
 
       const formData = new FormData()
       formData.append("file", primaryFile.file, primaryFile.name)
@@ -3222,35 +3188,19 @@ function IEPWizard() {
       formData.append("iepDate", iepDate)
       formData.append("userNotes", studentUpdate)
 
-      console.log("[v0] BUILD: FormData prepared")
-      console.log("[v0] BUILD: - file:", primaryFile.name, primaryFile.file.size, "bytes")
-      console.log("[v0] BUILD: - state:", selectedState)
-      console.log("[v0] BUILD: - iepDate:", iepDate)
-      console.log("[v0] BUILD: - userNotes length:", studentUpdate.length)
+      console.log("[v0] BUILD: Calling /api/extract-iep NOW")
 
-      setBuildTasks((prev) =>
-        prev.map((t) =>
-          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
-        ),
-      )
-
-      console.log("[v0] BUILD: About to call /api/extract-iep")
       const response = await fetch("/api/extract-iep", {
         method: "POST",
         body: formData,
       })
-      console.log("[v0] BUILD: Response received, status:", response.status)
+
+      console.log("[v0] BUILD: Response status:", response.status)
 
       const data = await response.json()
-      console.log("[v0] BUILD: Response data:", data)
+      console.log("[v0] BUILD: Response data received")
 
       if (!response.ok) {
-        if (data.error === "No file provided" && retryCount < 1) {
-          console.log("[v0] BUILD: No file provided error, retrying in 1 second...")
-          setRetryCount((prev) => prev + 1)
-          await new Promise((r) => setTimeout(r, 1000))
-          return handleStartBuilding(true)
-        }
         throw new Error(data.error || "Failed to process IEP")
       }
 
@@ -3259,23 +3209,27 @@ function IEPWizard() {
           t.id === "extract" ? { ...t, status: "complete" } : t.id === "generate" ? { ...t, status: "loading" } : t,
         ),
       )
-      await new Promise((r) => setTimeout(r, 300))
 
-      // Extract new_iep data
       const newIEP = data.new_iep || data.result?.new_iep || data.result?.iep
       const remediationData = data.remediation || data.result?.remediation
 
-      console.log("[v0] new_iep found:", !!newIEP)
-      console.log("[v0] remediation found:", !!remediationData)
-
       if (newIEP) {
         setExtractedIEP(newIEP)
-      }
-      if (remediationData) {
-        setRemediation(remediationData)
+        setBuildTasks((prev) =>
+          prev.map((t) =>
+            t.id === "generate" ? { ...t, status: "complete" } : t.id === "validate" ? { ...t, status: "loading" } : t,
+          ),
+        )
       }
 
-      setBuildTasks((prev) => prev.map((t) => ({ ...t, status: "complete" })))
+      if (remediationData) {
+        setRemediation(remediationData)
+        setBuildTasks((prev) => prev.map((t) => (t.id === "validate" ? { ...t, status: "complete" } : t)))
+      }
+
+      if (newIEP && !remediationData) {
+        setBuildTasks((prev) => prev.map((t) => ({ ...t, status: "complete" })))
+      }
 
       const elapsedTime = buildStartTime ? Date.now() - buildStartTime : 0
       logEvent("BUILD_COMPLETED", {
@@ -3284,12 +3238,8 @@ function IEPWizard() {
         goalsCount: newIEP?.goals?.length || 0,
         servicesCount: newIEP?.services?.length || 0,
       })
-
-      // Advance to review step
-      await new Promise((r) => setTimeout(r, 500))
-      setCurrentStep("review")
     } catch (err) {
-      console.error("[v0] Build error:", err)
+      console.error("[v0] BUILD: Error:", err)
       setBuildError(err instanceof Error ? err.message : "An error occurred")
       setBuildTasks((prev) => prev.map((t) => (t.status === "loading" ? { ...t, status: "error" } : t)))
       logEvent("BUILD_ERROR", { error: String(err) })
@@ -3298,12 +3248,24 @@ function IEPWizard() {
     }
   }
 
-  // Navigation handlers
   const handleNext = () => {
     if (currentStep === "upload" && files.length > 0) {
       setCurrentStep("tell")
     } else if (currentStep === "tell") {
-      handleStartBuilding()
+      // Just transition to building step - BuildingStep will trigger the API call
+      console.log("[v0] handleNext: Transitioning to building step")
+      setIsSubmitting(true)
+      setBuildError(null)
+      setBuildStartTime(Date.now())
+      setCurrentStep("building")
+      logEvent("BUILD_STARTED")
+      setBuildTasks([
+        { id: "upload", label: "Uploading document...", status: "loading" },
+        { id: "extract", label: "Extracting IEP data...", status: "pending" },
+        { id: "generate", label: "Generating new IEP...", status: "pending" },
+        { id: "validate", label: "Validating compliance...", status: "pending" },
+      ])
+      setBuildApiCalled(false) // Reset buildApiCalled
     } else if (currentStep === "review") {
       setCurrentStep("edit")
       logEvent("REVIEW_COMPLETED")
@@ -3340,6 +3302,7 @@ function IEPWizard() {
     setFixedIssues(new Set())
     setBuildError(null)
     setBuildTasks([])
+    setBuildApiCalled(false) // Reset buildApiCalled
     logEvent("SESSION_RESTARTED")
   }
 
@@ -3438,6 +3401,13 @@ function IEPWizard() {
             error={buildError}
             onRetry={handleStartBuilding}
             selectedState={selectedState}
+            onStartBuild={handleStartBuilding}
+            buildStarted={buildApiCalled}
+            // Pass onComplete prop
+            onComplete={() => {
+              console.log("BuildingStep finished, calling handleNext from IEPWizard")
+              handleNext()
+            }}
           />
         )}
 
