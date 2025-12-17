@@ -260,24 +260,25 @@ interface ChatMessage {
 
 function UploadStep({
   files,
-  onFileUpload,
   onRemoveFile,
+  onFilesSelected,
   onNext,
   logEvent,
 }: {
   files: UploadedFile[]
-  onFileUpload: (files: FileList | null) => void
   onRemoveFile: (id: string) => void
+  onFilesSelected: (files: File[]) => void // Updated prop name
   onNext: () => void
-  logEvent: (eventType: string, metadata?: Record<string, any>) => void
+  logEvent: (event: string, metadata?: Record<string, unknown>) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
-  const hasIEP = files.some((f) => f.type === "iep") || files.length > 0
+
+  const hasIEP = files.some((f) => f.type === "iep")
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
-    onFileUpload(e.target.files)
+    onFilesSelected(selectedFiles) // Use onFilesSelected
     if (selectedFiles.length > 0) {
       logEvent("FILE_UPLOADED", { fileName: selectedFiles[0].name, fileSize: selectedFiles[0].size })
     }
@@ -299,14 +300,25 @@ function UploadStep({
     setIsDragOver(false)
     const droppedFiles = e.dataTransfer.files
     if (droppedFiles.length > 0) {
-      onFileUpload(droppedFiles)
+      onFilesSelected(Array.from(droppedFiles)) // Use onFilesSelected
       logEvent("FILE_UPLOADED", { fileName: droppedFiles[0].name, fileSize: droppedFiles[0].size })
     }
   }
 
   return (
-    <div className="min-h-[80vh] flex flex-col bg-gradient-to-b from-blue-50/80 to-white">
-      <div className="max-w-xl mx-auto px-6 py-8 flex-1 flex flex-col">
+    <div className="min-h-[80vh] flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/soft-watercolor-illustration-of-warm-sunlit-elemen.jpg"
+          alt=""
+          className="w-full h-full object-cover opacity-[0.08]"
+          aria-hidden="true"
+        />
+        {/* Gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-blue-50/80 to-white/95" />
+      </div>
+
+      <div className="max-w-xl mx-auto px-6 py-8 flex-1 flex flex-col relative z-10">
         <div className="flex justify-center mb-4">
           <div className="relative w-32 h-32">
             <img
@@ -320,7 +332,7 @@ function UploadStep({
 
         {/* Warm, empathetic header - acknowledges their hard day */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4 shadow-sm">
             <Heart className="w-7 h-7 text-blue-600" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3">You've got this.</h1>
@@ -337,12 +349,12 @@ function UploadStep({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center cursor-pointer transition-all duration-200 mb-6 ${
+          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center cursor-pointer transition-all duration-200 mb-6 backdrop-blur-sm ${
             isDragOver
-              ? "border-blue-500 bg-blue-100/50 scale-[1.01]"
+              ? "border-blue-500 bg-blue-100/70 scale-[1.01]"
               : hasIEP
-                ? "border-green-400 bg-green-50"
-                : "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50/50"
+                ? "border-green-400 bg-green-50/80"
+                : "border-blue-300 bg-white/80 hover:border-blue-400 hover:bg-blue-50/70"
           }`}
         >
           <div
@@ -747,154 +759,159 @@ function BuildingStep({
   }, [allComplete, onComplete])
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 relative">
+    <div className="min-h-[80vh] flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/soft-watercolor-illustration-of-organized-stack-of.jpg"
+          alt=""
+          className="w-full h-full object-cover opacity-[0.06]"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-slate-50/90 to-white/95" />
+      </div>
+
       {!allComplete && !error && <FloatingParticles />}
 
-      {!allComplete && !error && (
-        <div className="flex justify-center mb-4">
-          <img
-            src="/minimal-line-art-illustration-of-papers-being-orga.jpg"
-            alt=""
-            className="w-48 h-24 object-contain opacity-60"
-            aria-hidden="true"
-          />
-        </div>
-      )}
-
-      <div className="text-center mb-8 relative z-10">
-        <div className="flex justify-center mb-6">
-          {allComplete ? (
-            <div className="relative">
-              <img
-                src="/watercolor-celebration-confetti-burst-in-soft-blue.jpg"
-                alt=""
-                className="absolute -inset-4 w-32 h-32 object-contain opacity-40 animate-pulse"
-                aria-hidden="true"
-              />
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10">
-                <CheckCircle2 className="w-12 h-12 text-white" />
-              </div>
-            </div>
-          ) : error ? (
-            <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
-              <AlertTriangle className="w-12 h-12 text-white" />
-            </div>
-          ) : (
-            <AnimatedProgressRing progress={progress} size={120} />
-          )}
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
-        </h1>
-
-        <div className="h-6 overflow-hidden">
-          <p key={messageIndex} className="text-slate-600 animate-fade-in">
-            {error
-              ? "Let's try that again"
-              : allComplete
-                ? "Time to review your compliant draft!"
-                : FUN_LOADING_MESSAGES[messageIndex]}
-          </p>
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6 text-center">
-          <p className="text-red-800 mb-4">{error}</p>
-          <button
-            onClick={onRetry}
-            className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200"
-          >
-            Try Again
-          </button>
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm relative z-10">
-        <div className="space-y-3">
-          {tasks.map((task, index) => (
-            <div
-              key={task.id}
-              className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
-                task.status === "running"
-                  ? "bg-blue-50 border border-blue-100"
-                  : task.status === "complete"
-                    ? "bg-green-50/50"
-                    : ""
-              }`}
-            >
+      <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 flex-1 flex flex-col justify-center">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6">
+            {allComplete ? (
               <div className="relative">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                    task.status === "complete"
-                      ? "bg-gradient-to-br from-green-400 to-green-500 shadow-md shadow-green-200"
-                      : task.status === "running"
-                        ? "bg-gradient-to-br from-blue-400 to-blue-500 shadow-md shadow-blue-200"
-                        : task.status === "error"
-                          ? "bg-gradient-to-br from-red-400 to-red-500 shadow-md shadow-red-200"
-                          : "bg-slate-100"
-                  }`}
-                >
-                  {task.status === "complete" && <CheckCircle2 className="w-5 h-5 text-white animate-scale-in" />}
-                  {task.status === "running" && <Loader2 className="w-5 h-5 text-white animate-spin" />}
-                  {task.status === "error" && <AlertTriangle className="w-5 h-5 text-white" />}
-                  {task.status === "pending" && <span className="text-sm font-medium text-slate-400">{index + 1}</span>}
+                <div className="absolute -inset-8 z-0">
+                  <img
+                    src="/soft-watercolor-confetti-burst-in-blue-and-gold--c.jpg"
+                    alt=""
+                    className="w-full h-full object-contain opacity-30 animate-pulse"
+                    aria-hidden="true"
+                  />
                 </div>
-                {/* Pulse ring for running task */}
-                {task.status === "running" && (
-                  <div className="absolute inset-0 rounded-xl bg-blue-400 animate-ping opacity-20" />
-                )}
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10">
+                  <CheckCircle2 className="w-12 h-12 text-white" />
+                </div>
               </div>
+            ) : error ? (
+              <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
+                <AlertTriangle className="w-12 h-12 text-white" />
+              </div>
+            ) : (
+              <AnimatedProgressRing progress={progress} size={120} />
+            )}
+          </div>
 
-              <span
-                className={`flex-1 font-medium transition-all duration-300 ${
-                  task.status === "complete"
-                    ? "text-green-700"
-                    : task.status === "running"
-                      ? "text-blue-700"
-                      : "text-slate-400"
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
+          </h1>
+
+          <div className="h-6 overflow-hidden">
+            <p key={messageIndex} className="text-slate-600 animate-fade-in">
+              {error
+                ? "Let's try that again"
+                : allComplete
+                  ? "Time to review your compliant draft!"
+                  : FUN_LOADING_MESSAGES[messageIndex]}
+            </p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6 text-center">
+            <p className="text-red-800 mb-4">{error}</p>
+            <button
+              onClick={onRetry}
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm relative z-10">
+          <div className="space-y-3">
+            {tasks.map((task, index) => (
+              <div
+                key={task.id}
+                className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
+                  task.status === "running"
+                    ? "bg-blue-50 border border-blue-100"
+                    : task.status === "complete"
+                      ? "bg-green-50/50"
+                      : ""
                 }`}
               >
-                {task.label}
-              </span>
+                <div className="relative">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                      task.status === "complete"
+                        ? "bg-gradient-to-br from-green-400 to-green-500 shadow-md shadow-green-200"
+                        : task.status === "running"
+                          ? "bg-gradient-to-br from-blue-400 to-blue-500 shadow-md shadow-blue-200"
+                          : task.status === "error"
+                            ? "bg-gradient-to-br from-red-400 to-red-500 shadow-md shadow-red-200"
+                            : "bg-slate-100"
+                    }`}
+                  >
+                    {task.status === "complete" && <CheckCircle2 className="w-5 h-5 text-white animate-scale-in" />}
+                    {task.status === "running" && <Loader2 className="w-5 h-5 text-white animate-spin" />}
+                    {task.status === "error" && <AlertTriangle className="w-5 h-5 text-white" />}
+                    {task.status === "pending" && (
+                      <span className="text-sm font-medium text-slate-400">{index + 1}</span>
+                    )}
+                  </div>
+                  {/* Pulse ring for running task */}
+                  {task.status === "running" && (
+                    <div className="absolute inset-0 rounded-xl bg-blue-400 animate-ping opacity-20" />
+                  )}
+                </div>
 
-              {task.status === "complete" && (
-                <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full animate-scale-in">
-                  Done
+                <span
+                  className={`flex-1 font-medium transition-all duration-300 ${
+                    task.status === "complete"
+                      ? "text-green-700"
+                      : task.status === "running"
+                        ? "text-blue-700"
+                        : "text-slate-400"
+                  }`}
+                >
+                  {task.label}
                 </span>
-              )}
-              {task.status === "running" && <BouncingDots />}
-            </div>
-          ))}
+
+                {task.status === "complete" && (
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full animate-scale-in">
+                    Done
+                  </span>
+                )}
+                {task.status === "running" && <BouncingDots />}
+              </div>
+            ))}
+          </div>
         </div>
+
+        {!allComplete && !error && (
+          <div className="relative z-10">
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+              <div
+                className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out relative"
+                style={{ width: `${progress}%` }}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+              </div>
+            </div>
+            <p className="text-center text-sm text-slate-500">
+              Validating against {stateName} regulations and federal IDEA requirements
+            </p>
+          </div>
+        )}
+
+        {allComplete && (
+          <div className="text-center relative z-10">
+            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium animate-bounce">
+              <Sparkles className="w-4 h-4" />
+              Draft ready for review!
+            </div>
+          </div>
+        )}
       </div>
-
-      {!allComplete && !error && (
-        <div className="relative z-10">
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
-            <div
-              className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out relative"
-              style={{ width: `${progress}%` }}
-            >
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-            </div>
-          </div>
-          <p className="text-center text-sm text-slate-500">
-            Validating against {stateName} regulations and federal IDEA requirements
-          </p>
-        </div>
-      )}
-
-      {allComplete && (
-        <div className="text-center relative z-10">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full font-medium animate-bounce">
-            <Sparkles className="w-4 h-4" />
-            Draft ready for review!
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -3368,8 +3385,8 @@ function IEPWizard() {
         {currentStep === "upload" && (
           <UploadStep
             files={files}
-            onFileUpload={handleFileUpload}
             onRemoveFile={handleRemoveFile}
+            onFilesSelected={handleFileUpload} // Pass handleFileUpload
             onNext={handleNext}
             logEvent={logEvent}
           />
