@@ -760,12 +760,10 @@ function BuildingStep({
     if (!apiCalledRef.current && onStartBuild) {
       console.log("[v0] BuildingStep: Triggering onStartBuild NOW")
       apiCalledRef.current = true
-      // Use setTimeout to ensure state has settled after mount
-      setTimeout(() => {
-        onStartBuild()
-      }, 0)
+      onStartBuild()
     }
-  }, [onStartBuild]) // Include onStartBuild in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty deps - only run on mount
 
   // Auto-advance when all tasks complete
   useEffect(() => {
@@ -3185,16 +3183,10 @@ function IEPWizard() {
     console.log("[v0] BUILD: Starting API call with file:", primaryFile.name)
 
     try {
-      // Immediately set the first task to loading
+      // Immediately set the first task to loading when API starts
       setBuildTasks((prev) =>
         prev.map((t) =>
           t.id === "upload" ? { ...t, status: "loading" } : t,
-        ),
-      )
-
-      setBuildTasks((prev) =>
-        prev.map((t) =>
-          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
         ),
       )
 
@@ -3205,6 +3197,13 @@ function IEPWizard() {
       formData.append("userNotes", studentUpdate)
 
       console.log("[v0] BUILD: Calling /api/extract-iep NOW")
+
+      // Mark upload complete and extraction in progress
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
+        ),
+      )
 
       const response = await fetch("/api/extract-iep", {
         method: "POST",
