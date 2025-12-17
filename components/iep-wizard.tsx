@@ -725,7 +725,6 @@ function BuildingStep({
   selectedState,
   onComplete,
   onStartBuild,
-  buildStarted,
 }: {
   tasks: BuildingTask[]
   error: string | null
@@ -733,7 +732,6 @@ function BuildingStep({
   selectedState: string
   onComplete?: () => void
   onStartBuild?: () => void
-  buildStarted?: boolean
 }) {
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
   const allComplete = tasks.every((t) => t.status === "complete")
@@ -752,13 +750,31 @@ function BuildingStep({
         ? currentTask.label
         : "Starting..."
 
+  // Use a ref to ensure API is called exactly once
+  const apiCalledRef = useRef(false)
+
   useEffect(() => {
-    console.log("[v0] BuildingStep mounted, buildStarted:", buildStarted)
-    if (!buildStarted && onStartBuild) {
-      console.log("[v0] BuildingStep: Triggering onStartBuild")
+    console.log("[v0] BuildingStep mounted, apiCalledRef:", apiCalledRef.current)
+    
+    // Only call the API if we haven't already and onStartBuild exists
+    if (!apiCalledRef.current && onStartBuild) {
+      console.log("[v0] BuildingStep: Triggering onStartBuild NOW")
+      apiCalledRef.current = true
       onStartBuild()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty deps - only run on mount
+
+  // Auto-advance when all tasks complete
+  useEffect(() => {
+    if (allComplete && !error && onComplete) {
+      console.log("[v0] BuildingStep: All tasks complete, auto-advancing in 1.5s")
+      const timer = setTimeout(() => {
+        onComplete()
+      }, 1500) // Give user a moment to see completion
+      return () => clearTimeout(timer)
+    }
+  }, [allComplete, error, onComplete])
 
   // This ensures accurate time tracking for research
 
@@ -3018,8 +3034,6 @@ function IEPWizard() {
   // File uploads
   const [files, setFiles] = useState<UploadedFile[]>([]) // Changed type to UploadedFile for consistency
 
-  const [buildApiCalled, setBuildApiCalled] = useState(false)
-
   // State for file upload readiness and retries
   const [isFileReady, setIsFileReady] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -3159,13 +3173,6 @@ function IEPWizard() {
   const handleStartBuilding = async (isRetry = false) => {
     console.log("[v0] BUILD: handleStartBuilding called, isRetry:", isRetry)
 
-    if (buildApiCalled && !isRetry) {
-      console.log("[v0] BUILD: API already called, skipping")
-      return
-    }
-
-    setBuildApiCalled(true)
-
     const primaryFile = files.find((f) => f.type === "iep") || files[0]
     if (!primaryFile) {
       console.log("[v0] BUILD: No file found!")
@@ -3176,9 +3183,10 @@ function IEPWizard() {
     console.log("[v0] BUILD: Starting API call with file:", primaryFile.name)
 
     try {
+      // Immediately set the first task to loading when API starts
       setBuildTasks((prev) =>
         prev.map((t) =>
-          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
+          t.id === "upload" ? { ...t, status: "loading" } : t,
         ),
       )
 
@@ -3189,6 +3197,13 @@ function IEPWizard() {
       formData.append("userNotes", studentUpdate)
 
       console.log("[v0] BUILD: Calling /api/extract-iep NOW")
+
+      // Mark upload complete and extraction in progress
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
+        ),
+      )
 
       const response = await fetch("/api/extract-iep", {
         method: "POST",
@@ -3260,12 +3275,14 @@ function IEPWizard() {
       setCurrentStep("building")
       logEvent("BUILD_STARTED")
       setBuildTasks([
-        { id: "upload", label: "Uploading document...", status: "loading" },
+        { id: "upload", label: "Uploading document...", status: "pending" },
         { id: "extract", label: "Extracting IEP data...", status: "pending" },
         { id: "generate", label: "Generating new IEP...", status: "pending" },
         { id: "validate", label: "Validating compliance...", status: "pending" },
       ])
-      setBuildApiCalled(false) // Reset buildApiCalled
+    } else if (currentStep === "building") {
+      setCurrentStep("review")
+      logEvent("BUILDING_COMPLETED")
     } else if (currentStep === "review") {
       setCurrentStep("edit")
       logEvent("REVIEW_COMPLETED")
@@ -3302,7 +3319,6 @@ function IEPWizard() {
     setFixedIssues(new Set())
     setBuildError(null)
     setBuildTasks([])
-    setBuildApiCalled(false) // Reset buildApiCalled
     logEvent("SESSION_RESTARTED")
   }
 
@@ -3402,7 +3418,6 @@ function IEPWizard() {
             onRetry={handleStartBuilding}
             selectedState={selectedState}
             onStartBuild={handleStartBuilding}
-            buildStarted={buildApiCalled}
             // Pass onComplete prop
             onComplete={() => {
               console.log("BuildingStep finished, calling handleNext from IEPWizard")
