@@ -1673,7 +1673,7 @@ function EditIEPStep({
         if (strengths) parts.push(`Strengths: ${strengths}`)
         if (academic) parts.push(`Academic: ${academic}`)
         if (functional) parts.push(`Functional: ${functional}`)
-        return parts.length > 0 ? parts.join('. ') + '.' : '[Enter Present Levels of Academic and Functional Performance]'
+        return parts.join('. ') + '.'
       }
       return '[Enter Present Levels of Academic and Functional Performance]'
     }
@@ -1831,7 +1831,7 @@ function EditIEPStep({
             <Button 
               onClick={() => {
                 setEditingIssueId(issue.id)
-                setEditText(issue.current_text || suggestion || '')
+                setEditText(issue.current_text || suggestion)
               }} 
               size="sm" 
               variant="outline"
