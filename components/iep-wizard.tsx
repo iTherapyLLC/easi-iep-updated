@@ -23,25 +23,19 @@ import {
   Mic,
   MicOff,
   BarChart3,
-  Send,
   ClipboardCheck,
   Award,
-  GraduationCap,
   Pencil,
   Wand2,
   ListChecks,
   Building2,
   AlertTriangle,
   Camera,
-  Star,
   User,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card" // Added for chat interface
-import { useHashChainLogger } from "@/hooks/use-hash-chain-logger"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
-// </CHANGE> Import DownloadIEPButton component
-import { DownloadIEPButton } from "@/components/download-iep-button"
+import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 
 // =============================================================================
 // CONSTANTS
@@ -99,6 +93,23 @@ const US_STATES = [
   { code: "WV", name: "West Virginia" },
   { code: "WI", name: "Wisconsin" },
   { code: "WY", name: "Wyoming" },
+]
+
+// 13 IDEA disability categories for CHECK 12 compliance
+const IDEA_DISABILITY_CATEGORIES = [
+  { code: "autism", label: "Autism" },
+  { code: "deaf-blindness", label: "Deaf-Blindness" },
+  { code: "deafness", label: "Deafness" },
+  { code: "emotional-disturbance", label: "Emotional Disturbance" },
+  { code: "hearing-impairment", label: "Hearing Impairment" },
+  { code: "intellectual-disability", label: "Intellectual Disability" },
+  { code: "multiple-disabilities", label: "Multiple Disabilities" },
+  { code: "orthopedic-impairment", label: "Orthopedic Impairment" },
+  { code: "other-health-impairment", label: "Other Health Impairment (OHI)" },
+  { code: "specific-learning-disability", label: "Specific Learning Disability (SLD)" },
+  { code: "speech-language-impairment", label: "Speech or Language Impairment" },
+  { code: "traumatic-brain-injury", label: "Traumatic Brain Injury" },
+  { code: "visual-impairment", label: "Visual Impairment (including Blindness)" },
 ]
 
 // =============================================================================
@@ -235,14 +246,16 @@ type WizardStep = "upload" | "tell" | "building" | "review" | "edit" | "myslp"
 
 function UploadStep({
   files,
-  onAddFiles,
+  onFileUpload, // Renamed from onAddFiles
   onRemoveFile,
   onNext,
+  logEvent, // Added logEvent prop
 }: {
   files: UploadedFile[]
-  onAddFiles: (files: UploadedFile[]) => void
+  onFileUpload: (files: FileList | null) => void // Changed type for consistency with input
   onRemoveFile: (id: string) => void
   onNext: () => void
+  logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const hasIEP = files.some((f) => f.type === "iep") || files.length > 0
@@ -255,7 +268,14 @@ function UploadStep({
       type: file.name.toLowerCase().includes("iep") ? "iep" : "other",
       file: file,
     }))
-    onAddFiles(newFiles)
+    // onAddFiles(newFiles) // Removed as onFileUpload is used directly
+    // Instead, let the parent handle the file state
+    onFileUpload(e.target.files) // Pass FileList to parent handler
+    // Log first file upload if any files selected
+    if (selectedFiles.length > 0) {
+      logEvent("FILE_UPLOADED", { fileName: selectedFiles[0].name, fileSize: selectedFiles[0].size })
+    }
+    e.target.value = "" // Reset input to allow re-uploading same file
   }
 
   return (
@@ -321,6 +341,7 @@ function UploadStep({
                 onClick={(e) => {
                   e.stopPropagation()
                   onRemoveFile(file.id)
+                  logEvent("FILE_REMOVED", { fileName: file.name }) // Log file removal
                 }}
                 className="p-1 hover:bg-slate-200 rounded"
               >
@@ -357,42 +378,53 @@ function UploadStep({
 // STEP 2: TELL US
 // =============================================================================
 
-function TellStep({
+function TellUsStep({
   studentUpdate,
-  onUpdateText,
+  setStudentUpdate, // Renamed from onUpdateText
   onBack,
   onNext,
   studentName,
   selectedState,
-  onStateChange,
+  setSelectedState, // Renamed from onStateChange
   iepDate,
-  onDateChange,
+  setIepDate, // Renamed from onDateChange
   logEvent, // Added logEvent prop
+  isListening,
+  onStartListening,
+  onStopListening,
 }: {
   studentUpdate: string
-  onUpdateText: (text: string) => void
+  setStudentUpdate: (text: string) => void // Changed type to reflect setter
   onBack: () => void
   onNext: () => void
   studentName?: string
   selectedState: string
-  onStateChange: (state: string) => void
+  setSelectedState: (state: string) => void // Changed type
   iepDate: string
-  onDateChange: (date: string) => void
+  setIepDate: (date: string) => void // Changed type
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
+  isListening: boolean
+  onStartListening: () => void
+  onStopListening: () => void
 }) {
   const hasContent = studentUpdate.trim().length > 20
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
-  const { isRecording, isSupported, toggleRecording } = useVoice({
+  const { isSupported, toggleRecording } = useVoice({
     onTranscript: (text) => {
-      onUpdateText(studentUpdate + (studentUpdate ? " " : "") + text)
+      setStudentUpdate(studentUpdate + (studentUpdate ? " " : "") + text)
       logEvent("VOICE_TRANSCRIPT_ADDED", { length: text.length })
     },
   })
 
   const handleMicClick = () => {
-    toggleRecording()
-    logEvent("MIC_TOGGLED", { isRecording: !isRecording })
+    if (isListening) {
+      onStopListening()
+      logEvent("MIC_TOGGLED", { isRecording: false })
+    } else {
+      onStartListening()
+      logEvent("MIC_TOGGLED", { isRecording: true })
+    }
   }
 
   return (
@@ -414,7 +446,7 @@ function TellStep({
             <select
               value={selectedState}
               onChange={(e) => {
-                onStateChange(e.target.value)
+                setSelectedState(e.target.value)
                 logEvent("STATE_CHANGED", { newState: e.target.value }) // Log state change
               }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
@@ -432,7 +464,7 @@ function TellStep({
               type="date"
               value={iepDate}
               onChange={(e) => {
-                onDateChange(e.target.value)
+                setIepDate(e.target.value)
                 logEvent("DATE_CHANGED", { newDate: e.target.value }) // Log date change
               }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
@@ -440,14 +472,14 @@ function TellStep({
           </div>
         </div>
         <p className="text-sm text-slate-500">
-          We'll check against <span className="font-medium text-teal-600">{stateName}</span> regulations
+          We'll check against <span className="text-teal-600 font-medium">{stateName}</span> regulations
         </p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
         <textarea
           value={studentUpdate}
-          onChange={(e) => onUpdateText(e.target.value)}
+          onChange={(e) => setStudentUpdate(e.target.value)}
           placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
           className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
         />
@@ -456,7 +488,7 @@ function TellStep({
             onClick={handleMicClick}
             disabled={!isSupported}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-              isRecording
+              isListening // Changed from isRecording to isListening
                 ? "bg-red-100 text-red-700 animate-pulse"
                 : isSupported
                   ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -464,7 +496,7 @@ function TellStep({
             }`}
             title={!isSupported ? "Voice input not supported in this browser" : undefined}
           >
-            {isRecording ? (
+            {isListening ? ( // Changed from isRecording to isListening
               <>
                 <MicOff className="w-4 h-4" />
                 <span className="flex items-center gap-2">
@@ -496,7 +528,7 @@ function TellStep({
             <button
               key={prompt}
               onClick={() => {
-                onUpdateText(studentUpdate + (studentUpdate ? " " : "") + prompt + ". ")
+                setStudentUpdate(studentUpdate + (studentUpdate ? " " : "") + prompt + ". ")
                 logEvent("PROMPT_ADDED", { prompt }) // Log prompt addition
               }}
               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-sm text-slate-600 transition-colors"
@@ -709,7 +741,7 @@ function ReviewStep({
   onApplyFix,
   onApplyAll,
   onBack,
-  onFinish,
+  onNext,
   onDownload,
   isFixing,
   selectedState,
@@ -720,10 +752,10 @@ function ReviewStep({
   iep: ExtractedIEP | null
   remediation: RemediationData | null
   fixedIssues: Set<string>
-  onApplyFix: (issue: ComplianceIssue) => void
+  onApplyFix: (issue: ComplianceIssue) => void // Updated type to ComplianceIssue
   onApplyAll: () => void
   onBack: () => void
-  onFinish: () => void
+  onNext: () => void
   onDownload: () => void
   isFixing: boolean
   selectedState: string
@@ -731,7 +763,7 @@ function ReviewStep({
   logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
   iepDate: string // Added iepDate type
 }) {
-  const [showCelebration, setShowCelebration] = useState(false) // Set to false to avoid initial celebration
+  const [showCelebration, setShowCelebration] = useState(false)
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("overview") // Changed default to overview
   const [showVerified, setShowVerified] = useState(false)
@@ -785,7 +817,7 @@ function ReviewStep({
     <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Header with score */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg">
           <ClipboardCheck className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-foreground mb-2 hover-title">Review Your New IEP</h1>
@@ -846,6 +878,7 @@ function ReviewStep({
                   key={i}
                   onClick={() => {
                     setActiveTab("compliance")
+                    logEvent("COMPLIANCE_EXPANDED", { failedCheckName: check.name })
                   }}
                   className="w-full flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-2 hover:bg-amber-100 transition-colors text-left"
                 >
@@ -869,7 +902,10 @@ function ReviewStep({
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)} // Removed 'as any'
+            onClick={() => {
+              setActiveTab(tab.id)
+              logEvent("TAB_CHANGED", { tabId: tab.id })
+            }}
             className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.id
                 ? "border-blue-600 text-blue-600"
@@ -1068,7 +1104,15 @@ function ReviewStep({
               <>
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-muted-foreground">{unfixedIssues.length} items need attention</span>
-                  <Button onClick={onApplyAll} disabled={isFixing} size="sm" variant="outline">
+                  <Button
+                    onClick={() => {
+                      onApplyAll()
+                      logEvent("FIX_ALL_APPLIED")
+                    }}
+                    disabled={isFixing}
+                    size="sm"
+                    variant="outline"
+                  >
                     {isFixing ? "Fixing..." : "Fix All"}
                   </Button>
                 </div>
@@ -1082,7 +1126,7 @@ function ReviewStep({
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <AlertCircle className="w-4 h-4 text-amber-600" />
-                          <span className="font-medium text-amber-800">Quick Question</span>
+                          <span className="font-medium text-amber-800">{issue.title}</span>
                         </div>
                         <p className="text-foreground mb-2">{issue.description || issue.message}</p>
                         <button
@@ -1101,7 +1145,10 @@ function ReviewStep({
                         )}
                       </div>
                       <Button
-                        onClick={() => onApplyFix(issue)}
+                        onClick={() => {
+                          onApplyFix(issue)
+                          logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+                        }}
                         disabled={isFixing}
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700"
@@ -1120,31 +1167,46 @@ function ReviewStep({
       {/* Action buttons - updated to blue */}
       <div className="flex gap-3 mt-8">
         <button
-          onClick={onBack}
+          onClick={() => {
+            onBack()
+            logEvent("NAVIGATED_BACK", { fromStep: "review" })
+          }}
           className="flex-1 py-4 rounded-xl font-semibold border border-border hover:bg-muted transition-colors flex items-center justify-center gap-2"
         >
           <ArrowLeft className="w-5 h-5" />
           Back
         </button>
-        <button
-          onClick={onDownload}
+        <Button
+          onClick={() => {
+            onDownload()
+            logEvent("IEP_DOWNLOADED", { context: "review_step" })
+          }}
           className="flex-1 py-4 rounded-xl font-semibold border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
         >
           <Download className="w-5 h-5" />
           Download Draft
-        </button>
-        <button
-          onClick={() => onFinish()}
+        </Button>
+        <Button
+          onClick={() => {
+            onNext()
+            logEvent("AUTO_ADVANCED_TO_REVIEW")
+          }}
           className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
           Looks Good
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
     </div>
   )
 }
 
+// =============================================================================
+// STEP 5: EDIT & FIX (Previously Clinical Review)
+// =============================================================================
+
+// NOTE: This component is intended to replace the previous `EditIEPStep`
+// and integrate the "fix" functionality more directly.
 function EditIEPStep({
   iep,
   setIep,
@@ -1154,6 +1216,7 @@ function EditIEPStep({
   onApplyFix,
   onBack,
   onContinue,
+  onDownload, // Added onDownload prop
   isFixing,
   selectedState,
   logEvent,
@@ -1163,9 +1226,10 @@ function EditIEPStep({
   remediation: RemediationData | null
   fixedIssues: Set<string>
   setFixedIssues: React.Dispatch<React.SetStateAction<Set<string>>>
-  onApplyFix: (issue: any) => void
+  onApplyFix: (issue: ComplianceIssue) => void // Changed type to ComplianceIssue
   onBack: () => void
   onContinue: () => void
+  onDownload: () => void // Added onDownload type
   isFixing: boolean
   selectedState: string
   logEvent: (eventType: string, metadata?: Record<string, any>) => void
@@ -1230,16 +1294,18 @@ function EditIEPStep({
   const handleStartEdit = (field: string, currentValue: string) => {
     setEditingField(field)
     setEditValue(currentValue)
+    logEvent("FIELD_EDIT_STARTED", { field })
   }
 
   const handleCancelEdit = () => {
     setEditingField(null)
     setEditValue("")
+    logEvent("FIELD_EDIT_CANCELLED", { field: editingField })
   }
 
   const handleSaveEdit = (field: string, updateFn: (value: string) => void) => {
     updateFn(editValue)
-    logEvent("FIELD_EDITED", { field })
+    logEvent("FIELD_EDIT_SAVED", { field })
     setEditingField(null)
     setEditValue("")
   }
@@ -1256,12 +1322,14 @@ function EditIEPStep({
     setTimeout(() => setShowCelebration(false), 1500)
   }
 
-  const handleApplyFix = (issue: any) => {
+  const handleApplyFix = (issue: ComplianceIssue) => {
+    // Changed type to ComplianceIssue
     onApplyFix(issue)
     triggerCelebration(issue.id)
   }
 
-  const IssueCard = ({ issue }: { issue: any }) => {
+  const IssueCard = ({ issue }: { issue: ComplianceIssue }) => {
+    // Changed type to ComplianceIssue
     const severityCategory = getSeverityCategory(issue.severity)
     const severityConfig = {
       critical: {
@@ -1330,7 +1398,10 @@ function EditIEPStep({
         <div className="flex gap-2">
           {issue.suggested_fix && (
             <Button
-              onClick={() => handleApplyFix(issue)}
+              onClick={() => {
+                handleApplyFix(issue)
+                logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+              }}
               disabled={isFixing}
               size="sm"
               className="bg-blue-600 hover:bg-blue-700"
@@ -1425,8 +1496,11 @@ function EditIEPStep({
           return (
             <button
               key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              onClick={() => {
+                setActiveSection(section.id)
+                logEvent("FIELD_EDIT_SECTION_CHANGED", { sectionId: section.id })
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                 activeSection === section.id
                   ? "bg-blue-600 text-white"
                   : "bg-card border border-border text-foreground hover:bg-muted"
@@ -1742,10 +1816,10 @@ function EditIEPStep({
                 )}
               </div>
 
-              {/* Primary Disability */}
+              {/* Primary Disability - Replace text input with IDEA category dropdown */}
               <div className="border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="font-medium text-foreground">Primary Disability</label>
+                  <label className="font-medium text-foreground">Primary Disability (IDEA Category)</label>
                   {editingField !== "student-disability" && (
                     <button
                       onClick={() =>
@@ -1763,12 +1837,21 @@ function EditIEPStep({
                 </div>
                 {editingField === "student-disability" ? (
                   <div className="space-y-2">
-                    <input
-                      type="text"
+                    <select
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
+                      className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 bg-background"
+                    >
+                      <option value="">Select IDEA disability category...</option>
+                      {IDEA_DISABILITY_CATEGORIES.map((cat) => (
+                        <option key={cat.code} value={cat.label}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Select one of the 13 federally recognized IDEA disability categories
+                    </p>
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                         Cancel
@@ -1782,9 +1865,22 @@ function EditIEPStep({
                                 ? {
                                     ...prev,
                                     student: { ...prev.student, disability: value, primary_disability: value },
+                                    eligibility: {
+                                      ...prev.eligibility,
+                                      primary_disability: value,
+                                      primaryDisability: value,
+                                    },
                                   }
                                 : null,
                             )
+                            // Mark the disability issue as fixed if it exists
+                            const disabilityIssue = issues.find(
+                              (i) => i.id?.includes("disability") || i.title?.toLowerCase().includes("disability"),
+                            )
+                            if (disabilityIssue && value) {
+                              setFixedIssues((prev) => new Set([...prev, disabilityIssue.id]))
+                              logEvent("FIX_MANUAL_ENTERED", { issueId: disabilityIssue.id, field: "disability" })
+                            }
                           })
                         }
                       >
@@ -1793,16 +1889,27 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">
-                    {iep.student?.disability || iep.student?.primary_disability || "Not specified"}
-                  </p>
+                  <div>
+                    <p className="text-foreground">
+                      {iep.student?.disability || iep.student?.primary_disability || (
+                        <span className="text-amber-600 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4" />
+                          Not specified
+                        </span>
+                      )}
+                    </p>
+                    {!(iep.student?.disability || iep.student?.primary_disability) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        CHECK 12: Must specify one of 13 IDEA categories (-15 points)
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* PLAAFP Section - existing code continues */}
         {activeSection === "plaafp" && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -2233,26 +2340,36 @@ function EditIEPStep({
 
       {/* Footer Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-border">
-        <Button variant="outline" onClick={onBack}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            onBack()
+            logEvent("NAVIGATED_BACK", { fromStep: "edit" })
+          }}
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Review
+          Back
         </Button>
         <Button
-          onClick={onContinue}
-          disabled={!canProceed}
-          className={canProceed ? "bg-blue-600 hover:bg-blue-700" : ""}
+          onClick={() => {
+            onDownload()
+            logEvent("DRAFT_IEP_DOWNLOADED", { context: "edit_step" })
+          }}
+          className="flex-1 py-4 rounded-xl font-semibold border border-blue-600 text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
         >
-          {canProceed ? (
-            <>
-              Continue to Clinical Review
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Fix {criticalIssues.length} Critical Issue{criticalIssues.length !== 1 ? "s" : ""} to Continue
-            </>
-          )}
+          <Download className="w-5 h-5" />
+          Download Draft
+        </Button>
+        <Button
+          onClick={() => {
+            onContinue()
+            logEvent("EDIT_STEP_COMPLETED")
+          }}
+          disabled={!canProceed}
+          className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+        >
+          Continue to Review
+          <ArrowRight className="w-5 h-5" />
         </Button>
       </div>
     </div>
@@ -2260,27 +2377,76 @@ function EditIEPStep({
 }
 
 // =============================================================================
-// STEP 5: CLINICAL REVIEW (MySLP)
+// STEP 6: CLINICAL REVIEW (MySLP)
 // =============================================================================
+
+// Helper component for download button
+const DownloadIEPButton = ({
+  iep,
+  state,
+  complianceScore,
+  onDownloadComplete,
+}: {
+  iep: ExtractedIEP | null
+  state: string
+  complianceScore: number
+  onDownloadComplete?: () => void
+}) => {
+  const handleDownload = async () => {
+    if (!iep) return
+
+    try {
+      const response = await fetch("/api/download-iep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ iep, state, complianceScore }),
+      })
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `EASI_IEP_${state}_${new Date().toISOString().split("T")[0]}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      onDownloadComplete?.()
+    } catch (error) {
+      console.error("Error downloading IEP:", error)
+    }
+  }
+
+  return (
+    <Button onClick={handleDownload} className="w-full" disabled={!iep}>
+      <Download className="w-4 h-4 mr-2" />
+      Download Final IEP
+    </Button>
+  )
+}
 
 function ClinicalReviewStep({
   iep,
   remediation,
   state, // Add state prop
   stateName, // Add stateName prop
+  complianceScore, // Add complianceScore prop
+  sessionId, // Add sessionId prop
   onBack,
-  onDownload,
-  onStartNew,
+  onStartAnother, // Rename onStartNew to onStartAnother
   logEvent,
+  onDownloadReport, // Add onDownloadReport prop
 }: {
   iep: ExtractedIEP | null // Changed to ExtractedIEP | null
   remediation: RemediationData | null // Changed to RemediationData | null
   state: string // Add state type
   stateName: string // Add stateName type
+  complianceScore: number // Add complianceScore type
+  sessionId: string // Add sessionId prop
   onBack: () => void
-  onDownload: () => void
-  onStartNew: () => void
+  onStartAnother: () => void // Rename to onStartAnother
   logEvent: (event: string, metadata?: Record<string, any>) => void
+  onDownloadReport?: () => void // Add onDownloadReport prop
 }) {
   const [isLoading, setIsLoading] = useState(true)
   const [review, setReview] = useState<any>(null)
@@ -2288,7 +2454,6 @@ function ClinicalReviewStep({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isSending, setIsSending] = useState(false)
-  const [sessionId] = useState(() => `myslp-${Date.now()}`)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -2304,14 +2469,6 @@ function ClinicalReviewStep({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
-
-  // Function to handle key down event for input
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault() // Prevent default form submission or newline
-      handleSendMessage()
-    }
-  }
 
   useEffect(() => {
     logEvent("CLINICAL_REVIEW_STARTED")
@@ -2370,7 +2527,6 @@ function ClinicalReviewStep({
         })
 
         const data = await response.json()
-        console.log("[v0] MySLP API response:", data)
 
         if (data.success && data.review) {
           setReview(data.review)
@@ -2398,6 +2554,7 @@ function ClinicalReviewStep({
             timestamp: new Date(),
           },
         ])
+        logEvent("CLINICAL_REVIEW_FALLBACK", { error: String(err) })
       } finally {
         setIsLoading(false)
         stepTimers.forEach(clearTimeout)
@@ -2480,239 +2637,153 @@ function ClinicalReviewStep({
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
+      logEvent("MYSLP_RESPONSE_ERROR", { error: String(err) })
     } finally {
       setIsSending(false)
-      inputRef.current?.focus()
     }
   }
 
-  const handleDownloadReport = () => {
-    logEvent("COMPLIANCE_REPORT_DOWNLOADED")
-    // Generate compliance report
-    const report = `
-CLINICAL COMPLIANCE REPORT
-Generated: ${new Date().toLocaleDateString()}
-Session: ${sessionId}
-
-CLINICAL COMMENTARY:
-${review?.commentary || "No commentary available."}
-
-CONVERSATION HISTORY:
-${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
-    `.trim()
-
-    const blob = new Blob([report], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `compliance-report-${new Date().toISOString().split("T")[0]}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
   }
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="space-y-8 animate-fade-in">
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground">MySLP Clinical Review</h2>
-          <p className="text-muted-foreground">Getting a second opinion from our clinical expert...</p>
-        </div>
-
-        <Card className="border-border">
-          <CardContent className="p-6 space-y-4">
-            {loadingSteps.map((step) => (
-              <div key={step.id} className="flex items-center gap-3">
-                {step.status === "complete" ? (
-                  <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                ) : step.status === "running" ? (
-                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                ) : (
-                  <div className="w-5 h-5 rounded-full border-2 border-muted" />
-                )}
-                <span className={step.status === "pending" ? "text-muted-foreground" : "text-foreground"}>
-                  {step.label}
-                </span>
-                {step.status === "complete" && <span className="ml-auto text-sm text-blue-600">Done</span>}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-amber-600" />
-          </div>
-          <h2 className="text-2xl font-semibold text-foreground">Review Unavailable</h2>
-          <p className="text-muted-foreground">{error}</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Button onClick={onDownload} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-            <Download className="w-4 h-4 mr-2" />
-            Download IEP Anyway
-          </Button>
-          <Button onClick={onBack} variant="outline" className="w-full bg-transparent">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Review
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  // Main chat interface
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header with score */}
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg">
-          <GraduationCap className="w-8 h-8 text-white" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+          <Users className="w-8 h-8 text-blue-600" />
         </div>
-        <h2 className="text-2xl font-semibold text-foreground">Clinical Review Complete</h2>
-
-        {/* Score ring */}
-        <div className="flex justify-center">
-          <div className="relative w-32 h-32">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none" className="text-muted" />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={`${(review?.score / 100) * 352} 352`}
-                className="text-blue-600"
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-foreground">{review?.score || 75}%</span>
-              <span className="text-xs text-muted-foreground">Compliance</span>
-            </div>
-          </div>
-        </div>
+        <h2 className="text-2xl font-bold text-gray-900">MySLP Clinical Review</h2>
+        <p className="text-gray-600 mt-2">Chat with our clinical expert about your IEP</p>
+        <p className="text-sm text-blue-600 font-medium mt-1">{stateName} regulations</p>
       </div>
 
-      {/* Compliance checks */}
-      {review?.complianceChecks && (
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(review.complianceChecks).map(
-            (
-              [key, check]: [string, any], // Changed type to any for simplicity based on provided code
-            ) => (
-              <div
-                key={key}
-                className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
-                  check.passed ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
-                }`}
-              >
-                {check.passed ? (
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                )}
-                <span className="truncate">
-                  {key === "fape"
-                    ? "FAPE"
-                    : key === "lre"
-                      ? "LRE"
-                      : key === "measurableGoals"
-                        ? "Measurable"
-                        : "Aligned"}
-                </span>
-              </div>
-            ),
-          )}
-        </div>
-      )}
-
-      {/* Chat interface */}
-      <Card>
-        <CardContent className="p-0">
-          {/* Messages container */}
-          <div className="h-64 overflow-y-auto p-4 space-y-4 border-t border-b border-border">
-            {messages.map((message) => (
+      {/* Chat Messages */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="h-96 overflow-y-auto p-4 space-y-4">
+          {isLoading && messages.length === 0 ? (
+            <div className="space-y-3">
+              {loadingSteps.map((step, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  {step.status === "complete" ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  ) : step.status === "running" ? (
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                  )}
+                  <span className={step.status === "pending" ? "text-gray-400" : "text-gray-700"}>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                    message.role === "user" ? "bg-blue-600 text-white" : "bg-muted text-foreground"
+                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                    message.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <span className="text-xs opacity-70 mt-1 block">
+                  <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+                  <p className={`text-xs mt-1 ${message.role === "user" ? "text-blue-200" : "text-gray-400"}`}>
                     {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
+                  </p>
                 </div>
               </div>
-            ))}
-            {isSending && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
 
-          {/* Input area */}
-          <div className="p-4 flex gap-2">
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-4">
+          <div className="flex gap-2">
             <input
-              ref={inputRef}
+              ref={inputRef} // Assign ref to the input element
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about the IEP... (e.g., 'Explain the math goal')"
-              className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-background text-foreground"
-              disabled={isSending}
+              placeholder="Ask a question about the IEP..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isSending || isLoading}
             />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isSending}
-              size="icon"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Send className="w-4 h-4" />
+            <Button onClick={handleSendMessage} disabled={isSending || isLoading || !inputValue.trim()}>
+              {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Action buttons - updated to blue */}
+      {/* Compliance Score */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
+        <div className="relative w-24 h-24 mx-auto mb-4">
+          <svg className="w-24 h-24 transform -rotate-90">
+            <circle cx="48" cy="48" r="40" stroke="#e5e7eb" strokeWidth="8" fill="none" />
+            <circle
+              cx="48"
+              cy="48"
+              r="40"
+              stroke="#3b82f6"
+              strokeWidth="8"
+              fill="none"
+              strokeDasharray={251.2}
+              strokeDashoffset={251.2 * (1 - complianceScore / 100)}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-2xl font-bold text-gray-900">{complianceScore}%</span>
+          </div>
+        </div>
+        <p className="font-medium text-gray-900">{stateName} Compliant</p>
+      </div>
+
+      {/* Action Buttons */}
       <div className="space-y-3">
         <DownloadIEPButton
           iep={iep}
           state={state}
-          // complianceScore={complianceScore} // FIX: complianceScore is not defined here
-          complianceScore={remediation?.score ?? 0} // Use remediation.score as a fallback if original_score is not available
-          onDownloadComplete={() => logEvent("FINAL_IEP_DOWNLOADED")}
+          complianceScore={complianceScore}
+          onDownloadComplete={() => logEvent("FINAL_IEP_DOWNLOADED", { complianceScore })}
         />
-        <Button onClick={handleDownloadReport} variant="outline" className="w-full bg-transparent">
-          <FileText className="w-4 h-4 mr-2" />
-          Download Compliance Report
-        </Button>
-        <Button onClick={onStartNew} variant="ghost" className="w-full">
-          <Star className="w-4 h-4 mr-2" />
+        {onDownloadReport && ( // Conditionally render download report button
+          <Button
+            variant="outline"
+            className="w-full bg-transparent"
+            onClick={() => {
+              onDownloadReport()
+              logEvent("COMPLIANCE_REPORT_DOWNLOADED")
+            }}
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Download Compliance Report
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          className="w-full"
+          onClick={() => {
+            onStartAnother()
+            logEvent("NEW_IEP_STARTED_FROM_CLINICAL")
+          }}
+        >
           Start Another IEP
         </Button>
-        <Button onClick={onBack} variant="ghost" className="w-full text-muted-foreground">
+        <Button
+          variant="ghost"
+          className="w-full text-gray-500"
+          onClick={() => {
+            onBack()
+            logEvent("NAVIGATED_BACK", { fromStep: "myslp" })
+          }}
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Review
+          Back to Edit & Fix
         </Button>
       </div>
     </div>
@@ -2720,402 +2791,433 @@ ${messages.map((m) => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n")}
 }
 
 // =============================================================================
-// MAIN COMPONENT
+// MAIN WIZARD COMPONENT
 // =============================================================================
 
-export function IEPWizard() {
+function IEPWizard() {
+  // Step management
+  type WizardStep = "upload" | "tell" | "building" | "review" | "edit" | "myslp"
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
-  const [files, setFiles] = useState<UploadedFile[]>([])
+
+  // File uploads
+  const [files, setFiles] = useState<UploadedFile[]>([]) // Changed type to UploadedFile for consistency
+
+  // Form state
+  const [selectedState, setSelectedState] = useState("CA")
+  const [iepDate, setIepDate] = useState(new Date().toISOString().split("T")[0])
   const [studentUpdate, setStudentUpdate] = useState("")
-  const [selectedState, setSelectedState] = useState("CA") // Default to CA
-  const [iepDate, setIEPDate] = useState("")
+
+  // Extracted/edited IEP data
   const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
   const [remediation, setRemediation] = useState<RemediationData | null>(null)
-  const [fixedIssues, setFixedIssues] = useState(new Set<string>())
-  const [isFixing, setIsFixing] = useState(false)
-  const [reviewStartTime, setReviewStartTime] = useState<number | undefined>(undefined)
+  const [fixedIssues, setFixedIssues] = useState<Set<string>>(new Set())
+
+  // Loading/error states
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [buildError, setBuildError] = useState<string | null>(null)
-  const [buildTasks, setBuildTasks] = useState([
-    { id: "1", label: "Reading your uploaded documents", status: "pending" as const },
-    { id: "2", label: "Analyzing previous goals and progress", status: "pending" as const },
-    { id: "3", label: "Writing new goals based on progress", status: "pending" as const },
-    { id: "4", label: "Checking against IDEA & state requirements", status: "pending" as const },
-    { id: "5", label: "Aligning services with new goals", status: "pending" as const },
-  ])
-  const sessionId = "dummySessionId" // Dummy sessionId for illustration
-  const { logEvent } = useHashChainLogger({ sessionId })
+  const [buildTasks, setBuildTasks] = useState<
+    { id: string; label: string; status: "pending" | "loading" | "complete" | "error" }[]
+  >([])
+  const [isFixing, setIsFixing] = useState(false)
 
-  const handleAddFiles = (newFiles: UploadedFile[]) => {
-    setFiles((prevFiles) => [...prevFiles, ...newFiles])
+  // Session and logging
+  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
+  const { logEvent } = useHashChainLogger(sessionId)
+
+  // Timing for research metrics
+  const [buildStartTime, setBuildStartTime] = useState<number | null>(null)
+
+  // Voice state and handlers
+  // </CHANGE> Fixed destructuring to match useVoice hook return values
+  const {
+    isRecording: isListening,
+    startRecording: startListening,
+    stopRecording: stopListening,
+    isSupported,
+  } = useVoice({
+    onTranscript: (text) => {
+      setStudentUpdate((prev) => prev + " " + text)
+    },
+  })
+
+  // Log session start
+  useEffect(() => {
+    logEvent("SESSION_STARTED")
+    return () => {
+      logEvent("SESSION_ENDED")
+    }
+  }, [logEvent])
+
+  // Handle file upload
+  const handleFileUpload = (newFiles: FileList | null) => {
+    if (!newFiles) return
+    const fileArray = Array.from(newFiles).map((file) => ({
+      id: Math.random().toString(36).substr(2, 9), // Generate unique ID
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.name.toLowerCase().includes("iep") ? "iep" : "other", // Infer type
+    }))
+    setFiles((prev) => [...prev, ...fileArray])
+    // Log individual file upload on first file if multiple are dropped
+    if (fileArray.length > 0) {
+      logEvent("FILE_UPLOADED", { fileName: fileArray[0].name, fileSize: fileArray[0].size })
+    }
   }
 
   const handleRemoveFile = (id: string) => {
-    setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id))
-    logEvent("FILE_REMOVED", { fileId: id })
+    setFiles((prev) => {
+      const removedFile = prev.find((f) => f.id === id)
+      if (removedFile) {
+        logEvent("FILE_REMOVED", { fileName: removedFile.name }) // Log file removal
+      }
+      return prev.filter((_, i) => i !== id)
+    })
   }
 
+  // Build IEP - call Lambda
   const handleStartBuilding = async () => {
-    if (isSubmitting) {
-      console.log("[v0] Already submitting, skipping duplicate call")
-      return
-    }
-
-    if (files.length === 0) {
-      setBuildError("Please upload at least one file")
-      return
-    }
+    if (files.length === 0) return
 
     setIsSubmitting(true)
     setBuildError(null)
+    setBuildStartTime(Date.now())
     setCurrentStep("building")
+    logEvent("BUILD_STARTED")
 
-    // Reset tasks
-    setBuildTasks((tasks) => tasks.map((t) => ({ ...t, status: "pending" as const })))
-
-    logEvent("BUILD_STARTED", { fileCount: files.length, state: selectedState })
+    setBuildTasks([
+      { id: "upload", label: "Uploading document...", status: "loading" },
+      { id: "extract", label: "Extracting IEP data...", status: "pending" },
+      { id: "generate", label: "Generating new IEP...", status: "pending" },
+      { id: "validate", label: "Validating compliance...", status: "pending" },
+    ])
 
     try {
-      // Update task 1: Reading documents
-      setBuildTasks((tasks) => tasks.map((t) => (t.id === "1" ? { ...t, status: "running" as const } : t)))
-
       const formData = new FormData()
-      // Get the actual file from the first uploaded file
-      if (files[0]?.file) {
-        formData.append("file", files[0].file)
-      } else {
-        throw new Error("No file data available")
-      }
-      formData.append("state", selectedState || "CA")
-      formData.append("iepDate", iepDate || new Date().toISOString().split("T")[0])
-      formData.append("userNotes", studentUpdate || "")
+      files.forEach((fileObj, index) => {
+        formData.append(`file${index}`, fileObj.file, fileObj.name) // Append with unique keys
+      })
+      formData.append("state", selectedState)
+      formData.append("iepDate", iepDate)
+      formData.append("userNotes", studentUpdate)
 
-      console.log("[v0] Calling /api/extract-iep...")
+      // Update tasks as we progress
+      await new Promise((r) => setTimeout(r, 500))
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "upload" ? { ...t, status: "complete" } : t.id === "extract" ? { ...t, status: "loading" } : t,
+        ),
+      )
 
       const response = await fetch("/api/extract-iep", {
         method: "POST",
         body: formData,
       })
 
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "extract" ? { ...t, status: "complete" } : t.id === "generate" ? { ...t, status: "loading" } : t,
+        ),
+      )
+      await new Promise((r) => setTimeout(r, 300))
+
       const data = await response.json()
 
-      console.log("[v0] Extract response keys:", Object.keys(data))
-      console.log("[v0] Full response:", JSON.stringify(data).substring(0, 1000))
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to extract IEP")
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to process IEP")
       }
 
-      // Update remaining tasks
-      setBuildTasks((tasks) => tasks.map((t) => (t.id === "1" ? { ...t, status: "complete" as const } : t)))
-      setBuildTasks((tasks) => tasks.map((t) => (t.id === "2" ? { ...t, status: "running" as const } : t)))
+      setBuildTasks((prev) =>
+        prev.map((t) =>
+          t.id === "generate" ? { ...t, status: "complete" } : t.id === "validate" ? { ...t, status: "loading" } : t,
+        ),
+      )
+      await new Promise((r) => setTimeout(r, 300))
 
-      // Extract the NEW IEP data from response.new_iep (per project rules)
-      const newIEP = data.new_iep || data.iep || data.result?.new_iep || data.result?.iep
+      // Extract new_iep data
+      const newIEP = data.new_iep || data.result?.new_iep || data.result?.iep
       const remediationData = data.remediation || data.result?.remediation
 
       console.log("[v0] new_iep found:", !!newIEP)
       console.log("[v0] remediation found:", !!remediationData)
 
-      if (!newIEP) {
-        console.error("[v0] No new_iep in response. Full data:", data)
-        throw new Error("No IEP data in response")
+      if (newIEP) {
+        setExtractedIEP(newIEP)
+      }
+      if (remediationData) {
+        setRemediation(remediationData)
       }
 
-      // Update remaining tasks
-      setBuildTasks((tasks) =>
-        tasks.map((t) => (t.id === "2" || t.id === "3" ? { ...t, status: "complete" as const } : t)),
-      )
-      setBuildTasks((tasks) => tasks.map((t) => (t.id === "4" ? { ...t, status: "running" as const } : t)))
+      setBuildTasks((prev) => prev.map((t) => ({ ...t, status: "complete" })))
 
-      // Set the extracted IEP data (this is the NEW IEP, not the old one)
-      setExtractedIEP({
-        student: newIEP.student,
-        eligibility: newIEP.eligibility,
-        plaafp: newIEP.plaafp,
-        goals: newIEP.goals,
-        services: newIEP.services,
-        accommodations: newIEP.accommodations,
-        placement: newIEP.placement,
-        lre: newIEP.lre, // Added LRE data
-      })
-
-      // Set remediation data with score from remediation.original_score
-      setRemediation({
-        score: remediationData?.original_score || remediationData?.score || 0,
-        original_score: remediationData?.original_score,
-        issues: remediationData?.issues || [],
-        passed_count: remediationData?.passed_count,
-        total_checks: remediationData?.total_checks,
-        checks_passed: remediationData?.checks_passed || [],
-        checks_failed: remediationData?.checks_failed || [],
-      })
-
-      // Complete all tasks
-      setBuildTasks((tasks) => tasks.map((t) => ({ ...t, status: "complete" as const })))
-
-      logEvent("EXTRACTION_COMPLETED", {
-        score: remediationData?.original_score || remediationData?.score,
-        goalsCount: newIEP.goals?.length,
-        servicesCount: newIEP.services?.length,
-      })
-
+      const elapsedTime = buildStartTime ? Date.now() - buildStartTime : 0
       logEvent("BUILD_COMPLETED", {
-        score: remediationData?.original_score || remediationData?.score,
-        goalsCount: newIEP.goals?.length,
-        servicesCount: newIEP.services?.length,
-        elapsedMs: Date.now() - (reviewStartTime || Date.now()),
+        elapsedMs: elapsedTime,
+        complianceScore: remediationData?.original_score || remediationData?.score,
+        goalsCount: newIEP?.goals?.length || 0,
+        servicesCount: newIEP?.services?.length || 0,
       })
 
-      // Auto-advance to review after short delay
-      setTimeout(() => {
-        setReviewStartTime(Date.now())
-        setCurrentStep("review")
-        logEvent("AUTO_ADVANCED_TO_REVIEW")
-      }, 1500)
-    } catch (error) {
-      console.error("[v0] Build error:", error)
-      setBuildError(error instanceof Error ? error.message : "Unknown error")
-      logEvent("BUILD_FAILED", { error: error instanceof Error ? error.message : "Unknown" })
+      // Advance to review step
+      await new Promise((r) => setTimeout(r, 500))
+      setCurrentStep("review")
+    } catch (err) {
+      console.error("[v0] Build error:", err)
+      setBuildError(err instanceof Error ? err.message : "An error occurred")
+      setBuildTasks((prev) => prev.map((t) => (t.status === "loading" ? { ...t, status: "error" } : t)))
+      logEvent("BUILD_ERROR", { error: String(err) })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleRetryBuild = () => {
-    setBuildError(null)
-    logEvent("BUILD_RETRY_REQUESTED")
-    handleStartBuilding()
+  // Apply suggested fix to IEP
+  const handleApplyFix = (issue: ComplianceIssue) => {
+    // Use ComplianceIssue type
+    if (!issue.suggested_fix || !extractedIEP) return
+
+    setIsFixing(true)
+    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+
+    // Apply the fix based on issue type and structure
+    let updatedIEP = { ...extractedIEP }
+
+    // Basic example: applying fixes based on known issue IDs or titles
+    if (issue.id?.includes("student-name") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, name: issue.suggested_fix },
+      }
+    } else if (issue.id?.includes("student-grade") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, grade: issue.suggested_fix },
+      }
+    } else if (issue.id?.includes("student-disability") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, disability: issue.suggested_fix, primary_disability: issue.suggested_fix },
+        eligibility: {
+          ...updatedIEP.eligibility,
+          primary_disability: issue.suggested_fix,
+          primaryDisability: issue.suggested_fix,
+        },
+      }
+    } else if (issue.id?.includes("goal-") && issue.suggested_fix) {
+      const goalIndexMatch = issue.id.match(/goal-(\d+)/)
+      if (goalIndexMatch && goalIndexMatch[1]) {
+        const goalIndex = Number.parseInt(goalIndexMatch[1], 10)
+        if (updatedIEP.goals && updatedIEP.goals[goalIndex]) {
+          const newGoals = [...updatedIEP.goals]
+          newGoals[goalIndex] = { ...newGoals[goalIndex], text: issue.suggested_fix, goal_text: issue.suggested_fix }
+          updatedIEP = { ...updatedIEP, goals: newGoals }
+        }
+      }
+    }
+    // Add more specific fix logic for other fields as needed
+
+    setExtractedIEP(updatedIEP)
+    setFixedIssues((prev) => new Set([...prev, issue.id]))
+    setIsFixing(false)
   }
 
+  // Navigation handlers
   const handleNext = () => {
     if (currentStep === "upload" && files.length > 0) {
-      logEvent("FILE_UPLOADED", { fileCount: files.length })
       setCurrentStep("tell")
     } else if (currentStep === "tell") {
       handleStartBuilding()
     } else if (currentStep === "review") {
-      // Go to edit step instead of myslp
       setCurrentStep("edit")
-      logEvent("EDIT_STEP_STARTED")
+      logEvent("REVIEW_COMPLETED")
     } else if (currentStep === "edit") {
       setCurrentStep("myslp")
-      logEvent("CLINICAL_REVIEW_STARTED")
+      logEvent("EDIT_STEP_COMPLETED")
     }
   }
 
   const handleBack = () => {
     if (currentStep === "tell") {
       setCurrentStep("upload")
-    } else if (currentStep === "building") {
-      setCurrentStep("tell")
+      logEvent("NAVIGATED_BACK", { fromStep: "tell" })
     } else if (currentStep === "review") {
       setCurrentStep("building")
+      logEvent("NAVIGATED_BACK", { fromStep: "review" })
     } else if (currentStep === "edit") {
       setCurrentStep("review")
+      logEvent("NAVIGATED_BACK", { fromStep: "edit" })
     } else if (currentStep === "myslp") {
       setCurrentStep("edit")
+      logEvent("NAVIGATED_BACK", { fromStep: "myslp" })
     }
   }
 
-  const handleUpdateText = (text: string) => {
-    setStudentUpdate(text)
-  }
-
-  const handleStateChange = (state: string) => {
-    setSelectedState(state)
-  }
-
-  const handleDateChange = (date: string) => {
-    setIEPDate(date)
-  }
-
-  const handleApplyFix = (issue: ComplianceIssue) => {
-    setFixedIssues((prevIssues) => new Set([...prevIssues, issue.id]))
-    setIsFixing(true)
-    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
-    // Simulate fixing process completion
-    setTimeout(() => setIsFixing(false), 1000)
-  }
-
-  const handleApplyAll = () => {
-    setFixedIssues(new Set(remediation?.issues.map((issue) => issue.id) || []))
-    setIsFixing(true)
-    logEvent("FIX_ALL_APPLIED")
-    // Simulate fixing process completion
-    setTimeout(() => setIsFixing(false), 1000)
-  }
-
-  const handleFinish = () => {
-    logEvent("IEP_APPROVED", {
-      finalScore: remediation?.original_score || remediation?.score,
-    })
-    setCurrentStep("edit") // Go to edit step instead of myslp
-  }
-
-  const handleDownloadDraft = () => {
-    // Logic to download the IEP draft
-    logEvent("IEP_DOWNLOADED")
-  }
-
-  const handleDownloadFinalIEP = () => {
-    // Logic to download the finalized IEP
-    logEvent("FINAL_IEP_DOWNLOADED")
-  }
-
-  const handleStartNewIEP = () => {
-    // Logic to reset and start a new IEP
+  const handleStartAnother = () => {
+    setCurrentStep("upload")
     setFiles([])
+    setSelectedState("CA")
+    setIepDate(new Date().toISOString().split("T")[0])
     setStudentUpdate("")
-    setSelectedState("CA") // Reset to default state
-    setIEPDate("")
     setExtractedIEP(null)
     setRemediation(null)
-    setFixedIssues(new Set<string>())
-    setIsFixing(false)
-    setReviewStartTime(undefined)
-    setIsSubmitting(false)
+    setFixedIssues(new Set())
     setBuildError(null)
-    setBuildTasks([
-      { id: "1", label: "Reading your uploaded documents", status: "pending" as const },
-      { id: "2", label: "Analyzing previous goals and progress", status: "pending" as const },
-      { id: "3", label: "Writing new goals based on progress", status: "pending" as const },
-      { id: "4", label: "Checking against IDEA & state requirements", status: "pending" as const },
-      { id: "5", label: "Aligning services with new goals", status: "pending" as const },
-    ])
-    setCurrentStep("upload")
+    setBuildTasks([])
+    logEvent("SESSION_RESTARTED")
   }
 
-  // Find the step indicator section and update it:
-  return (
-    <div>
-      {/* Step Indicator */}
-      <div className="pt-8 mb-8">
-        <div className="flex items-center justify-between max-w-3xl mx-auto px-4">
-          {[
-            { step: "upload", label: "Upload Materials", num: 1 },
-            { step: "tell", label: "Tell Us About Progress", num: 2 },
-            { step: "building", label: "Building Your IEP", num: 3 },
-            { step: "review", label: "Review Draft", num: 4 },
-            { step: "edit", label: "Edit & Fix", num: 5 },
-            { step: "myslp", label: "Clinical Review", num: 6 },
-          ].map(({ step, label, num }) => {
-            const stepOrder = ["upload", "tell", "building", "review", "edit", "myslp"]
-            const currentIndex = stepOrder.indexOf(currentStep)
-            const stepIndex = stepOrder.indexOf(step)
-            const isComplete = stepIndex < currentIndex
-            const isCurrent = step === currentStep
+  // Progress steps for header
+  const progressSteps = [
+    { id: "upload", label: "Upload Materials" },
+    { id: "tell", label: "Tell Us About Progress" },
+    { id: "building", label: "Building Your IEP" },
+    { id: "review", label: "Review Draft" },
+    { id: "edit", label: "Edit & Fix" },
+    { id: "myslp", label: "Clinical Review" },
+  ]
 
-            return (
-              <div key={step} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                      isComplete
-                        ? "bg-blue-600 text-white"
-                        : isCurrent
-                          ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {isComplete ? <Check className="w-4 h-4" /> : num}
+  const stepOrder: WizardStep[] = ["upload", "tell", "building", "review", "edit", "myslp"]
+  const currentStepIndex = stepOrder.indexOf(currentStep)
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      {/* Progress Header */}
+      <div className="pt-8 pb-4 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            {progressSteps.map((step, index) => {
+              const stepIndex = stepOrder.indexOf(step.id as WizardStep)
+              const isComplete = stepIndex < currentStepIndex
+              const isCurrent = step.id === currentStep
+
+              return (
+                <div key={step.id} className="flex items-center">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                        isComplete
+                          ? "bg-blue-600 text-white"
+                          : isCurrent
+                            ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                            : "bg-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {isComplete ? <Check className="w-5 h-5" /> : index + 1}
+                    </div>
+                    <span
+                      className={`mt-2 text-xs text-center max-w-[80px] ${isCurrent ? "text-blue-600 font-medium" : "text-gray-500"}`}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span
-                    className={`mt-1 text-xs hidden sm:block ${isCurrent ? "text-blue-600 font-medium" : "text-muted-foreground"}`}
-                  >
-                    {label}
-                  </span>
+                  {index < progressSteps.length - 1 && (
+                    <div
+                      className={`w-12 h-0.5 mx-2 ${stepIndex < currentStepIndex ? "bg-blue-600" : "bg-gray-200"}`}
+                    />
+                  )}
                 </div>
-                {num < 6 && <div className={`w-12 h-0.5 mx-2 ${isComplete ? "bg-blue-600" : "bg-muted"}`} />}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {currentStep === "upload" && (
-        <UploadStep files={files} onAddFiles={handleAddFiles} onRemoveFile={handleRemoveFile} onNext={handleNext} />
-      )}
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 pb-12">
+        {/* Upload Step */}
+        {currentStep === "upload" && (
+          <UploadStep
+            files={files}
+            onFileUpload={handleFileUpload}
+            onRemoveFile={handleRemoveFile}
+            onNext={handleNext}
+            logEvent={logEvent}
+          />
+        )}
 
-      {currentStep === "tell" && (
-        <TellStep
-          studentUpdate={studentUpdate}
-          onUpdateText={handleUpdateText}
-          onBack={handleBack}
-          onNext={handleNext}
-          studentName={extractedIEP?.student?.name} // Pass student name for better UX
-          selectedState={selectedState}
-          onStateChange={handleStateChange}
-          iepDate={iepDate}
-          onDateChange={handleDateChange}
-          logEvent={logEvent}
-        />
-      )}
+        {/* Tell Us About Progress Step */}
+        {currentStep === "tell" && (
+          <TellUsStep
+            selectedState={selectedState}
+            setSelectedState={setSelectedState}
+            iepDate={iepDate}
+            setIepDate={setIepDate}
+            studentUpdate={studentUpdate}
+            setStudentUpdate={setStudentUpdate}
+            isListening={isListening}
+            onStartListening={startListening}
+            onStopListening={stopListening}
+            onBack={handleBack}
+            onNext={handleNext}
+            logEvent={logEvent}
+          />
+        )}
 
-      {currentStep === "building" && (
-        <BuildingStep
-          tasks={buildTasks}
-          error={buildError}
-          onRetry={handleRetryBuild}
-          selectedState={selectedState}
-          onComplete={() => {
-            // We already set currentStep to "review" in handleStartBuilding
-            logEvent("BUILDING_COMPLETED")
-          }}
-        />
-      )}
+        {/* Building Step */}
+        {currentStep === "building" && (
+          <BuildingStep
+            tasks={buildTasks}
+            error={buildError}
+            onRetry={handleStartBuilding}
+            selectedState={selectedState}
+          />
+        )}
 
-      {currentStep === "review" && extractedIEP && remediation && (
-        <ReviewStep
-          iep={extractedIEP}
-          remediation={remediation}
-          fixedIssues={fixedIssues}
-          onApplyFix={handleApplyFix}
-          onApplyAll={handleApplyAll}
-          onBack={handleBack}
-          onFinish={handleFinish} // Use the updated handleFinish
-          onDownload={handleDownloadDraft}
-          isFixing={isFixing}
-          selectedState={selectedState}
-          startTime={reviewStartTime}
-          logEvent={logEvent}
-          iepDate={iepDate} // Pass iepDate prop
-        />
-      )}
+        {/* Review Step */}
+        {currentStep === "review" && extractedIEP && (
+          <ReviewStep
+            iep={extractedIEP}
+            remediation={remediation}
+            fixedIssues={fixedIssues}
+            onApplyFix={handleApplyFix}
+            onApplyAll={() => {}} // Placeholder, implement if needed
+            onBack={handleBack}
+            onNext={handleNext}
+            onDownload={() => {}} // Placeholder, implement if needed
+            isFixing={isFixing}
+            selectedState={selectedState}
+            logEvent={logEvent}
+            iepDate={iepDate} // Pass iepDate
+          />
+        )}
 
-      {currentStep === "edit" && extractedIEP && (
-        <EditIEPStep
-          iep={extractedIEP}
-          setIep={setExtractedIEP}
-          remediation={remediation}
-          fixedIssues={fixedIssues}
-          setFixedIssues={setFixedIssues}
-          onApplyFix={handleApplyFix}
-          onBack={handleBack}
-          onContinue={() => {
-            logEvent("EDIT_STEP_COMPLETED", { fixedCount: fixedIssues.size })
-            setCurrentStep("myslp")
-          }}
-          isFixing={isFixing}
-          selectedState={selectedState}
-          logEvent={logEvent}
-        />
-      )}
+        {/* Edit & Fix Step */}
+        {currentStep === "edit" && extractedIEP && (
+          <EditIEPStep
+            iep={extractedIEP}
+            setIep={setExtractedIEP}
+            remediation={remediation}
+            fixedIssues={fixedIssues}
+            setFixedIssues={setFixedIssues}
+            onApplyFix={handleApplyFix}
+            onBack={handleBack}
+            onContinue={handleNext}
+            onDownload={() => {}} // Placeholder, implement if needed
+            isFixing={isFixing}
+            selectedState={selectedState}
+            logEvent={logEvent}
+          />
+        )}
 
-      {currentStep === "myslp" && (
-        <ClinicalReviewStep
-          iep={extractedIEP}
-          remediation={remediation}
-          state={selectedState}
-          stateName={US_STATES.find((s) => s.code === selectedState)?.name || selectedState}
-          onBack={handleBack}
-          onDownload={handleDownloadFinalIEP}
-          onStartNew={handleStartNewIEP}
-          logEvent={logEvent}
-        />
-      )}
+        {/* Clinical Review Step */}
+        {currentStep === "myslp" && extractedIEP && (
+          <ClinicalReviewStep
+            iep={extractedIEP}
+            remediation={remediation}
+            state={selectedState}
+            stateName={US_STATES.find((s) => s.code === selectedState)?.name || selectedState}
+            complianceScore={remediation?.original_score || remediation?.score || 0}
+            sessionId={sessionId}
+            onBack={handleBack}
+            onStartAnother={handleStartAnother}
+            logEvent={logEvent}
+            onDownloadReport={() => {}} // Placeholder, implement if needed
+          />
+        )}
+      </div>
     </div>
   )
 }
 
+export { IEPWizard }
 export default IEPWizard
