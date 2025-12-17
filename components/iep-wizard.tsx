@@ -1698,7 +1698,7 @@ function EditIEPStep({
               placeholder="Enter the corrected information..."
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               autoFocus
-              aria-label="Enter corrected information for this compliance issue"
+              aria-label={`Enter corrected information for: ${issue.title}`}
               aria-required="true"
               aria-invalid={editText.trim().length === 0}
             />
@@ -1731,7 +1731,7 @@ function EditIEPStep({
             </div>
             {editText.trim().length === 0 && (
               <p className="text-xs text-red-600" role="alert" aria-live="polite">
-                Please enter the required information
+                Please enter the corrected text for this compliance issue
               </p>
             )}
           </div>
