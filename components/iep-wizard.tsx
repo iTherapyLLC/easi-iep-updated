@@ -30,9 +30,9 @@ import {
   ListChecks,
   Building2,
   AlertTriangle,
-  Camera,
   User,
   Sparkles,
+  Heart,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
@@ -135,6 +135,7 @@ interface UploadedFile {
   name: string
   type: "iep" | "notes" | "photo" | "report" | "other"
   file: File
+  size?: number // Added size for file information
 }
 
 interface ComplianceIssue {
@@ -194,6 +195,7 @@ interface ExtractedIEP {
     domain?: string // Added for goal domain
     criteria?: string // Added for goal criteria
     evaluation_method?: string // Added for goal evaluation method
+    measurement?: string // Added for goal measurement
   }>
   services?: Array<{
     type?: string // Added optional type
@@ -252,138 +254,184 @@ interface ChatMessage {
   timestamp: Date
 }
 
-type WizardStep = "upload" | "tell" | "building" | "review" | "edit" | "myslp"
-
 // =============================================================================
 // STEP 1: UPLOAD
 // =============================================================================
 
 function UploadStep({
   files,
-  onFileUpload, // Renamed from onAddFiles
+  onFileUpload,
   onRemoveFile,
   onNext,
-  logEvent, // Added logEvent prop
+  logEvent,
 }: {
   files: UploadedFile[]
-  onFileUpload: (files: FileList | null) => void // Changed type for consistency with input
+  onFileUpload: (files: FileList | null) => void
   onRemoveFile: (id: string) => void
   onNext: () => void
-  logEvent: (eventType: string, metadata?: Record<string, any>) => void // Added logEvent prop
+  logEvent: (eventType: string, metadata?: Record<string, any>) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
   const hasIEP = files.some((f) => f.type === "iep") || files.length > 0
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
-    const newFiles: UploadedFile[] = selectedFiles.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: file.name.toLowerCase().includes("iep") ? "iep" : "other",
-      file: file,
-    }))
-    // onAddFiles(newFiles) // Removed as onFileUpload is used directly
-    // Instead, let the parent handle the file state
-    onFileUpload(e.target.files) // Pass FileList to parent handler
-    // Log first file upload if any files selected
+    onFileUpload(e.target.files)
     if (selectedFiles.length > 0) {
       logEvent("FILE_UPLOADED", { fileName: selectedFiles[0].name, fileSize: selectedFiles[0].size })
     }
-    e.target.value = "" // Reset input to allow re-uploading same file
+    e.target.value = ""
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const droppedFiles = e.dataTransfer.files
+    if (droppedFiles.length > 0) {
+      onFileUpload(droppedFiles)
+      logEvent("FILE_UPLOADED", { fileName: droppedFiles[0].name, fileSize: droppedFiles[0].size })
+    }
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Let's Build Your New IEP</h1>
-        <p className="text-slate-600">
-          Upload the current IEP and any notes, photos, or reports you have.
-          <br />
-          <span className="text-slate-500 text-sm">We'll use these to create a draft of the new IEP.</span>
-        </p>
-      </div>
-
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-colors mb-6"
-      >
-        <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-        <p className="text-lg font-medium text-slate-700 mb-1">Drop files here or tap to browse</p>
-        <p className="text-sm text-slate-500">PDFs, photos of handwritten notes, Word docs — anything helps</p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic"
-        />
-      </div>
-
-      <div className="flex gap-3 justify-center mb-8">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 transition-colors"
-        >
-          <FileText className="w-4 h-4" />
-          Current IEP
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm text-slate-700 transition-colors"
-        >
-          <Camera className="w-4 h-4" />
-          Photo of Notes
-        </button>
-      </div>
-
-      {files.length > 0 && (
-        <div className="space-y-2 mb-8">
-          <p className="text-sm font-medium text-slate-700 mb-2">Uploaded ({files.length})</p>
-          {files.map((file) => (
-            <div key={file.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-teal-600" />
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{file.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {file.type === "iep" ? "Previous IEP" : "Supporting document"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRemoveFile(file.id)
-                  logEvent("FILE_REMOVED", { fileName: file.name }) // Log file removal
-                }}
-                className="p-1 hover:bg-slate-200 rounded"
-              >
-                <X className="w-4 h-4 text-slate-400" />
-              </button>
-            </div>
-          ))}
+    <div className="min-h-[80vh] flex flex-col bg-gradient-to-b from-blue-50/80 to-white">
+      <div className="max-w-xl mx-auto px-6 py-8 flex-1 flex flex-col">
+        <div className="flex justify-center mb-4">
+          <div className="relative w-32 h-32">
+            <img
+              src="/warm-watercolor-illustration-of-a-gentle-hand-hold.jpg"
+              alt=""
+              className="w-full h-full object-contain opacity-80"
+              aria-hidden="true"
+            />
+          </div>
         </div>
-      )}
 
-      <button
-        onClick={onNext}
-        disabled={!hasIEP}
-        className={`w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-          hasIEP
-            ? "bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-xl"
-            : "bg-slate-200 text-slate-400 cursor-not-allowed"
-        }`}
-      >
-        {hasIEP ? (
-          <>
-            Continue
-            <ArrowRight className="w-5 h-5" />
-          </>
-        ) : (
-          "Upload the current IEP to continue"
+        {/* Warm, empathetic header - acknowledges their hard day */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4">
+            <Heart className="w-7 h-7 text-blue-600" />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3">You've got this.</h1>
+          <p className="text-base text-slate-600 leading-relaxed">
+            Just upload the current IEP and we'll handle the rest.
+            <br />
+            <span className="text-slate-500">Takes about 2 minutes.</span>
+          </p>
+        </div>
+
+        {/* Simple, large drop zone - easy target for tired hands */}
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center cursor-pointer transition-all duration-200 mb-6 ${
+            isDragOver
+              ? "border-blue-500 bg-blue-100/50 scale-[1.01]"
+              : hasIEP
+                ? "border-green-400 bg-green-50"
+                : "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50/50"
+          }`}
+        >
+          <div
+            className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors ${
+              hasIEP ? "bg-green-500" : isDragOver ? "bg-blue-500" : "bg-blue-100"
+            }`}
+          >
+            {hasIEP ? (
+              <CheckCircle2 className="w-7 h-7 text-white" />
+            ) : (
+              <Upload className={`w-7 h-7 ${isDragOver ? "text-white" : "text-blue-600"}`} />
+            )}
+          </div>
+
+          <p className="text-lg font-semibold text-slate-800 mb-2">
+            {hasIEP ? "Got it! Ready when you are." : "Tap here or drop a file"}
+          </p>
+          <p className="text-sm text-slate-500">
+            {hasIEP ? "Add more files if you'd like" : "PDF, Word doc, or photo"}
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic"
+          />
+        </div>
+
+        {/* Uploaded files - simple, clear */}
+        {files.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {files.map((file) => (
+              <div
+                key={file.id}
+                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-800 truncate max-w-[200px]">{file.name}</p>
+                    <p className="text-xs text-green-600 font-medium">Ready</p>
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveFile(file.id)
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  aria-label="Remove file"
+                >
+                  <X className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
-      </button>
+
+        {/* Spacer */}
+        <div className="flex-1 min-h-[20px]" />
+
+        {/* Big, friendly continue button */}
+        <button
+          onClick={onNext}
+          disabled={!hasIEP}
+          className={`w-full py-5 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
+            hasIEP
+              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50"
+              : "bg-slate-100 text-slate-400 cursor-not-allowed"
+          }`}
+        >
+          {hasIEP ? (
+            <>
+              Continue
+              <ArrowRight className="w-5 h-5" />
+            </>
+          ) : (
+            "Upload the IEP to continue"
+          )}
+        </button>
+
+        {/* Reassuring footer */}
+        <p className="text-center text-xs text-slate-400 mt-4">Secure and private. We never store your documents.</p>
+      </div>
     </div>
   )
 }
@@ -702,11 +750,30 @@ function BuildingStep({
     <div className="max-w-2xl mx-auto px-4 py-8 relative">
       {!allComplete && !error && <FloatingParticles />}
 
+      {!allComplete && !error && (
+        <div className="flex justify-center mb-4">
+          <img
+            src="/minimal-line-art-illustration-of-papers-being-orga.jpg"
+            alt=""
+            className="w-48 h-24 object-contain opacity-60"
+            aria-hidden="true"
+          />
+        </div>
+      )}
+
       <div className="text-center mb-8 relative z-10">
         <div className="flex justify-center mb-6">
           {allComplete ? (
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200">
-              <CheckCircle2 className="w-12 h-12 text-white" />
+            <div className="relative">
+              <img
+                src="/watercolor-celebration-confetti-burst-in-soft-blue.jpg"
+                alt=""
+                className="absolute -inset-4 w-32 h-32 object-contain opacity-40 animate-pulse"
+                aria-hidden="true"
+              />
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10">
+                <CheckCircle2 className="w-12 h-12 text-white" />
+              </div>
             </div>
           ) : error ? (
             <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
@@ -3030,6 +3097,56 @@ function IEPWizard() {
     })
   }
 
+  // Apply suggested fix to IEP
+  const handleApplyFix = (issue: ComplianceIssue) => {
+    // Use ComplianceIssue type
+    if (!issue.suggested_fix || !extractedIEP) return
+
+    setIsFixing(true)
+    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+
+    // Apply the fix based on issue type and structure
+    let updatedIEP = { ...extractedIEP }
+
+    // Basic example: applying fixes based on known issue IDs or titles
+    if (issue.id?.includes("student-name") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, name: issue.suggested_fix },
+      }
+    } else if (issue.id?.includes("student-grade") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, grade: issue.suggested_fix },
+      }
+    } else if (issue.id?.includes("student-disability") && issue.suggested_fix) {
+      updatedIEP = {
+        ...updatedIEP,
+        student: { ...updatedIEP.student, disability: issue.suggested_fix, primary_disability: issue.suggested_fix },
+        eligibility: {
+          ...updatedIEP.eligibility,
+          primary_disability: issue.suggested_fix,
+          primaryDisability: issue.suggested_fix,
+        },
+      }
+    } else if (issue.id?.includes("goal-") && issue.suggested_fix) {
+      const goalIndexMatch = issue.id.match(/goal-(\d+)/)
+      if (goalIndexMatch && goalIndexMatch[1]) {
+        const goalIndex = Number.parseInt(goalIndexMatch[1], 10)
+        if (updatedIEP.goals && updatedIEP.goals[goalIndex]) {
+          const newGoals = [...updatedIEP.goals]
+          newGoals[goalIndex] = { ...newGoals[goalIndex], text: issue.suggested_fix, goal_text: issue.suggested_fix }
+          updatedIEP = { ...updatedIEP, goals: newGoals }
+        }
+      }
+    }
+    // Add more specific fix logic for other fields as needed
+
+    setExtractedIEP(updatedIEP)
+    setFixedIssues((prev) => new Set([...prev, issue.id]))
+    setIsFixing(false)
+  }
+
   // Build IEP - call Lambda
   const handleStartBuilding = async (isRetry = false) => {
     if (files.length === 0) {
@@ -3142,56 +3259,6 @@ function IEPWizard() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  // Apply suggested fix to IEP
-  const handleApplyFix = (issue: ComplianceIssue) => {
-    // Use ComplianceIssue type
-    if (!issue.suggested_fix || !extractedIEP) return
-
-    setIsFixing(true)
-    logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
-
-    // Apply the fix based on issue type and structure
-    let updatedIEP = { ...extractedIEP }
-
-    // Basic example: applying fixes based on known issue IDs or titles
-    if (issue.id?.includes("student-name") && issue.suggested_fix) {
-      updatedIEP = {
-        ...updatedIEP,
-        student: { ...updatedIEP.student, name: issue.suggested_fix },
-      }
-    } else if (issue.id?.includes("student-grade") && issue.suggested_fix) {
-      updatedIEP = {
-        ...updatedIEP,
-        student: { ...updatedIEP.student, grade: issue.suggested_fix },
-      }
-    } else if (issue.id?.includes("student-disability") && issue.suggested_fix) {
-      updatedIEP = {
-        ...updatedIEP,
-        student: { ...updatedIEP.student, disability: issue.suggested_fix, primary_disability: issue.suggested_fix },
-        eligibility: {
-          ...updatedIEP.eligibility,
-          primary_disability: issue.suggested_fix,
-          primaryDisability: issue.suggested_fix,
-        },
-      }
-    } else if (issue.id?.includes("goal-") && issue.suggested_fix) {
-      const goalIndexMatch = issue.id.match(/goal-(\d+)/)
-      if (goalIndexMatch && goalIndexMatch[1]) {
-        const goalIndex = Number.parseInt(goalIndexMatch[1], 10)
-        if (updatedIEP.goals && updatedIEP.goals[goalIndex]) {
-          const newGoals = [...updatedIEP.goals]
-          newGoals[goalIndex] = { ...newGoals[goalIndex], text: issue.suggested_fix, goal_text: issue.suggested_fix }
-          updatedIEP = { ...updatedIEP, goals: newGoals }
-        }
-      }
-    }
-    // Add more specific fix logic for other fields as needed
-
-    setExtractedIEP(updatedIEP)
-    setFixedIssues((prev) => new Set([...prev, issue.id]))
-    setIsFixing(false)
   }
 
   // Navigation handlers
