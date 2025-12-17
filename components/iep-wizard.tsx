@@ -61,6 +61,93 @@ const safeRender = (value: unknown, fallback = 'Not specified'): string => {
   return String(value)
 }
 
+/**
+ * Helper functions to extract data from IEP with multiple possible field paths.
+ * The Lambda may return data in different structures, so we check all possibilities.
+ */
+
+const getStudentName = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.student?.name ||
+    iep.student?.full_name ||
+    iep.student?.legal_name ||
+    (iep as any).student_name ||
+    (iep as any).studentInfo?.name ||
+    'Not specified'
+  )
+}
+
+const getStudentGrade = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.student?.grade ||
+    (iep.student as any)?.grade_level ||
+    (iep as any).grade ||
+    (iep as any).studentInfo?.grade ||
+    'Not specified'
+  )
+}
+
+const getStudentSchool = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.student?.school ||
+    (iep as any).school ||
+    (iep as any).school_of_attendance ||
+    (iep as any).studentInfo?.school ||
+    'Not specified'
+  )
+}
+
+const getStudentDistrict = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.student?.district ||
+    (iep as any).district ||
+    (iep as any).studentInfo?.district ||
+    'Not specified'
+  )
+}
+
+const getStudentDOB = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.student?.dob ||
+    iep.student?.date_of_birth ||
+    (iep as any).dob ||
+    (iep as any).date_of_birth ||
+    (iep as any).studentInfo?.dob ||
+    'Not specified'
+  )
+}
+
+const getPrimaryDisability = (iep: ExtractedIEP | null): string => {
+  if (!iep) return 'Not specified'
+  return (
+    iep.eligibility?.primary_disability ||
+    iep.eligibility?.primaryDisability ||
+    (iep.eligibility as any)?.primary ||
+    iep.student?.disability ||
+    iep.student?.primary_disability ||
+    (iep as any).primary_disability ||
+    (iep as any).disabilities?.primary ||
+    'Not specified'
+  )
+}
+
+const getSecondaryDisability = (iep: ExtractedIEP | null): string => {
+  if (!iep) return ''
+  return (
+    iep.eligibility?.secondary_disability ||
+    iep.eligibility?.secondaryDisability ||
+    (iep.eligibility as any)?.secondary ||
+    (iep as any).secondary_disability ||
+    (iep as any).disabilities?.secondary ||
+    ''
+  )
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -1211,19 +1298,19 @@ function ReviewStep({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Name:</span>{" "}
-                  <span className="font-medium text-foreground">{safeRender(iep?.student?.name)}</span>
+                  <span className="font-medium text-foreground">{getStudentName(iep)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Grade:</span>{" "}
-                  <span className="font-medium text-foreground">{safeRender(iep?.student?.grade)}</span>
+                  <span className="font-medium text-foreground">{getStudentGrade(iep)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">School:</span>{" "}
-                  <span className="font-medium text-foreground">{safeRender(iep?.student?.school)}</span>
+                  <span className="font-medium text-foreground">{getStudentSchool(iep)}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">District:</span>{" "}
-                  <span className="font-medium text-foreground">{safeRender(iep?.student?.district)}</span>
+                  <span className="font-medium text-foreground">{getStudentDistrict(iep)}</span>
                 </div>
               </div>
             </div>
@@ -1233,16 +1320,12 @@ function ReviewStep({
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">Primary Disability:</span>{" "}
-                  <span className="font-medium text-foreground">
-                    {safeRender(iep?.eligibility?.primary_disability || iep?.eligibility?.primaryDisability)}
-                  </span>
+                  <span className="font-medium text-foreground">{getPrimaryDisability(iep)}</span>
                 </div>
-                {(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability) && (
+                {getSecondaryDisability(iep) && (
                   <div>
                     <span className="text-muted-foreground">Secondary Disability:</span>{" "}
-                    <span className="font-medium text-foreground">
-                      {safeRender(iep?.eligibility?.secondary_disability || iep?.eligibility?.secondaryDisability)}
-                    </span>
+                    <span className="font-medium text-foreground">{getSecondaryDisability(iep)}</span>
                   </div>
                 )}
               </div>
@@ -2065,7 +2148,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{safeRender(iep.student?.name)}</p>
+                  <p className="text-foreground">{getStudentName(iep)}</p>
                 )}
               </div>
 
@@ -2075,7 +2158,7 @@ function EditIEPStep({
                   <label className="font-medium text-foreground">Grade</label>
                   {editingField !== "student-grade" && (
                     <button
-                      onClick={() => handleStartEdit("student-grade", iep.student?.grade || "")}
+                      onClick={() => handleStartEdit("student-grade", getStudentGrade(iep))}
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
@@ -2108,7 +2191,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{safeRender(iep.student?.grade)}</p>
+                  <p className="text-foreground">{getStudentGrade(iep)}</p>
                 )}
               </div>
 
@@ -2118,7 +2201,7 @@ function EditIEPStep({
                   <label className="font-medium text-foreground">School</label>
                   {editingField !== "student-school" && (
                     <button
-                      onClick={() => handleStartEdit("student-school", iep.student?.school || "")}
+                      onClick={() => handleStartEdit("student-school", getStudentSchool(iep))}
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
@@ -2151,7 +2234,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{safeRender(iep.student?.school)}</p>
+                  <p className="text-foreground">{getStudentSchool(iep)}</p>
                 )}
               </div>
 
@@ -2161,7 +2244,7 @@ function EditIEPStep({
                   <label className="font-medium text-foreground">District</label>
                   {editingField !== "student-district" && (
                     <button
-                      onClick={() => handleStartEdit("student-district", iep.student?.district || "")}
+                      onClick={() => handleStartEdit("student-district", getStudentDistrict(iep))}
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
@@ -2194,7 +2277,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{safeRender(iep.student?.district)}</p>
+                  <p className="text-foreground">{getStudentDistrict(iep)}</p>
                 )}
               </div>
 
@@ -2204,7 +2287,7 @@ function EditIEPStep({
                   <label className="font-medium text-foreground">Date of Birth</label>
                   {editingField !== "student-dob" && (
                     <button
-                      onClick={() => handleStartEdit("student-dob", iep.student?.dob || "")}
+                      onClick={() => handleStartEdit("student-dob", getStudentDOB(iep))}
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
@@ -2238,7 +2321,7 @@ function EditIEPStep({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-foreground">{iep.student?.dob || "Not specified"}</p>
+                  <p className="text-foreground">{getStudentDOB(iep)}</p>
                 )}
               </div>
 
@@ -2251,7 +2334,7 @@ function EditIEPStep({
                       onClick={() =>
                         handleStartEdit(
                           "student-disability",
-                          iep.student?.disability || iep.student?.primary_disability || "",
+                          getPrimaryDisability(iep),
                         )
                       }
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
@@ -2317,14 +2400,16 @@ function EditIEPStep({
                 ) : (
                   <div>
                     <p className="text-foreground">
-                      {iep.student?.disability || iep.student?.primary_disability || (
+                      {getPrimaryDisability(iep) !== 'Not specified' ? (
+                        getPrimaryDisability(iep)
+                      ) : (
                         <span className="text-amber-600 flex items-center gap-1">
                           <AlertTriangle className="w-4 h-4" />
                           Not specified
                         </span>
                       )}
                     </p>
-                    {!(iep.student?.disability || iep.student?.primary_disability) && (
+                    {getPrimaryDisability(iep) === 'Not specified' && (
                       <p className="text-xs text-muted-foreground mt-1">
                         CHECK 12: Must specify one of 13 IDEA categories (-15 points)
                       </p>
@@ -3425,6 +3510,9 @@ function IEPWizard() {
 
       const newIEP = data.new_iep || data.result?.new_iep || data.result?.iep
       const remediationData = data.remediation || data.result?.remediation
+
+      // Debug logging to see exact Lambda response structure
+      console.log('[DEBUG] Full IEP data structure:', JSON.stringify(newIEP, null, 2))
 
       if (newIEP) {
         setExtractedIEP(newIEP)
