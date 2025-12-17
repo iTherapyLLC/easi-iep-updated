@@ -3166,25 +3166,37 @@ function IEPWizard() {
 
   // Build IEP - call Lambda
   const handleStartBuilding = async (isRetry = false) => {
+    console.log("[v0] BUILD: handleStartBuilding called, isRetry:", isRetry)
+    console.log("[v0] BUILD: files array:", files)
+    console.log("[v0] BUILD: files.length:", files.length)
+
     if (files.length === 0) {
-      console.error("[v0] No files uploaded")
+      console.error("[v0] BUILD: No files uploaded - ABORTING")
       setBuildError("Please upload an IEP document first")
       return
     }
 
     const primaryFile = files[0]
+    console.log("[v0] BUILD: primaryFile:", primaryFile)
+    console.log("[v0] BUILD: primaryFile.file:", primaryFile?.file)
+    console.log("[v0] BUILD: primaryFile.file instanceof File:", primaryFile?.file instanceof File)
+
     if (!primaryFile || !primaryFile.file) {
-      console.error("[v0] File object not ready, waiting...")
+      console.error("[v0] BUILD: File object not ready")
       if (!isRetry) {
-        // Wait and retry automatically
+        console.log("[v0] BUILD: Scheduling retry in 500ms")
         setTimeout(() => handleStartBuilding(true), 500)
       } else {
+        console.log("[v0] BUILD: Retry failed - showing error")
         setBuildError("File not ready. Please try again.")
       }
       return
     }
 
+    console.log("[v0] BUILD: File validated, proceeding with build")
+
     if (!isRetry) {
+      console.log("[v0] BUILD: Setting up build state (not a retry)")
       setIsSubmitting(true)
       setBuildError(null)
       setBuildStartTime(Date.now())
@@ -3201,6 +3213,7 @@ function IEPWizard() {
     }
 
     try {
+      console.log("[v0] BUILD: Waiting 500ms before API call")
       await new Promise((r) => setTimeout(r, 500))
 
       const formData = new FormData()
@@ -3209,7 +3222,11 @@ function IEPWizard() {
       formData.append("iepDate", iepDate)
       formData.append("userNotes", studentUpdate)
 
-      console.log("[v0] Sending file:", primaryFile.name, primaryFile.file.size, "bytes")
+      console.log("[v0] BUILD: FormData prepared")
+      console.log("[v0] BUILD: - file:", primaryFile.name, primaryFile.file.size, "bytes")
+      console.log("[v0] BUILD: - state:", selectedState)
+      console.log("[v0] BUILD: - iepDate:", iepDate)
+      console.log("[v0] BUILD: - userNotes length:", studentUpdate.length)
 
       setBuildTasks((prev) =>
         prev.map((t) =>
@@ -3217,16 +3234,19 @@ function IEPWizard() {
         ),
       )
 
+      console.log("[v0] BUILD: About to call /api/extract-iep")
       const response = await fetch("/api/extract-iep", {
         method: "POST",
         body: formData,
       })
+      console.log("[v0] BUILD: Response received, status:", response.status)
 
       const data = await response.json()
+      console.log("[v0] BUILD: Response data:", data)
 
       if (!response.ok) {
         if (data.error === "No file provided" && retryCount < 1) {
-          console.log("[v0] No file provided error, retrying in 1 second...")
+          console.log("[v0] BUILD: No file provided error, retrying in 1 second...")
           setRetryCount((prev) => prev + 1)
           await new Promise((r) => setTimeout(r, 1000))
           return handleStartBuilding(true)
