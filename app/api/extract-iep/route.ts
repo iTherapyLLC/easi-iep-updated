@@ -30,16 +30,13 @@ export async function POST(request: NextRequest) {
 
     let file = formData.get("file") as File | null
     if (!file) {
-      console.log("[extract-iep] 'file' not found, trying 'document'...")
       file = formData.get("document") as File | null
     }
     if (!file) {
-      console.log("[extract-iep] 'document' not found, trying 'pdf'...")
       file = formData.get("pdf") as File | null
     }
     if (!file) {
       // Try to get first file from any field
-      console.log("[extract-iep] Trying to find any File object...")
       for (const [key, value] of formData.entries()) {
         if (value instanceof File) {
           console.log(`[extract-iep] Found file in field "${key}"`)
@@ -62,7 +59,7 @@ export async function POST(request: NextRequest) {
       console.log("[extract-iep] ERROR: No file found in any field. FormData keys were:", allKeys)
       return NextResponse.json(
         {
-          error: "No document content provided",
+          error: "No file provided",
           debug: { keys: allKeys, contentType: request.headers.get("content-type") },
         },
         { status: 400 },
@@ -79,16 +76,33 @@ export async function POST(request: NextRequest) {
 
     console.log("[extract-iep] ArrayBuffer size:", arrayBuffer.byteLength)
     console.log("[extract-iep] Base64 length:", base64.length)
+    console.log("[extract-iep] Base64 first 100 chars:", base64.substring(0, 100))
 
     const payload = {
       action: "analyze",
+      // Primary field names
       pdf_base64: base64,
+      document: base64,
+      content: base64,
+      file: base64,
+      pdf: base64,
+      // Metadata
       state: state,
       iep_date: iepDate,
       user_notes: userNotes,
+      // Additional context
+      filename: file.name,
+      filetype: file.type,
+      filesize: file.size,
     }
 
-    console.log("[extract-iep] Sending to Lambda - base64 length:", base64.length, "state:", state)
+    console.log("[extract-iep] Sending to Lambda:")
+    console.log("[extract-iep] - action:", payload.action)
+    console.log("[extract-iep] - base64 length:", base64.length)
+    console.log("[extract-iep] - state:", payload.state)
+    console.log("[extract-iep] - iep_date:", payload.iep_date)
+    console.log("[extract-iep] - user_notes length:", userNotes.length)
+    console.log("[extract-iep] - filename:", payload.filename)
 
     const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
       method: "POST",
@@ -101,6 +115,9 @@ export async function POST(request: NextRequest) {
     const result = await lambdaResponse.json()
 
     console.log("[extract-iep] Lambda response keys:", Object.keys(result))
+    if (result.error) {
+      console.log("[extract-iep] Lambda error:", result.error)
+    }
 
     if (!lambdaResponse.ok) {
       return NextResponse.json(
