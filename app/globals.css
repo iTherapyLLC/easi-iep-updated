@@ -531,7 +531,6 @@
     .animate-float-gentle,
     .animate-breathing-pulse,
     .animate-icon-float,
-    .animate-icon-wiggle,
     .animate-icon-bounce,
     .animate-gradient-shimmer,
     .animate-fade-slide-up,
@@ -575,19 +574,6 @@
       }
       50% { 
         transform: translateY(-5px) rotate(1deg);
-      }
-    }
-
-    /* Icon wiggle for personality - subtle rotation */
-    .animate-icon-wiggle {
-      animation: icon-wiggle 2.5s ease-in-out infinite;
-    }
-    @keyframes icon-wiggle {
-      0%, 100% { 
-        transform: rotate(-2deg);
-      }
-      50% { 
-        transform: rotate(2deg);
       }
     }
 

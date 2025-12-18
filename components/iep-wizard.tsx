@@ -681,7 +681,7 @@ function UploadStep({
         className={`
           mt-6 w-full py-4 rounded-xl font-medium text-base
           flex items-center justify-center gap-2
-          transition-all duration-300
+          transition-all duration-300 group
           ${
             hasIEP
               ? "bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200/50 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 animate-gradient-shimmer"
