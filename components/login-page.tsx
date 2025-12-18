@@ -240,27 +240,22 @@ export default function LoginPage() {
             <div
               key={index}
               className="relative aspect-square rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300"
-              style={{
-                animation: `fade-slide-up 0.6s ease-out ${index * 0.15}s forwards`,
-                opacity: 0,
-                transform: "translateY(20px)",
-              }}
             >
               <img
                 src={img.src || "/placeholder.svg"}
                 alt={img.alt}
+                crossOrigin="anonymous"
                 className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = `/placeholder.svg?height=400&width=400&query=${encodeURIComponent(img.alt)}`
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             </div>
           ))}
         </div>
 
-        {/* Testimonial quote */}
-        <div
-          className="mt-8 max-w-lg mx-auto bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg"
-          style={{ animation: "fade-slide-up 0.6s ease-out 0.6s forwards", opacity: 0 }}
-        >
+        <div className="mt-8 max-w-lg mx-auto bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
           <Quote className="w-8 h-8 text-blue-400 mb-3" />
           <p className="text-gray-700 italic text-lg leading-relaxed">
             {
@@ -271,7 +266,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right side - Login form */}
       <div className="flex-1 flex items-center justify-center p-4 relative z-10">
         <div className={`w-full max-w-md ${shake ? "animate-shake" : ""}`}>
           {/* Logo/Brand Section */}
@@ -440,11 +434,6 @@ export default function LoginPage() {
         
         @keyframes fade-in {
           0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes fade-slide-up {
-          0% { opacity: 0; transform: translateY(20px); }
           100% { opacity: 1; transform: translateY(0); }
         }
         
