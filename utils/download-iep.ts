@@ -153,6 +153,23 @@ const safeString = (value: unknown, fallback = "Not specified"): string => {
 }
 
 /**
+ * Sanitize filename by removing unsafe characters for filesystem
+ */
+const sanitizeFilename = (filename: string): string => {
+  // Remove or replace characters that are unsafe for filenames
+  return filename.replace(/[/\\:*?"<>|]/g, "_").replace(/\s+/g, "_")
+}
+
+/**
+ * Validate and sanitize severity value for use in CSS class names
+ */
+const sanitizeSeverity = (severity: string): string => {
+  const validSeverities = ["critical", "high", "medium", "low", "warning", "suggestion"]
+  const normalized = severity.toLowerCase().trim()
+  return validSeverities.includes(normalized) ? normalized : "low"
+}
+
+/**
  * Get student name from various possible field locations
  */
 const getStudentName = (iep: IEPData): string => {
@@ -730,7 +747,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
         .map(
           (issue) => `
         <div class="issue">
-          <span class="issue-severity severity-${safeString(issue.severity)}">${safeString(issue.severity).toUpperCase()}</span>
+          <span class="issue-severity severity-${sanitizeSeverity(issue.severity)}">${safeString(issue.severity).toUpperCase()}</span>
           <div class="issue-title">${safeString(issue.title)}</div>
           <div class="issue-description">${safeString(issue.description)}</div>
           ${issue.citation ? `<div class="check-citation">Legal Citation: ${safeString(issue.citation)}</div>` : ""}
@@ -778,7 +795,7 @@ export async function downloadIEP(params: DownloadIEPParams): Promise<void> {
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `EASI_IEP_${studentName.replace(/\s+/g, "_")}_${state}_${today}.html`
+    link.download = `EASI_IEP_${sanitizeFilename(studentName)}_${sanitizeFilename(state)}_${today}.html`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -807,7 +824,7 @@ export async function downloadComplianceReport(params: DownloadComplianceReportP
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `EASI_Compliance_Report_${studentName.replace(/\s+/g, "_")}_${state}_${today}.html`
+    link.download = `EASI_Compliance_Report_${sanitizeFilename(studentName)}_${sanitizeFilename(state)}_${today}.html`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
