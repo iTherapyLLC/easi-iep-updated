@@ -3854,9 +3854,65 @@ function IEPWizard() {
   const currentStepIndex = stepOrder.indexOf(currentStep)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {/* Top left cluster */}
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg]"
+        />
+        <img src="/easi-logo.png" alt="" className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg]" />
+        {/* Top right cluster */}
+        <img src="/easi-logo.png" alt="" className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg]" />
+        <img src="/easi-logo.png" alt="" className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg]" />
+        {/* Middle scattered */}
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.035] rotate-[5deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.04] rotate-[-12deg]"
+        />
+        {/* Bottom cluster */}
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.04] rotate-[15deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.03] rotate-[-5deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.035] rotate-[8deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.04] rotate-[-20deg]"
+        />
+        {/* Extra fill for large screens */}
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.025] rotate-[25deg] hidden lg:block"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.02] rotate-[-30deg] hidden xl:block"
+        />
+      </div>
+
       {/* Progress Header */}
-      <div className="pt-8 pb-4 px-4">
+      <div className="pt-8 pb-4 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-center mb-6">
             <div className="flex items-center gap-3">
@@ -3904,7 +3960,7 @@ function IEPWizard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 pb-12">
+      <div className="max-w-4xl mx-auto px-4 pb-12 relative z-10">
         {/* Upload Step */}
         {currentStep === "upload" && (
           <UploadStep
