@@ -11,20 +11,20 @@ const VALID_PASSWORDS = ["easi2026", "iepguardian", "innervoice", "specialed"]
 
 const TEACHER_IMAGES = [
   {
-    src: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&q=80",
-    alt: "Happy special education teacher smiling",
+    src: "/teacher1.jpg",
+    alt: "Happy special education teacher smiling warmly in classroom",
   },
   {
-    src: "https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=400&h=400&fit=crop&q=80",
-    alt: "Relieved case manager",
+    src: "/teacher2.jpg",
+    alt: "Relieved case manager celebrating completing paperwork",
   },
   {
-    src: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400&h=400&fit=crop&q=80",
-    alt: "Teacher helping student learn",
+    src: "/teacher3.jpg",
+    alt: "Teacher helping student with special needs",
   },
   {
-    src: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=400&fit=crop&q=80",
-    alt: "Special education team collaborating",
+    src: "/teacher4.jpg",
+    alt: "Special education team collaborating at IEP meeting",
   },
 ]
 
