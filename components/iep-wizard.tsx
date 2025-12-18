@@ -38,6 +38,7 @@ import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
+import { LogoutButton } from "@/components/logout-button"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -3914,10 +3915,14 @@ function IEPWizard() {
       {/* Progress Header */}
       <div className="pt-8 pb-4 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex-1" />
             <div className="flex items-center gap-3">
               <img src="/easi-logo.png" alt="EASI IEP" className="h-10 w-auto" />
               <span className="text-xl font-semibold text-slate-700 tracking-tight">EASI IEP</span>
+            </div>
+            <div className="flex-1 flex justify-end">
+              <LogoutButton />
             </div>
           </div>
 
