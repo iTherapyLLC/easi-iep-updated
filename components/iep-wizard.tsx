@@ -525,6 +525,9 @@ function UploadStep({
   return (
     <div className="flex flex-col px-4 py-6 max-w-lg mx-auto">
       <div className="text-center mb-6">
+        <div className="flex justify-center mb-4">
+          <img src="/easi-logo.png" alt="" className="h-12 w-auto opacity-80" aria-hidden="true" />
+        </div>
         <h1 className="text-xl font-semibold text-slate-800 mb-1">Upload the current IEP</h1>
         <p className="text-sm text-slate-500">We'll handle everything else</p>
       </div>
@@ -592,13 +595,7 @@ function UploadStep({
             <Upload
               className={`
                 w-8 h-8 transition-all duration-300
-                ${
-                  isDragOver
-                    ? "text-white scale-110"
-                    : isHovering
-                      ? "text-blue-600"
-                      : "text-slate-400"
-                }
+                ${isDragOver ? "text-white scale-110" : isHovering ? "text-blue-600" : "text-slate-400"}
                 ${!hasIEP && !isDragOver && !isHovering ? "animate-icon-float" : ""}
                 ${iconHovered && isHovering ? "animate-icon-bounce" : ""}
               `}
@@ -716,8 +713,6 @@ function UploadStep({
 // =============================================================================
 // STEP 2: TELL US
 // =============================================================================
-
-// Find the TellStep component and update the button disabled condition
 
 // Inside TellStep component props, add isFileReady:
 interface TellStepProps {
@@ -1072,8 +1067,12 @@ function BuildingStep({
                     aria-hidden="true"
                   />
                 </div>
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10">
-                  <CheckCircle2 className="w-12 h-12 text-white" />
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10 p-4">
+                  <img
+                    src="/easi-logo.png"
+                    alt="Success"
+                    className="w-full h-full object-contain brightness-0 invert"
+                  />
                 </div>
               </div>
             ) : error ? (
@@ -2214,15 +2213,11 @@ function EditIEPStep({
           <div className="space-y-6">
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-800 text-sm">
-                Copy each section below and paste into SEIS or your district's IEP system. 
-                When you're done, upload a screenshot and we'll double-check everything landed correctly.
+                Copy each section below and paste into SEIS or your district's IEP system. When you're done, upload a
+                screenshot and we'll double-check everything landed correctly.
               </p>
             </div>
-            <CopyPasteInterface
-              iep={iep}
-              onScreenshotUpload={handleScreenshotUpload}
-              logEvent={logEvent}
-            />
+            <CopyPasteInterface iep={iep} onScreenshotUpload={handleScreenshotUpload} logEvent={logEvent} />
           </div>
         )}
 
@@ -3831,6 +3826,13 @@ function IEPWizard() {
       {/* Progress Header */}
       <div className="pt-8 pb-4 px-4">
         <div className="max-w-4xl mx-auto">
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center gap-3">
+              <img src="/easi-logo.png" alt="EASI IEP" className="h-10 w-auto" />
+              <span className="text-xl font-semibold text-slate-700 tracking-tight">EASI IEP</span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between mb-8">
             {progressSteps.map((step, index) => {
               const stepIndex = stepOrder.indexOf(step.id as WizardStep)

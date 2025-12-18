@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   description: "A supportive platform helping special education teachers create compliant IEPs with confidence",
   generator: "v0.app",
   icons: {
-    icon: "/favicon.webp",
-    apple: "/favicon.webp",
+    icon: "/easi-logo.png",
+    apple: "/easi-logo.png",
   },
 }
 
