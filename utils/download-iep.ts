@@ -110,31 +110,46 @@ interface DownloadComplianceReportParams {
 }
 
 /**
+ * Escape HTML special characters to prevent XSS
+ */
+const escapeHtml = (text: string): string => {
+  const map: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }
+  return text.replace(/[&<>"']/g, (m) => map[m])
+}
+
+/**
  * Safely render a value that might be null, undefined, or an object
+ * Escapes HTML to prevent XSS vulnerabilities
  */
 const safeString = (value: unknown, fallback = "Not specified"): string => {
-  if (value === null || value === undefined) return fallback
-  if (typeof value === "string") return value
-  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  if (value === null || value === undefined) return escapeHtml(fallback)
+  if (typeof value === "string") return escapeHtml(value)
+  if (typeof value === "number" || typeof value === "boolean") return escapeHtml(String(value))
   if (Array.isArray(value)) {
     return (
       value
         .map((v) => safeString(v, ""))
         .filter(Boolean)
-        .join(", ") || fallback
+        .join(", ") || escapeHtml(fallback)
     )
   }
   if (typeof value === "object") {
     const vals = Object.values(value as Record<string, unknown>)
-    if (vals.length === 0) return fallback
+    if (vals.length === 0) return escapeHtml(fallback)
     return (
       vals
         .map((v) => safeString(v, ""))
         .filter(Boolean)
-        .join(", ") || fallback
+        .join(", ") || escapeHtml(fallback)
     )
   }
-  return String(value)
+  return escapeHtml(String(value))
 }
 
 /**
@@ -458,13 +473,12 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       font-size: 28px;
     }
     .score-circle {
-      display: inline-block;
+      display: flex;
       width: 120px;
       height: 120px;
       border-radius: 50%;
       background: ${scoreColor};
       color: white;
-      display: flex;
       align-items: center;
       justify-content: center;
       font-size: 36px;
@@ -716,7 +730,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
         .map(
           (issue) => `
         <div class="issue">
-          <span class="issue-severity severity-${issue.severity}">${issue.severity.toUpperCase()}</span>
+          <span class="issue-severity severity-${safeString(issue.severity)}">${safeString(issue.severity).toUpperCase()}</span>
           <div class="issue-title">${safeString(issue.title)}</div>
           <div class="issue-description">${safeString(issue.description)}</div>
           ${issue.citation ? `<div class="check-citation">Legal Citation: ${safeString(issue.citation)}</div>` : ""}
