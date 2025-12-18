@@ -1848,8 +1848,8 @@ function EditIEPStep({
       fileName: file.name,
       fileSize: file.size,
     })
-    // Simple toast notification (could be replaced with a proper toast system if available)
-    console.log("Got it! We'll verify your IEP in the next step.")
+    // TODO: Add toast notification: "Got it! We'll verify your IEP in the next step."
+    // The verificationScreenshot state can be used in the next step (MySLP review) to verify the transfer
   }
 
   const handleManualFix = (issueId: string, newText?: string) => {
