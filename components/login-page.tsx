@@ -1,32 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, LogIn, CheckCircle2, Sparkles, Quote } from "lucide-react"
-import Image from "next/image"
+import { Eye, EyeOff, LogIn, CheckCircle2, Sparkles } from "lucide-react"
 
-// PRESET PASSWORDS - Multiple passwords for different users/purposes
+// PRESET PASSWORDS
 const VALID_PASSWORDS = ["easi2026", "iepguardian", "innervoice", "specialed"]
-
-const TEACHER_IMAGES = [
-  {
-    src: "/teacher1.jpg",
-    alt: "Happy special education teacher smiling warmly in classroom",
-  },
-  {
-    src: "/teacher2.jpg",
-    alt: "Relieved case manager celebrating completing paperwork",
-  },
-  {
-    src: "/teacher3.jpg",
-    alt: "Teacher helping student with special needs",
-  },
-  {
-    src: "/teacher4.jpg",
-    alt: "Special education team collaborating at IEP meeting",
-  },
-]
 
 export default function LoginPage() {
   const [password, setPassword] = useState("")
@@ -36,21 +16,6 @@ export default function LoginPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [shake, setShake] = useState(false)
   const router = useRouter()
-
-  const [particles, setParticles] = useState<
-    Array<{ id: number; x: number; y: number; size: number; duration: number }>
-  >([])
-
-  useEffect(() => {
-    const newParticles = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 4 + 2,
-      duration: Math.random() * 10 + 10,
-    }))
-    setParticles(newParticles)
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,7 +28,6 @@ export default function LoginPage() {
       setIsSuccess(true)
       localStorage.setItem("isAuthenticated", "true")
       localStorage.setItem("authTimestamp", Date.now().toString())
-
       await new Promise((resolve) => setTimeout(resolve, 1500))
       router.push("/")
     } else {
@@ -75,199 +39,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex overflow-hidden relative">
-      {/* Animated Gradient Background */}
-      <div
-        className="absolute inset-0 bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100"
-        style={{
-          backgroundSize: "400% 400%",
-          animation: "gradient-shift 15s ease infinite",
-        }}
-      />
+    <div className="min-h-screen flex">
+      {/* Left Side - Teacher Images */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-blue-600 to-indigo-700 overflow-hidden">
+        {/* Main teacher image as background */}
+        <div className="absolute inset-0">
+          <img src="/teacher1.jpg" alt="Special education teacher" className="w-full h-full object-cover opacity-40" />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-indigo-700/80" />
+        </div>
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((particle) => (
-          <div
-            key={particle.id}
-            className="absolute rounded-full bg-blue-400/20"
-            style={{
-              left: `${particle.x}%`,
-              top: `${particle.y}%`,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              animation: `float-particle ${particle.duration}s ease-in-out infinite`,
-              animationDelay: `${particle.id * 0.5}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Top left cluster */}
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={80}
-          height={80}
-          className="absolute top-[5%] left-[3%] opacity-[0.03] rotate-[-15deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={48}
-          height={48}
-          className="absolute top-[12%] left-[15%] opacity-[0.025] rotate-[20deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={64}
-          height={64}
-          className="absolute top-[25%] left-[5%] opacity-[0.02] rotate-[-5deg]"
-        />
-
-        {/* Top right cluster */}
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={72}
-          height={72}
-          className="absolute top-[8%] right-[8%] opacity-[0.03] rotate-[25deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={56}
-          height={56}
-          className="absolute top-[20%] right-[3%] opacity-[0.025] rotate-[-20deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={48}
-          height={48}
-          className="absolute top-[3%] right-[20%] opacity-[0.02] rotate-[10deg]"
-        />
-
-        {/* Middle sides */}
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={60}
-          height={60}
-          className="absolute top-[45%] left-[2%] opacity-[0.025] rotate-[15deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={52}
-          height={52}
-          className="absolute top-[55%] right-[4%] opacity-[0.03] rotate-[-25deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={44}
-          height={44}
-          className="absolute top-[38%] right-[12%] opacity-[0.02] rotate-[30deg]"
-        />
-
-        {/* Bottom clusters */}
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={68}
-          height={68}
-          className="absolute bottom-[15%] left-[8%] opacity-[0.03] rotate-[-10deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={56}
-          height={56}
-          className="absolute bottom-[5%] left-[20%] opacity-[0.025] rotate-[15deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={76}
-          height={76}
-          className="absolute bottom-[10%] right-[6%] opacity-[0.03] rotate-[-30deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={48}
-          height={48}
-          className="absolute bottom-[25%] right-[15%] opacity-[0.02] rotate-[5deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={40}
-          height={40}
-          className="absolute bottom-[3%] right-[25%] opacity-[0.025] rotate-[-15deg]"
-        />
-
-        {/* Center scattered (subtle) */}
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={36}
-          height={36}
-          className="absolute top-[35%] left-[25%] opacity-[0.015] rotate-[20deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={32}
-          height={32}
-          className="absolute top-[65%] left-[30%] opacity-[0.015] rotate-[-10deg]"
-        />
-        <Image
-          src="/easi-logo.png"
-          alt=""
-          width={40}
-          height={40}
-          className="absolute top-[50%] right-[25%] opacity-[0.02] rotate-[35deg]"
-        />
-      </div>
-
-      <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-center p-12">
-        <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
-          {TEACHER_IMAGES.map((img, index) => (
-            <div
-              key={index}
-              className="relative aspect-square rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300"
-            >
-              <img
-                src={img.src || "/placeholder.svg"}
-                alt={img.alt}
-                crossOrigin="anonymous"
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = `/placeholder.svg?height=400&width=400&query=${encodeURIComponent(img.alt)}`
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        {/* Floating teacher photo cards */}
+        <div className="relative z-10 flex flex-col justify-center items-center w-full p-12">
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <div className="rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300 rotate-[-3deg]">
+              <img src="/teacher2.jpg" alt="Teacher helping student" className="w-full h-40 object-cover" />
             </div>
-          ))}
+            <div className="rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300 rotate-[2deg] mt-8">
+              <img src="/teacher3.jpg" alt="Classroom collaboration" className="w-full h-40 object-cover" />
+            </div>
+            <div className="rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300 rotate-[3deg]">
+              <img src="/teacher4.jpg" alt="Teacher at work" className="w-full h-40 object-cover" />
+            </div>
+            <div className="rounded-2xl overflow-hidden shadow-2xl transform hover:scale-105 transition-transform duration-300 rotate-[-2deg] mt-8">
+              <img src="/teacher1.jpg" alt="Happy teacher" className="w-full h-40 object-cover" />
+            </div>
+          </div>
+
+          {/* Tagline */}
+          <div className="mt-12 text-center text-white">
+            <h2 className="text-3xl font-bold mb-3">Built for Educators</h2>
+            <p className="text-blue-100 text-lg max-w-sm">
+              Spend less time on paperwork, more time with your students.
+            </p>
+          </div>
         </div>
 
-        <div className="mt-8 max-w-lg mx-auto bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-          <Quote className="w-8 h-8 text-blue-400 mb-3" />
-          <p className="text-gray-700 italic text-lg leading-relaxed">
-            {
-              "EASI IEP saved me hours every week. I finally have time to focus on my students instead of drowning in paperwork."
-            }
-          </p>
-          <p className="mt-4 text-gray-600 font-medium">— Special Education Teacher, California</p>
-        </div>
+        {/* Decorative gradient at bottom */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-blue-900/50 to-transparent" />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 relative z-10">
-        <div className={`w-full max-w-md ${shake ? "animate-shake" : ""}`}>
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-blue-50 relative overflow-hidden">
+        {/* Background logo decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
+          <img src="/easi-logo.png" alt="" className="absolute -top-20 -right-20 w-64 h-64 rotate-[15deg]" />
+          <img src="/easi-logo.png" alt="" className="absolute -bottom-20 -left-20 w-64 h-64 rotate-[-15deg]" />
+          <img src="/easi-logo.png" alt="" className="absolute top-1/3 left-10 w-32 h-32 rotate-[25deg]" />
+          <img src="/easi-logo.png" alt="" className="absolute bottom-1/4 right-10 w-40 h-40 rotate-[-10deg]" />
+        </div>
+
+        <div className={`w-full max-w-md relative z-10 ${shake ? "animate-shake" : ""}`}>
           {/* Logo/Brand Section */}
           <div className="text-center mb-8">
             <div className="relative inline-block">
@@ -275,18 +96,8 @@ export default function LoginPage() {
                 className="absolute inset-0 bg-blue-400/30 rounded-full blur-xl"
                 style={{ animation: "pulse-slow 3s ease-in-out infinite" }}
               />
-
-              <div
-                className="relative w-24 h-24 mx-auto mb-4 bg-white rounded-full p-3 shadow-lg"
-                style={{ animation: "float 3s ease-in-out infinite" }}
-              >
-                <Image
-                  src="/easi-logo.png"
-                  alt="EASI IEP"
-                  width={96}
-                  height={96}
-                  className="w-full h-full object-contain"
-                />
+              <div className="relative w-20 h-20 mx-auto mb-4" style={{ animation: "float 3s ease-in-out infinite" }}>
+                <img src="/easi-logo.png" alt="EASI IEP" className="w-full h-full object-contain drop-shadow-lg" />
               </div>
             </div>
 
@@ -297,10 +108,15 @@ export default function LoginPage() {
             <p className="text-gray-600">Your IEP compliance guardian</p>
           </div>
 
+          {/* Mobile-only teacher image */}
+          <div className="lg:hidden mb-6 rounded-2xl overflow-hidden shadow-lg">
+            <img src="/teacher1.jpg" alt="Teacher" className="w-full h-32 object-cover" />
+          </div>
+
           {/* Success State */}
           {isSuccess ? (
             <div
-              className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-100 text-center"
+              className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center"
               style={{ animation: "success-pop 0.5s ease-out forwards" }}
             >
               <div
@@ -317,7 +133,7 @@ export default function LoginPage() {
             </div>
           ) : (
             /* Login Card */
-            <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-100 transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 transition-all duration-300 hover:shadow-2xl">
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Password Input */}
                 <div>
@@ -339,7 +155,6 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -348,10 +163,7 @@ export default function LoginPage() {
 
                 {/* Error Message */}
                 {error && (
-                  <div
-                    className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center"
-                    style={{ animation: "fade-in 0.3s ease-out forwards" }}
-                  >
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">
                     {error}
                   </div>
                 )}
@@ -373,74 +185,41 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {/* Hint */}
               <p className="text-center text-gray-400 text-xs mt-4">Need access? Contact your administrator</p>
             </div>
           )}
 
-          <div className="lg:hidden mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-lg">
-            <Quote className="w-6 h-6 text-blue-400 mb-2" />
-            <p className="text-gray-700 italic text-sm leading-relaxed">
-              {"EASI IEP saved me hours every week. I finally have time to focus on my students."}
-            </p>
-            <p className="mt-3 text-gray-600 font-medium text-sm">— Special Education Teacher</p>
-          </div>
-
-          {/* Footer */}
           <p className="text-center text-gray-500 text-sm mt-6">Powered by EASI IEP Guardian</p>
         </div>
       </div>
 
       {/* CSS Animations */}
       <style jsx>{`
-        @keyframes gradient-shift {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-10px); }
         }
-        
-        @keyframes float-particle {
-          0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
-          25% { transform: translateY(-20px) translateX(10px); opacity: 0.6; }
-          50% { transform: translateY(-10px) translateX(-10px); opacity: 0.4; }
-          75% { transform: translateY(-30px) translateX(5px); opacity: 0.5; }
-        }
-        
         @keyframes pulse-slow {
           0%, 100% { opacity: 0.3; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(1.1); }
         }
-        
         @keyframes sparkle {
           0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
           50% { opacity: 0.7; transform: scale(1.2) rotate(15deg); }
         }
-        
         @keyframes success-pop {
           0% { transform: scale(0.8); opacity: 0; }
           50% { transform: scale(1.05); }
           100% { transform: scale(1); opacity: 1; }
         }
-        
         @keyframes success-check {
           0% { transform: scale(0); }
           50% { transform: scale(1.2); }
           100% { transform: scale(1); }
         }
-        
-        @keyframes fade-in {
-          0% { opacity: 0; transform: translateY(-10px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        
         .animate-shake {
           animation: shake 0.5s ease-in-out;
         }
-        
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
