@@ -31,7 +31,6 @@ import {
   Building2,
   AlertTriangle,
   User,
-  Heart,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
@@ -45,18 +44,28 @@ import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHa
  * Safely render a value that might be an object.
  * React Error #31 occurs when trying to render objects directly as React children.
  */
-const safeRender = (value: unknown, fallback = 'Not specified'): string => {
+const safeRender = (value: unknown, fallback = "Not specified"): string => {
   if (value === null || value === undefined) return fallback
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
   if (Array.isArray(value)) {
-    return value.map(v => safeRender(v, '')).filter(Boolean).join(', ') || fallback
+    return (
+      value
+        .map((v) => safeRender(v, ""))
+        .filter(Boolean)
+        .join(", ") || fallback
+    )
   }
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     // Handle objects like { writing: "...", mathematics: "..." }
     const vals = Object.values(value as Record<string, unknown>)
     if (vals.length === 0) return fallback
-    return vals.map(v => safeRender(v, '')).filter(Boolean).join(', ') || fallback
+    return (
+      vals
+        .map((v) => safeRender(v, ""))
+        .filter(Boolean)
+        .join(", ") || fallback
+    )
   }
   return String(value)
 }
@@ -67,63 +76,58 @@ const safeRender = (value: unknown, fallback = 'Not specified'): string => {
  */
 
 const getStudentName = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
+  if (!iep) return "Not specified"
   return (
     iep.student?.name ||
     iep.student?.full_name ||
     iep.student?.legal_name ||
     (iep as any).student_name ||
     (iep as any).studentInfo?.name ||
-    'Not specified'
+    "Not specified"
   )
 }
 
 const getStudentGrade = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
+  if (!iep) return "Not specified"
   return (
     iep.student?.grade ||
     (iep.student as any)?.grade_level ||
     (iep as any).grade ||
     (iep as any).studentInfo?.grade ||
-    'Not specified'
+    "Not specified"
   )
 }
 
 const getStudentSchool = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
+  if (!iep) return "Not specified"
   return (
     iep.student?.school ||
     (iep as any).school ||
     (iep as any).school_of_attendance ||
     (iep as any).studentInfo?.school ||
-    'Not specified'
+    "Not specified"
   )
 }
 
 const getStudentDistrict = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
-  return (
-    iep.student?.district ||
-    (iep as any).district ||
-    (iep as any).studentInfo?.district ||
-    'Not specified'
-  )
+  if (!iep) return "Not specified"
+  return iep.student?.district || (iep as any).district || (iep as any).studentInfo?.district || "Not specified"
 }
 
 const getStudentDOB = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
+  if (!iep) return "Not specified"
   return (
     iep.student?.dob ||
     iep.student?.date_of_birth ||
     (iep as any).dob ||
     (iep as any).date_of_birth ||
     (iep as any).studentInfo?.dob ||
-    'Not specified'
+    "Not specified"
   )
 }
 
 const getPrimaryDisability = (iep: ExtractedIEP | null): string => {
-  if (!iep) return 'Not specified'
+  if (!iep) return "Not specified"
   return (
     iep.eligibility?.primary_disability ||
     iep.eligibility?.primaryDisability ||
@@ -132,19 +136,19 @@ const getPrimaryDisability = (iep: ExtractedIEP | null): string => {
     iep.student?.primary_disability ||
     (iep as any).primary_disability ||
     (iep as any).disabilities?.primary ||
-    'Not specified'
+    "Not specified"
   )
 }
 
 const getSecondaryDisability = (iep: ExtractedIEP | null): string => {
-  if (!iep) return ''
+  if (!iep) return ""
   return (
     iep.eligibility?.secondary_disability ||
     iep.eligibility?.secondaryDisability ||
     (iep.eligibility as any)?.secondary ||
     (iep as any).secondary_disability ||
     (iep as any).disabilities?.secondary ||
-    ''
+    ""
   )
 }
 
@@ -157,16 +161,11 @@ const extractIEPFromResponse = (data: any): ExtractedIEP => {
   const iepSource = data?.new_iep || data?.result?.new_iep || data?.result?.iep || data?.iep || data
 
   // Extract goals from multiple possible paths
-  const goals = 
-    iepSource?.goals ||
-    iepSource?.annual_goals ||
-    iepSource?.iep_goals ||
-    data?.goals ||
-    data?.result?.goals ||
-    []
+  const goals =
+    iepSource?.goals || iepSource?.annual_goals || iepSource?.iep_goals || data?.goals || data?.result?.goals || []
 
   // Extract services from multiple possible paths
-  const services = 
+  const services =
     iepSource?.services ||
     iepSource?.related_services ||
     iepSource?.special_education_services ||
@@ -175,7 +174,7 @@ const extractIEPFromResponse = (data: any): ExtractedIEP => {
     []
 
   // Extract student info from multiple possible paths
-  const student = 
+  const student =
     iepSource?.student ||
     iepSource?.student_info ||
     iepSource?.student_information ||
@@ -191,25 +190,43 @@ const extractIEPFromResponse = (data: any): ExtractedIEP => {
   const lre = iepSource?.lre || data?.lre || {}
 
   // Log which paths actually contained data
-  console.log('[DEBUG] Data extraction results:', {
-    goalsSource: iepSource?.goals ? 'iepSource.goals' : 
-                 iepSource?.annual_goals ? 'iepSource.annual_goals' :
-                 iepSource?.iep_goals ? 'iepSource.iep_goals' :
-                 data?.goals ? 'data.goals' :
-                 data?.result?.goals ? 'data.result.goals' : 'none',
+  console.log("[DEBUG] Data extraction results:", {
+    goalsSource: iepSource?.goals
+      ? "iepSource.goals"
+      : iepSource?.annual_goals
+        ? "iepSource.annual_goals"
+        : iepSource?.iep_goals
+          ? "iepSource.iep_goals"
+          : data?.goals
+            ? "data.goals"
+            : data?.result?.goals
+              ? "data.result.goals"
+              : "none",
     goalsCount: goals?.length || 0,
-    servicesSource: iepSource?.services ? 'iepSource.services' :
-                    iepSource?.related_services ? 'iepSource.related_services' :
-                    iepSource?.special_education_services ? 'iepSource.special_education_services' :
-                    data?.services ? 'data.services' :
-                    data?.result?.services ? 'data.result.services' : 'none',
+    servicesSource: iepSource?.services
+      ? "iepSource.services"
+      : iepSource?.related_services
+        ? "iepSource.related_services"
+        : iepSource?.special_education_services
+          ? "iepSource.special_education_services"
+          : data?.services
+            ? "data.services"
+            : data?.result?.services
+              ? "data.result.services"
+              : "none",
     servicesCount: services?.length || 0,
-    studentSource: iepSource?.student ? 'iepSource.student' :
-                   iepSource?.student_info ? 'iepSource.student_info' :
-                   iepSource?.student_information ? 'iepSource.student_information' :
-                   data?.student ? 'data.student' :
-                   data?.result?.student ? 'data.result.student' : 'none',
-    studentName: student?.name || student?.full_name || 'not found',
+    studentSource: iepSource?.student
+      ? "iepSource.student"
+      : iepSource?.student_info
+        ? "iepSource.student_info"
+        : iepSource?.student_information
+          ? "iepSource.student_information"
+          : data?.student
+            ? "data.student"
+            : data?.result?.student
+              ? "data.result.student"
+              : "none",
+    studentName: student?.name || student?.full_name || "not found",
   })
 
   return {
@@ -458,20 +475,24 @@ function UploadStep({
 }: {
   files: UploadedFile[]
   onRemoveFile: (id: string) => void
-  onFilesSelected: (files: File[]) => void // Updated prop name
+  onFilesSelected: (files: File[]) => void
   onNext: () => void
   logEvent: (event: string, metadata?: Record<string, unknown>) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isHovering, setIsHovering] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const hasIEP = files.some((f) => f.type === "iep")
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
-    onFilesSelected(selectedFiles) // Use onFilesSelected
+    onFilesSelected(selectedFiles)
     if (selectedFiles.length > 0) {
       logEvent("FILE_UPLOADED", { fileName: selectedFiles[0].name, fileSize: selectedFiles[0].size })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 600)
     }
     e.target.value = ""
   }
@@ -491,150 +512,179 @@ function UploadStep({
     setIsDragOver(false)
     const droppedFiles = e.dataTransfer.files
     if (droppedFiles.length > 0) {
-      onFilesSelected(Array.from(droppedFiles)) // Use onFilesSelected
+      onFilesSelected(Array.from(droppedFiles))
       logEvent("FILE_UPLOADED", { fileName: droppedFiles[0].name, fileSize: droppedFiles[0].size })
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 600)
     }
   }
 
   return (
-    <div className="min-h-[80vh] flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/soft-watercolor-illustration-of-warm-sunlit-elemen.jpg"
-          alt=""
-          className="w-full h-full object-cover opacity-[0.08]"
-          aria-hidden="true"
-        />
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-blue-50/80 to-white/95" />
+    <div className="flex flex-col px-4 py-6 max-w-lg mx-auto">
+      <div className="text-center mb-6">
+        <h1 className="text-xl font-semibold text-slate-800 mb-1">Upload the current IEP</h1>
+        <p className="text-sm text-slate-500">We'll handle everything else</p>
       </div>
 
-      <div className="max-w-xl mx-auto px-6 py-8 flex-1 flex flex-col relative z-10">
-        <div className="flex justify-center mb-4">
-          <div className="relative w-32 h-32">
-            <img
-              src="/warm-watercolor-illustration-of-a-gentle-hand-hold.jpg"
-              alt=""
-              className="w-full h-full object-contain opacity-80"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
-
-        {/* Warm, empathetic header - acknowledges their hard day */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4 shadow-sm">
-            <Heart className="w-7 h-7 text-blue-600" />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3">You've got this.</h1>
-          <p className="text-base text-slate-600 leading-relaxed">
-            Just upload the current IEP and we'll handle the rest.
-            <br />
-            <span className="text-slate-500">Takes about 2 minutes.</span>
-          </p>
-        </div>
-
-        {/* Simple, large drop zone - easy target for tired hands */}
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center cursor-pointer transition-all duration-200 mb-6 backdrop-blur-sm ${
-            isDragOver
-              ? "border-blue-500 bg-blue-100/70 scale-[1.01]"
-              : hasIEP
-                ? "border-green-400 bg-green-50/80"
-                : "border-blue-300 bg-white/80 hover:border-blue-400 hover:bg-blue-50/70"
-          }`}
-        >
-          <div
-            className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors ${
-              hasIEP ? "bg-green-500" : isDragOver ? "bg-blue-500" : "bg-blue-100"
-            }`}
-          >
-            {hasIEP ? (
-              <CheckCircle2 className="w-7 h-7 text-white" />
-            ) : (
-              <Upload className={`w-7 h-7 ${isDragOver ? "text-white" : "text-blue-600"}`} />
-            )}
-          </div>
-
-          <p className="text-lg font-semibold text-slate-800 mb-2">
-            {hasIEP ? "Got it! Ready when you are." : "Tap here or drop a file"}
-          </p>
-          <p className="text-sm text-slate-500">
-            {hasIEP ? "Add more files if you'd like" : "PDF, Word doc, or photo"}
-          </p>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileSelect}
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic"
-          />
-        </div>
-
-        {/* Uploaded files - simple, clear */}
-        {files.length > 0 && (
-          <div className="mb-6 space-y-2">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 truncate max-w-[200px]">{file.name}</p>
-                    <p className="text-xs text-green-600 font-medium">Ready</p>
-                  </div>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRemoveFile(file.id)
-                  }}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                  aria-label="Remove file"
-                >
-                  <X className="w-4 h-4 text-slate-400" />
-                </button>
-              </div>
-            ))}
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className={`
+          relative rounded-2xl p-8 text-center cursor-pointer
+          transition-all duration-200 ease-out
+          border-2 border-dashed
+          ${
+            showSuccess
+              ? "border-green-400 bg-green-50 scale-[1.02] shadow-lg shadow-green-100"
+              : isDragOver
+                ? "border-blue-500 bg-blue-50 scale-[1.03] shadow-xl shadow-blue-100"
+                : hasIEP
+                  ? "border-green-400 bg-green-50/50 shadow-md"
+                  : isHovering
+                    ? "border-blue-400 bg-blue-50/50 scale-[1.01] shadow-lg shadow-blue-50"
+                    : "border-slate-200 bg-white shadow-sm hover:shadow-md"
+          }
+          ${!hasIEP && !isDragOver && !isHovering ? "animate-subtle-pulse" : ""}
+        `}
+        style={{
+          boxShadow: isDragOver
+            ? "0 20px 40px -10px rgba(59, 130, 246, 0.25), 0 0 0 4px rgba(59, 130, 246, 0.1)"
+            : isHovering && !hasIEP
+              ? "0 12px 24px -8px rgba(59, 130, 246, 0.15)"
+              : undefined,
+        }}
+      >
+        {showSuccess && (
+          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 bg-green-400/20 animate-ping" />
           </div>
         )}
 
-        {/* Spacer */}
-        <div className="flex-1 min-h-[20px]" />
-
-        {/* Big, friendly continue button */}
-        <button
-          onClick={onNext}
-          disabled={!hasIEP}
-          className={`w-full py-5 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-            hasIEP
-              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200/50"
-              : "bg-slate-100 text-slate-400 cursor-not-allowed"
-          }`}
+        <div
+          className={`
+            w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
+            transition-all duration-200
+            ${
+              hasIEP
+                ? "bg-green-500 scale-110"
+                : isDragOver
+                  ? "bg-blue-500 scale-125"
+                  : isHovering
+                    ? "bg-blue-100 scale-110"
+                    : "bg-slate-100"
+            }
+          `}
         >
           {hasIEP ? (
-            <>
-              Continue
-              <ArrowRight className="w-5 h-5" />
-            </>
+            <CheckCircle2 className="w-8 h-8 text-white animate-scale-in" />
           ) : (
-            "Upload the IEP to continue"
+            <Upload
+              className={`
+                w-8 h-8 transition-all duration-200
+                ${isDragOver ? "text-white scale-110" : isHovering ? "text-blue-600 -translate-y-1" : "text-slate-400"}
+              `}
+            />
           )}
-        </button>
+        </div>
 
-        {/* Reassuring footer */}
-        <p className="text-center text-xs text-slate-400 mt-4">Secure and private. We never store your documents.</p>
+        <p
+          className={`
+          text-base font-medium mb-1 transition-colors duration-200
+          ${hasIEP ? "text-green-700" : isDragOver ? "text-blue-700" : "text-slate-700"}
+        `}
+        >
+          {hasIEP ? "Ready to go" : isDragOver ? "Drop it right here" : "Drop file or tap to browse"}
+        </p>
+        <p
+          className={`
+          text-sm transition-colors duration-200
+          ${hasIEP ? "text-green-600" : isDragOver ? "text-blue-600" : "text-slate-400"}
+        `}
+        >
+          {hasIEP ? "Tap to add more files" : "PDF, Word, or photo"}
+        </p>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileSelect}
+          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic"
+        />
       </div>
+
+      {files.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {files.map((file, index) => (
+            <div
+              key={file.id}
+              className="
+                flex items-center justify-between p-3
+                bg-white rounded-xl border border-slate-100
+                shadow-sm hover:shadow-md hover:-translate-y-0.5
+                transition-all duration-200
+              "
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 truncate max-w-[180px]">{file.name}</p>
+                  <p className="text-xs text-green-600">Ready</p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemoveFile(file.id)
+                }}
+                className="
+                  p-2 rounded-lg text-slate-400
+                  hover:bg-red-50 hover:text-red-500
+                  transition-colors duration-150
+                "
+                aria-label="Remove file"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button
+        onClick={onNext}
+        disabled={!hasIEP}
+        className={`
+          mt-6 w-full py-4 rounded-xl font-medium text-base
+          flex items-center justify-center gap-2
+          transition-all duration-200
+          ${
+            hasIEP
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-200/50 hover:bg-blue-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              : "bg-slate-100 text-slate-400 cursor-not-allowed"
+          }
+          ${hasIEP ? "animate-subtle-breathe" : ""}
+        `}
+      >
+        {hasIEP ? (
+          <>
+            Continue
+            <ArrowRight className="w-4 h-4" />
+          </>
+        ) : (
+          "Upload IEP to continue"
+        )}
+      </button>
+
+      <p className="mt-4 text-center text-xs text-slate-400">Your files are encrypted and secure</p>
     </div>
   )
 }
@@ -947,7 +997,7 @@ function BuildingStep({
 
   useEffect(() => {
     console.log("[v0] BuildingStep mounted, apiCalledRef:", apiCalledRef.current)
-    
+
     // Only call the API if we haven't already and onStartBuild exists
     if (!apiCalledRef.current && onStartBuild) {
       console.log("[v0] BuildingStep: Triggering onStartBuild NOW")
@@ -1262,10 +1312,14 @@ function ReviewStep({
       </div>
 
       {/* Score badge - dynamic color based on score */}
-      <div className={`bg-gradient-to-r ${getScoreColors(complianceScore)} rounded-2xl p-6 mb-6 text-white text-center`}>
+      <div
+        className={`bg-gradient-to-r ${getScoreColors(complianceScore)} rounded-2xl p-6 mb-6 text-white text-center`}
+      >
         <div className="text-5xl font-bold mb-2">{complianceScore}%</div>
         <div className={`${getScoreTextColor(complianceScore)} font-medium`}>{stateName} Compliant</div>
-        <div className={`text-sm ${getScoreTextColor(complianceScore)} mt-1`}>Validated against {stateName} regulations and federal IDEA</div>
+        <div className={`text-sm ${getScoreTextColor(complianceScore)} mt-1`}>
+          Validated against {stateName} regulations and federal IDEA
+        </div>
         <div className="mt-3 inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1">
           <Clock className="w-4 h-4" />
           <span className="text-sm">Estimated {timeSavedMinutes} minutes saved</span>
@@ -1277,7 +1331,7 @@ function ReviewStep({
         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 mb-6">
           <AlertTriangle className="w-5 h-5 text-amber-600" />
           <span className="text-amber-800 font-medium">
-            {unfixedIssues.length} issue{unfixedIssues.length !== 1 ? 's' : ''} need attention before proceeding
+            {unfixedIssues.length} issue{unfixedIssues.length !== 1 ? "s" : ""} need attention before proceeding
           </span>
         </div>
       )}
@@ -1290,7 +1344,7 @@ function ReviewStep({
         >
           <div className="flex items-center gap-3">
             <Shield className="w-5 h-5 text-blue-600" />
-            <span className={`font-medium ${passedCount / totalChecks < 0.8 ? 'text-red-600' : 'text-foreground'}`}>
+            <span className={`font-medium ${passedCount / totalChecks < 0.8 ? "text-red-600" : "text-foreground"}`}>
               What we verified ({passedCount}/{totalChecks} checks passed)
             </span>
           </div>
@@ -1425,13 +1479,17 @@ function ReviewStep({
                 {iep?.plaafp?.academic && (
                   <div>
                     <span className="text-muted-foreground block">Academic:</span>
-                    <p className="text-foreground">{safeRender(iep.plaafp.academic, "No academic performance documented")}</p>
+                    <p className="text-foreground">
+                      {safeRender(iep.plaafp.academic, "No academic performance documented")}
+                    </p>
                   </div>
                 )}
                 {iep?.plaafp?.functional && (
                   <div>
                     <span className="text-muted-foreground block">Functional:</span>
-                    <p className="text-foreground">{safeRender(iep.plaafp.functional, "No functional performance documented")}</p>
+                    <p className="text-foreground">
+                      {safeRender(iep.plaafp.functional, "No functional performance documented")}
+                    </p>
                   </div>
                 )}
               </div>
@@ -1469,16 +1527,16 @@ function ReviewStep({
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground">Baseline:</span>{" "}
-                      <span>{safeRender(goal.baseline)}</span>
+                      <span className="text-muted-foreground">Baseline:</span> <span>{safeRender(goal.baseline)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Target:</span>{" "}
-                      <span>{safeRender(goal.target)}</span>
+                      <span className="text-muted-foreground">Target:</span> <span>{safeRender(goal.target)}</span>
                     </div>
                   </div>
                   {goal.clinical_notes && (
-                    <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">{safeRender(goal.clinical_notes, "")}</div>
+                    <div className="mt-2 text-sm text-amber-700 bg-amber-50 p-2 rounded">
+                      {safeRender(goal.clinical_notes, "")}
+                    </div>
                   )}
                 </div>
               ))
@@ -1524,7 +1582,10 @@ function ReviewStep({
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                   {accommodations.slice(0, 10).map((acc, idx) => (
                     <li key={idx}>
-                      {safeRender(typeof acc === "string" ? acc : acc.description || acc.name || acc.text, "Accommodation")}
+                      {safeRender(
+                        typeof acc === "string" ? acc : acc.description || acc.name || acc.text,
+                        "Accommodation",
+                      )}
                     </li>
                   ))}
                   {accommodations.length > 10 && (
@@ -1683,7 +1744,7 @@ function EditIEPStep({
   const [showCelebration, setShowCelebration] = useState(false)
   const [lastFixedIssue, setLastFixedIssue] = useState<string | null>(null)
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
-  const [editText, setEditText] = useState('')
+  const [editText, setEditText] = useState("")
 
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
@@ -1760,11 +1821,11 @@ function EditIEPStep({
       // Don't mark as fixed without actual input
       return
     }
-    
+
     // TODO: Update the actual IEP data based on the issue type
     // For now, we require text input before marking fixed to prevent bypassing compliance.
     // Future enhancement: Apply newText to the corresponding IEP field based on issue.id
-    
+
     setFixedIssues((prev) => new Set([...prev, issueId]))
     logEvent("FIX_MANUAL_ENTERED", { issueId, textLength: newText.length })
     triggerCelebration(issueId)
@@ -1784,76 +1845,77 @@ function EditIEPStep({
 
   // Helper function to generate default suggestions for issues without suggested_fix
   const getDefaultSuggestion = (issue: ComplianceIssue, iepData: ExtractedIEP | null): string => {
-    const issueId = issue.id?.toLowerCase() || ''
-    const issueTitle = issue.title?.toLowerCase() || ''
-    
+    const issueId = issue.id?.toLowerCase() || ""
+    const issueTitle = issue.title?.toLowerCase() || ""
+
     // Student name
-    if (issueId.includes('name') || issueTitle.includes('name')) {
-      return iepData?.student?.name || '[Enter Student Full Legal Name]'
+    if (issueId.includes("name") || issueTitle.includes("name")) {
+      return iepData?.student?.name || "[Enter Student Full Legal Name]"
     }
-    
+
     // Primary disability
-    if (issueId.includes('disability') || issueTitle.includes('disability')) {
-      const disability = iepData?.eligibility?.primary_disability || 
-                         iepData?.eligibility?.primaryDisability ||
-                         iepData?.student?.disability ||
-                         iepData?.student?.primary_disability
-      return disability || 'Other Health Impairment'
+    if (issueId.includes("disability") || issueTitle.includes("disability")) {
+      const disability =
+        iepData?.eligibility?.primary_disability ||
+        iepData?.eligibility?.primaryDisability ||
+        iepData?.student?.disability ||
+        iepData?.student?.primary_disability
+      return disability || "Other Health Impairment"
     }
-    
+
     // Grade
-    if (issueId.includes('grade') || issueTitle.includes('grade')) {
-      return iepData?.student?.grade || '[Enter Grade Level]'
+    if (issueId.includes("grade") || issueTitle.includes("grade")) {
+      return iepData?.student?.grade || "[Enter Grade Level]"
     }
-    
+
     // School
-    if (issueId.includes('school') || issueTitle.includes('school')) {
-      return iepData?.student?.school || '[Enter School Name]'
+    if (issueId.includes("school") || issueTitle.includes("school")) {
+      return iepData?.student?.school || "[Enter School Name]"
     }
-    
+
     // District
-    if (issueId.includes('district') || issueTitle.includes('district')) {
-      return iepData?.student?.district || '[Enter School District]'
+    if (issueId.includes("district") || issueTitle.includes("district")) {
+      return iepData?.student?.district || "[Enter School District]"
     }
-    
+
     // Date of birth
-    if (issueId.includes('dob') || issueId.includes('birth') || issueTitle.includes('birth')) {
-      return iepData?.student?.dob || iepData?.student?.date_of_birth || '[Enter Date of Birth]'
+    if (issueId.includes("dob") || issueId.includes("birth") || issueTitle.includes("birth")) {
+      return iepData?.student?.dob || iepData?.student?.date_of_birth || "[Enter Date of Birth]"
     }
-    
+
     // Present levels / PLAAFP
-    if (issueId.includes('plaafp') || issueId.includes('present') || issueTitle.includes('present level')) {
-      const strengths = iepData?.plaafp?.strengths || ''
-      const academic = iepData?.plaafp?.academic || ''
-      const functional = iepData?.plaafp?.functional || ''
-      
+    if (issueId.includes("plaafp") || issueId.includes("present") || issueTitle.includes("present level")) {
+      const strengths = iepData?.plaafp?.strengths || ""
+      const academic = iepData?.plaafp?.academic || ""
+      const functional = iepData?.plaafp?.functional || ""
+
       if (strengths || academic || functional) {
         const parts = []
         if (strengths) parts.push(`Strengths: ${strengths}`)
         if (academic) parts.push(`Academic: ${academic}`)
         if (functional) parts.push(`Functional: ${functional}`)
-        return parts.join('. ') + '.'
+        return parts.join(". ") + "."
       }
-      return '[Enter Present Levels of Academic and Functional Performance]'
+      return "[Enter Present Levels of Academic and Functional Performance]"
     }
-    
+
     // Goals
-    if (issueId.includes('goal') || issueTitle.includes('goal')) {
-      return '[Enter measurable annual goal with baseline, target criteria, and measurement method]'
+    if (issueId.includes("goal") || issueTitle.includes("goal")) {
+      return "[Enter measurable annual goal with baseline, target criteria, and measurement method]"
     }
-    
+
     // Services
-    if (issueId.includes('service') || issueTitle.includes('service')) {
-      return '[Enter service type, frequency, duration, location, and provider]'
+    if (issueId.includes("service") || issueTitle.includes("service")) {
+      return "[Enter service type, frequency, duration, location, and provider]"
     }
-    
+
     // LRE / Placement
-    if (issueId.includes('lre') || issueId.includes('placement') || issueTitle.includes('placement')) {
-      return iepData?.placement?.setting || iepData?.lre?.setting || 'General education classroom with supports'
+    if (issueId.includes("lre") || issueId.includes("placement") || issueTitle.includes("placement")) {
+      return iepData?.placement?.setting || iepData?.lre?.setting || "General education classroom with supports"
     }
-    
+
     // Default fallback
-    return '[Enter required information]'
+    return "[Enter required information]"
   }
 
   const IssueCard = ({ issue }: { issue: ComplianceIssue }) => {
@@ -1930,7 +1992,6 @@ function EditIEPStep({
             <textarea
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              placeholder="Enter the corrected information..."
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               autoFocus
               aria-label={`Enter corrected information for: ${issue.title}`}
@@ -1938,13 +1999,13 @@ function EditIEPStep({
               aria-invalid={editText.trim().length === 0}
             />
             <div className="flex gap-2">
-              <Button 
+              <Button
                 size="sm"
                 onClick={() => {
                   if (editText.trim().length > 0) {
                     handleManualFix(issue.id, editText.trim())
                     setEditingIssueId(null)
-                    setEditText('')
+                    setEditText("")
                   }
                 }}
                 disabled={editText.trim().length === 0}
@@ -1953,12 +2014,12 @@ function EditIEPStep({
                 <Check className="w-4 h-4 mr-1" />
                 Save Changes
               </Button>
-              <Button 
+              <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
                   setEditingIssueId(null)
-                  setEditText('')
+                  setEditText("")
                 }}
               >
                 Cancel
@@ -1975,7 +2036,7 @@ function EditIEPStep({
             {/* Always show "Fix it for me" button */}
             <Button
               onClick={() => {
-                handleApplyFix({...issue, suggested_fix: suggestion})
+                handleApplyFix({ ...issue, suggested_fix: suggestion })
                 logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
               }}
               disabled={isFixing}
@@ -1985,14 +2046,14 @@ function EditIEPStep({
               <Wand2 className="w-4 h-4 mr-1" />
               Fix it for me
             </Button>
-            
+
             {/* Keep Edit manually as secondary option */}
-            <Button 
+            <Button
               onClick={() => {
                 setEditingIssueId(issue.id)
                 setEditText(issue.current_text || suggestion)
-              }} 
-              size="sm" 
+              }}
+              size="sm"
               variant="outline"
             >
               <Pencil className="w-4 h-4 mr-1" />
@@ -2407,12 +2468,7 @@ function EditIEPStep({
                   <label className="font-medium text-foreground">Primary Disability (IDEA Category)</label>
                   {editingField !== "student-disability" && (
                     <button
-                      onClick={() =>
-                        handleStartEdit(
-                          "student-disability",
-                          getPrimaryDisability(iep),
-                        )
-                      }
+                      onClick={() => handleStartEdit("student-disability", getPrimaryDisability(iep))}
                       className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                     >
                       <Pencil className="w-3 h-3" />
@@ -2476,7 +2532,7 @@ function EditIEPStep({
                 ) : (
                   <div>
                     <p className="text-foreground">
-                      {getPrimaryDisability(iep) !== 'Not specified' ? (
+                      {getPrimaryDisability(iep) !== "Not specified" ? (
                         getPrimaryDisability(iep)
                       ) : (
                         <span className="text-amber-600 flex items-center gap-1">
@@ -2485,7 +2541,7 @@ function EditIEPStep({
                         </span>
                       )}
                     </p>
-                    {getPrimaryDisability(iep) === 'Not specified' && (
+                    {getPrimaryDisability(iep) === "Not specified" && (
                       <p className="text-xs text-muted-foreground mt-1">
                         CHECK 12: Must specify one of 13 IDEA categories (-15 points)
                       </p>
@@ -2779,7 +2835,9 @@ function EditIEPStep({
                       </div>
                     ) : (
                       <>
-                        <p className="text-foreground text-sm mb-3">{safeRender(goal.text || goal.goal_text, "No goal text")}</p>
+                        <p className="text-foreground text-sm mb-3">
+                          {safeRender(goal.text || goal.goal_text, "No goal text")}
+                        </p>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div className="bg-muted/50 rounded-lg p-3">
                             <p className="text-muted-foreground text-xs mb-1">Baseline</p>
@@ -2791,9 +2849,7 @@ function EditIEPStep({
                           </div>
                           <div className="bg-muted/50 rounded-lg p-3">
                             <p className="text-muted-foreground text-xs mb-1">Measurement</p>
-                            <p className="text-foreground">
-                              {safeRender(goal.measurement || goal.evaluation_method)}
-                            </p>
+                            <p className="text-foreground">{safeRender(goal.measurement || goal.evaluation_method)}</p>
                           </div>
                         </div>
                       </>
@@ -2955,9 +3011,9 @@ function EditIEPStep({
           disabled={!canProceed}
           className="flex-1 py-4 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
         >
-          {!canProceed 
+          {!canProceed
             ? criticalIssues.length > 0
-              ? `Fix ${criticalIssues.length} critical issue${criticalIssues.length !== 1 ? 's' : ''} to continue`
+              ? `Fix ${criticalIssues.length} critical issue${criticalIssues.length !== 1 ? "s" : ""} to continue`
               : `Improve score to ${MINIMUM_PASSING_SCORE}%+ to continue (currently ${currentScore}%)`
             : "Continue to MySLP Review"}
           <ArrowRight className="w-5 h-5" />
@@ -3543,11 +3599,7 @@ function IEPWizard() {
 
     try {
       // Immediately set the first task to loading when API starts
-      setBuildTasks((prev) =>
-        prev.map((t) =>
-          t.id === "upload" ? { ...t, status: "loading" } : t,
-        ),
-      )
+      setBuildTasks((prev) => prev.map((t) => (t.id === "upload" ? { ...t, status: "loading" } : t)))
 
       const formData = new FormData()
       formData.append("file", primaryFile.file, primaryFile.name)
@@ -3584,53 +3636,9 @@ function IEPWizard() {
         ),
       )
 
-      // Debug logging to see exact Lambda response structure
-      console.log('[DEBUG] ========== LAMBDA RESPONSE DEBUG ==========')
-      console.log('[DEBUG] Full API response:', JSON.stringify(data, null, 2))
-      console.log('[DEBUG] data.new_iep:', JSON.stringify(data?.new_iep, null, 2))
-      console.log('[DEBUG] data.result:', JSON.stringify(data?.result, null, 2))
-      console.log('[DEBUG] Goals location check:', {
-        'data.goals': data?.goals,
-        'data.new_iep?.goals': data?.new_iep?.goals,
-        'data.new_iep?.annual_goals': data?.new_iep?.annual_goals,
-        'data.new_iep?.iep_goals': data?.new_iep?.iep_goals,
-        'data.result?.goals': data?.result?.goals,
-        'data.result?.new_iep?.goals': data?.result?.new_iep?.goals,
-      })
-      console.log('[DEBUG] Services location check:', {
-        'data.services': data?.services,
-        'data.new_iep?.services': data?.new_iep?.services,
-        'data.new_iep?.related_services': data?.new_iep?.related_services,
-        'data.new_iep?.special_education_services': data?.new_iep?.special_education_services,
-        'data.result?.services': data?.result?.services,
-        'data.result?.new_iep?.services': data?.result?.new_iep?.services,
-      })
-      console.log('[DEBUG] Student location check:', {
-        'data.student': data?.student,
-        'data.new_iep?.student': data?.new_iep?.student,
-        'data.new_iep?.student_info': data?.new_iep?.student_info,
-        'data.new_iep?.student_information': data?.new_iep?.student_information,
-        'data.result?.student': data?.result?.student,
-        'data.result?.new_iep?.student': data?.result?.new_iep?.student,
-      })
-      console.log('[DEBUG] ========== END LAMBDA RESPONSE DEBUG ==========')
-
-      // Debug logging to see exact Lambda response structure
-      console.log('[DEBUG] ========== LAMBDA RESPONSE DEBUG ==========')
-      console.log('[DEBUG] Full API response keys:', Object.keys(data))
-      console.log('[DEBUG] data.new_iep exists:', !!data?.new_iep)
-      console.log('[DEBUG] data.result exists:', !!data?.result)
-      if (data?.new_iep) {
-        console.log('[DEBUG] data.new_iep keys:', Object.keys(data.new_iep))
-      }
-      if (data?.result) {
-        console.log('[DEBUG] data.result keys:', Object.keys(data.result))
-      }
-      console.log('[DEBUG] ========== END LAMBDA RESPONSE DEBUG ==========')
-
       // Use the helper function to extract IEP data from various possible paths
       const newIEP = extractIEPFromResponse(data)
-      console.log('[DEBUG] Extracted IEP:', {
+      console.log("[DEBUG] Extracted IEP:", {
         hasStudent: !!newIEP.student,
         studentName: newIEP.student?.name,
         goalsCount: newIEP.goals?.length,
@@ -3638,20 +3646,22 @@ function IEPWizard() {
       })
 
       // Extract remediation data from multiple paths
-      const remediationData = 
-        data?.remediation || 
-        data?.result?.remediation || 
-        data?.compliance || 
+      const remediationData =
+        data?.remediation ||
+        data?.result?.remediation ||
+        data?.compliance ||
         data?.result?.compliance ||
-        (data?.result?.compliance_score !== undefined ? {
-          score: data.result.compliance_score,
-          original_score: data.result.compliance_score,
-          issues: data.result.issues || data.result.compliance_issues || [],
-          checks_passed: data.result.checks_passed || [],
-          checks_failed: data.result.checks_failed || [],
-        } : null)
+        (data?.result?.compliance_score !== undefined
+          ? {
+              score: data.result.compliance_score,
+              original_score: data.result.compliance_score,
+              issues: data.result.issues || data.result.compliance_issues || [],
+              checks_passed: data.result.checks_passed || [],
+              checks_failed: data.result.checks_failed || [],
+            }
+          : null)
 
-      console.log('[DEBUG] Remediation data:', {
+      console.log("[DEBUG] Remediation data:", {
         found: !!remediationData,
         score: remediationData?.score || remediationData?.original_score,
         issuesCount: remediationData?.issues?.length,
