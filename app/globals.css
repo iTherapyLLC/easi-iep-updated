@@ -537,7 +537,8 @@
     .animate-fade-slide-up,
     .animate-success-flash,
     .animate-step-shimmer,
-    .animate-step-glow-pulse {
+    .animate-step-glow-pulse,
+    .animate-document-pulse {
       animation: none;
     }
   }
