@@ -31,10 +31,12 @@ import {
   Building2,
   AlertTriangle,
   User,
+  ClipboardCopy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
+import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -1760,10 +1762,11 @@ function EditIEPStep({
   selectedState: string
   logEvent: (eventType: string, metadata?: Record<string, any>) => void
 }) {
-  const [activeSection, setActiveSection] = useState<string>("issues")
+  const [activeSection, setActiveSection] = useState<string>("copy")
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>("")
   const [showCelebration, setShowCelebration] = useState(false)
+  const [verificationScreenshot, setVerificationScreenshot] = useState<File | null>(null)
   const [lastFixedIssue, setLastFixedIssue] = useState<string | null>(null)
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
   const [editText, setEditText] = useState("")
@@ -1794,6 +1797,7 @@ function EditIEPStep({
   const canProceed = criticalIssues.length === 0 && currentScore >= MINIMUM_PASSING_SCORE
 
   const sections = [
+    { id: "copy", label: "Copy to Your System", icon: ClipboardCopy },
     { id: "issues", label: "All Issues", icon: AlertTriangle },
     { id: "student", label: "Student Info", icon: User },
     { id: "plaafp", label: "Present Levels", icon: FileText },
@@ -1836,6 +1840,16 @@ function EditIEPStep({
     logEvent("FIELD_EDIT_SAVED", { field })
     setEditingField(null)
     setEditValue("")
+  }
+
+  const handleScreenshotUpload = (file: File) => {
+    setVerificationScreenshot(file)
+    logEvent("VERIFICATION_SCREENSHOT_UPLOADED", {
+      fileName: file.name,
+      fileSize: file.size,
+    })
+    // TODO: Add toast notification: "Got it! We'll verify your IEP in the next step."
+    // The verificationScreenshot state can be used in the next step (MySLP review) to verify the transfer
   }
 
   const handleManualFix = (issueId: string, newText?: string) => {
@@ -2196,6 +2210,22 @@ function EditIEPStep({
 
       {/* Section Content */}
       <div className="bg-card border border-border rounded-xl p-6">
+        {activeSection === "copy" && (
+          <div className="space-y-6">
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                Copy each section below and paste into SEIS or your district's IEP system. 
+                When you're done, upload a screenshot and we'll double-check everything landed correctly.
+              </p>
+            </div>
+            <CopyPasteInterface
+              iep={iep}
+              onScreenshotUpload={handleScreenshotUpload}
+              logEvent={logEvent}
+            />
+          </div>
+        )}
+
         {activeSection === "issues" && (
           <div className="space-y-6">
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
