@@ -6,9 +6,14 @@ import { useRouter } from "next/navigation"
 import { Eye, EyeOff, LogIn } from "lucide-react"
 import Image from "next/image"
 
-// PRESET PASSWORD - Change this to your desired password
-// For production, use an environment variable: process.env.NEXT_PUBLIC_ACCESS_PASSWORD
-const PRESET_PASSWORD = "easi2024"
+// PRESET PASSWORDS - Multiple passwords for different users/purposes
+// Primary: easi2026 | Alternates: iepguardian, innervoice, specialed
+const VALID_PASSWORDS = [
+  "easi2026",      // Primary password (current year + 1)
+  "iepguardian",   // Alternate password
+  "innervoice",    // Team password  
+  "specialed",     // Educator password
+]
 
 export default function LoginPage() {
   const [password, setPassword] = useState("")
@@ -24,7 +29,7 @@ export default function LoginPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    if (password === PRESET_PASSWORD) {
+    if (VALID_PASSWORDS.includes(password)) {
       localStorage.setItem("isAuthenticated", "true")
       localStorage.setItem("authTimestamp", Date.now().toString())
       router.push("/")
