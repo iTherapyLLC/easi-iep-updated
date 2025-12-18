@@ -528,8 +528,159 @@
     .animate-subtle-breathe,
     .animate-scale-in,
     .animate-float,
-    .animate-float-gentle {
+    .animate-float-gentle,
+    .animate-breathing-pulse,
+    .animate-icon-float,
+    .animate-icon-bounce,
+    .animate-gradient-shimmer,
+    .animate-fade-slide-up,
+    .animate-success-flash,
+    .animate-step-shimmer,
+    .animate-step-glow-pulse,
+    .animate-document-pulse {
       animation: none;
+    }
+  }
+
+  /* =============================================================================
+   * UPLOAD STEP ANIMATIONS - Warm & Delightful
+   * ============================================================================= */
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Breathing pulse for upload dropzone - dreamy, gentle 4-second cycle */
+    .animate-breathing-pulse {
+      animation: breathing-pulse 4s ease-in-out infinite;
+    }
+    @keyframes breathing-pulse {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.15),
+                    0 4px 12px -3px rgba(59, 130, 246, 0.1);
+        border-color: rgb(203, 213, 225);
+      }
+      50% { 
+        box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.2),
+                    0 8px 20px -5px rgba(59, 130, 246, 0.15);
+        border-color: rgb(147, 197, 253);
+      }
+    }
+
+    /* Icon float animation - gentle up/down with slight rotation */
+    .animate-icon-float {
+      animation: icon-float 3s ease-in-out infinite;
+    }
+    @keyframes icon-float {
+      0%, 100% { 
+        transform: translateY(0) rotate(-1deg);
+      }
+      50% { 
+        transform: translateY(-5px) rotate(1deg);
+      }
+    }
+
+    /* Icon bounce on hover - friendly and eager */
+    .animate-icon-bounce {
+      animation: icon-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes icon-bounce {
+      0% { 
+        transform: scale(1);
+      }
+      40% { 
+        transform: scale(1.15) translateY(-5px);
+      }
+      70% { 
+        transform: scale(0.95) translateY(0);
+      }
+      100% { 
+        transform: scale(1.1);
+      }
+    }
+
+    /* Gradient shimmer for enabled button - slow 6-second cycle */
+    .animate-gradient-shimmer {
+      background-size: 200% 100%;
+      animation: gradient-shimmer 6s ease-in-out infinite;
+    }
+    @keyframes gradient-shimmer {
+      0% { 
+        background-position: -200% center;
+      }
+      50% { 
+        background-position: 0% center;
+      }
+      100% { 
+        background-position: 200% center;
+      }
+    }
+
+    /* File card slide up and fade in */
+    .animate-fade-slide-up {
+      animation: fade-slide-up 0.3s ease-out forwards;
+    }
+    @keyframes fade-slide-up {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Success flash for file drop - brief celebration */
+    .animate-success-flash {
+      animation: success-flash 0.6s ease-out;
+    }
+    @keyframes success-flash {
+      0% { 
+        background-color: transparent;
+      }
+      50% { 
+        background-color: rgba(34, 197, 94, 0.2);
+      }
+      100% { 
+        background-color: transparent;
+      }
+    }
+
+    /* Step indicator shimmer for completed steps */
+    .animate-step-shimmer {
+      animation: step-shimmer 2s ease-in-out infinite;
+    }
+    @keyframes step-shimmer {
+      0%, 100% {
+        filter: brightness(1);
+      }
+      50% {
+        filter: brightness(1.3);
+      }
+    }
+
+    /* Step indicator glow pulse for current step */
+    .animate-step-glow-pulse {
+      animation: step-glow-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes step-glow-pulse {
+      0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+      }
+      50% { 
+        box-shadow: 0 0 15px 4px rgba(59, 130, 246, 0.3);
+      }
+    }
+
+    /* Document icon gentle pulse */
+    .animate-document-pulse {
+      animation: document-pulse 2s ease-in-out infinite;
+    }
+    @keyframes document-pulse {
+      0%, 100% { 
+        transform: scale(1);
+      }
+      50% { 
+        transform: scale(1.05);
+      }
     }
   }
 }
