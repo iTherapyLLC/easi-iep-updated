@@ -1,4 +1,4 @@
-Let's find out how late it is. I can do it maybe up to 6 PM but after that we'll have to reschedule. I just got offered a university teaching job for CSUEB, so if it's later than six, we will have to reschedule, so let's see what they're thinking. In general, my availability is pretty much7 to 6 in general, my availabilities from about 7 AM to 6 PM.@import "tailwindcss";
+@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
