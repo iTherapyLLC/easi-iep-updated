@@ -483,6 +483,7 @@ function UploadStep({
   const [isDragOver, setIsDragOver] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [iconHovered, setIconHovered] = useState(false)
 
   const hasIEP = files.some((f) => f.type === "iep")
 
@@ -535,46 +536,50 @@ function UploadStep({
         onMouseLeave={() => setIsHovering(false)}
         className={`
           relative rounded-2xl p-8 text-center cursor-pointer
-          transition-all duration-200 ease-out
+          transition-all duration-300 ease-out
           border-2 border-dashed
           ${
             showSuccess
-              ? "border-green-400 bg-green-50 scale-[1.02] shadow-lg shadow-green-100"
+              ? "border-green-400 bg-green-50 scale-[1.02]"
               : isDragOver
-                ? "border-blue-500 bg-blue-50 scale-[1.03] shadow-xl shadow-blue-100"
+                ? "border-blue-500 bg-blue-50/80 scale-[1.03]"
                 : hasIEP
-                  ? "border-green-400 bg-green-50/50 shadow-md"
+                  ? "border-green-400 bg-green-50/50"
                   : isHovering
-                    ? "border-blue-400 bg-blue-50/50 scale-[1.01] shadow-lg shadow-blue-50"
-                    : "border-slate-200 bg-white shadow-sm hover:shadow-md"
+                    ? "border-blue-400 bg-blue-50/30 scale-[1.02]"
+                    : "border-slate-200 bg-white"
           }
-          ${!hasIEP && !isDragOver && !isHovering ? "animate-subtle-pulse" : ""}
+          ${!hasIEP && !isDragOver && !isHovering ? "animate-breathing-pulse" : ""}
         `}
         style={{
           boxShadow: isDragOver
-            ? "0 20px 40px -10px rgba(59, 130, 246, 0.25), 0 0 0 4px rgba(59, 130, 246, 0.1)"
+            ? "0 20px 40px -10px rgba(59, 130, 246, 0.3), 0 0 0 4px rgba(139, 92, 246, 0.15)"
             : isHovering && !hasIEP
-              ? "0 12px 24px -8px rgba(59, 130, 246, 0.15)"
-              : undefined,
+              ? "0 15px 30px -8px rgba(59, 130, 246, 0.2), 0 0 0 2px rgba(139, 92, 246, 0.1)"
+              : showSuccess
+                ? "0 20px 40px -10px rgba(34, 197, 94, 0.3)"
+                : undefined,
         }}
       >
         {showSuccess && (
-          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none animate-success-flash">
             <div className="absolute inset-0 bg-green-400/20 animate-ping" />
           </div>
         )}
 
         <div
+          onMouseEnter={() => setIconHovered(true)}
+          onMouseLeave={() => setIconHovered(false)}
           className={`
             w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
-            transition-all duration-200
+            transition-all duration-300
             ${
               hasIEP
-                ? "bg-green-500 scale-110"
+                ? "bg-gradient-to-br from-green-500 to-green-600 scale-110 shadow-lg shadow-green-200"
                 : isDragOver
-                  ? "bg-blue-500 scale-125"
+                  ? "bg-gradient-to-br from-blue-500 to-blue-600 scale-125 shadow-xl shadow-blue-300"
                   : isHovering
-                    ? "bg-blue-100 scale-110"
+                    ? "bg-gradient-to-br from-blue-100 to-blue-200 scale-110 shadow-md shadow-blue-100"
                     : "bg-slate-100"
             }
           `}
@@ -584,8 +589,16 @@ function UploadStep({
           ) : (
             <Upload
               className={`
-                w-8 h-8 transition-all duration-200
-                ${isDragOver ? "text-white scale-110" : isHovering ? "text-blue-600 -translate-y-1" : "text-slate-400"}
+                w-8 h-8 transition-all duration-300
+                ${
+                  isDragOver
+                    ? "text-white scale-110"
+                    : isHovering
+                      ? "text-blue-600"
+                      : "text-slate-400"
+                }
+                ${!hasIEP && !isDragOver && !isHovering ? "animate-icon-float" : ""}
+                ${iconHovered && isHovering ? "animate-icon-bounce" : ""}
               `}
             />
           )}
@@ -627,17 +640,20 @@ function UploadStep({
                 flex items-center justify-between p-3
                 bg-white rounded-xl border border-slate-100
                 shadow-sm hover:shadow-md hover:-translate-y-0.5
-                transition-all duration-200
+                transition-all duration-200 animate-fade-slide-up
               "
-              style={{ animationDelay: `${index * 50}ms` }}
+              style={{ animationDelay: `${index * 80}ms` }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-blue-600" />
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-blue-600 animate-document-pulse" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700 truncate max-w-[180px]">{file.name}</p>
-                  <p className="text-xs text-green-600">Ready</p>
+                  <p className="text-xs text-green-600 font-medium flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                    Ready
+                  </p>
                 </div>
               </div>
               <button
@@ -648,7 +664,7 @@ function UploadStep({
                 className="
                   p-2 rounded-lg text-slate-400
                   hover:bg-red-50 hover:text-red-500
-                  transition-colors duration-150
+                  transition-all duration-200 hover:scale-110
                 "
                 aria-label="Remove file"
               >
@@ -665,19 +681,25 @@ function UploadStep({
         className={`
           mt-6 w-full py-4 rounded-xl font-medium text-base
           flex items-center justify-center gap-2
-          transition-all duration-200
+          transition-all duration-300
           ${
             hasIEP
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-200/50 hover:bg-blue-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              ? "bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200/50 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 animate-gradient-shimmer"
               : "bg-slate-100 text-slate-400 cursor-not-allowed"
           }
-          ${hasIEP ? "animate-subtle-breathe" : ""}
         `}
+        style={
+          hasIEP
+            ? {
+                backgroundSize: "200% 100%",
+              }
+            : undefined
+        }
       >
         {hasIEP ? (
           <>
             Continue
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </>
         ) : (
           "Upload IEP to continue"
@@ -3789,25 +3811,25 @@ function IEPWizard() {
                 <div key={step.id} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                         isComplete
-                          ? "bg-blue-600 text-white"
+                          ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200 animate-step-shimmer"
                           : isCurrent
-                            ? "bg-blue-600 text-white ring-4 ring-blue-100"
-                            : "bg-gray-200 text-gray-500"
+                            ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white ring-4 ring-blue-100 animate-step-glow-pulse"
+                            : "bg-gray-200 text-gray-500 hover:bg-gray-300 hover:scale-105 cursor-default"
                       }`}
                     >
                       {isComplete ? <Check className="w-5 h-5" /> : index + 1}
                     </div>
                     <span
-                      className={`mt-2 text-xs text-center max-w-[80px] ${isCurrent ? "text-blue-600 font-medium" : "text-gray-500"}`}
+                      className={`mt-2 text-xs text-center max-w-[80px] transition-all duration-200 ${isCurrent ? "text-blue-600 font-semibold" : "text-gray-500"}`}
                     >
                       {step.label}
                     </span>
                   </div>
                   {index < progressSteps.length - 1 && (
                     <div
-                      className={`w-12 h-0.5 mx-2 ${stepIndex < currentStepIndex ? "bg-blue-600" : "bg-gray-200"}`}
+                      className={`w-12 h-0.5 mx-2 transition-all duration-500 ${stepIndex < currentStepIndex ? "bg-gradient-to-r from-blue-600 to-blue-700" : "bg-gray-200"}`}
                     />
                   )}
                 </div>
