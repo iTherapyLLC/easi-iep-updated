@@ -9,6 +9,25 @@ import Image from "next/image"
 // PRESET PASSWORDS - Multiple passwords for different users/purposes
 const VALID_PASSWORDS = ["easi2026", "iepguardian", "innervoice", "specialed"]
 
+const TEACHER_IMAGES = [
+  {
+    src: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&q=80",
+    alt: "Happy special education teacher smiling",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1594608661623-aa0bd3a69d98?w=400&h=400&fit=crop&q=80",
+    alt: "Relieved case manager",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?w=400&h=400&fit=crop&q=80",
+    alt: "Teacher helping student learn",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=400&fit=crop&q=80",
+    alt: "Special education team collaborating",
+  },
+]
+
 export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -54,13 +73,6 @@ export default function LoginPage() {
       setIsLoading(false)
     }
   }
-
-  const teacherImages = [
-    { src: "/happy-special-education-teacher-smiling-warmly-in-.jpg", alt: "Happy special education teacher" },
-    { src: "/relieved-case-manager-celebrating-completing-paper.jpg", alt: "Relieved case manager" },
-    { src: "/joyful-teacher-high-fiving-student-with-special-ne.jpg", alt: "Teacher helping student" },
-    { src: "/smiling-special-education-team-collaborating-at-ie.jpg", alt: "Special education team collaborating" },
-  ]
 
   return (
     <div className="min-h-screen flex overflow-hidden relative">
@@ -224,7 +236,7 @@ export default function LoginPage() {
 
       <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-center p-12">
         <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto">
-          {teacherImages.map((img, index) => (
+          {TEACHER_IMAGES.map((img, index) => (
             <div
               key={index}
               className="relative aspect-square rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-transform duration-300"
@@ -234,7 +246,11 @@ export default function LoginPage() {
                 transform: "translateY(20px)",
               }}
             >
-              <Image src={img.src || "/placeholder.svg"} alt={img.alt} fill className="object-cover" />
+              <img
+                src={img.src || "/placeholder.svg"}
+                alt={img.alt}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
             </div>
           ))}
