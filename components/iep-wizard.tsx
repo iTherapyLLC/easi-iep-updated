@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
+import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -3813,6 +3814,37 @@ function IEPWizard() {
     logEvent("SESSION_RESTARTED")
   }
 
+  // Download handlers
+  const handleDownloadIEP = async () => {
+    if (!extractedIEP) {
+      console.error("No IEP data to download")
+      return
+    }
+    const score = remediation?.original_score || remediation?.score || 0
+    await downloadIEP({
+      iep: extractedIEP,
+      state: selectedState || "CA",
+      complianceScore: score,
+      remediation,
+    })
+    logEvent("IEP_DOWNLOADED", { complianceScore: score })
+  }
+
+  const handleDownloadComplianceReport = async () => {
+    if (!extractedIEP) {
+      console.error("No IEP data to download")
+      return
+    }
+    const score = remediation?.original_score || remediation?.score || 0
+    await downloadComplianceReport({
+      iep: extractedIEP,
+      state: selectedState || "CA",
+      complianceScore: score,
+      remediation,
+    })
+    logEvent("COMPLIANCE_REPORT_DOWNLOADED", { complianceScore: score })
+  }
+
   // Progress steps for header
   const progressSteps = [
     { id: "upload", label: "Upload Materials" },
@@ -3927,7 +3959,7 @@ function IEPWizard() {
             onApplyAll={() => {}} // Placeholder, implement if needed
             onBack={handleBack}
             onNext={handleNext}
-            onDownload={() => {}} // Placeholder, implement if needed
+            onDownload={handleDownloadIEP}
             isFixing={isFixing}
             selectedState={selectedState}
             logEvent={logEvent}
@@ -3946,7 +3978,7 @@ function IEPWizard() {
             onApplyFix={handleApplyFix}
             onBack={handleBack}
             onContinue={handleNext}
-            onDownload={() => {}} // Placeholder, implement if needed
+            onDownload={handleDownloadIEP}
             isFixing={isFixing}
             selectedState={selectedState}
             logEvent={logEvent}
@@ -3965,7 +3997,7 @@ function IEPWizard() {
             onBack={handleBack}
             onStartAnother={handleStartAnother}
             logEvent={logEvent}
-            onDownloadReport={() => {}} // Placeholder, implement if needed
+            onDownloadReport={handleDownloadComplianceReport}
           />
         )}
       </div>
