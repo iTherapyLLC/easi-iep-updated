@@ -744,10 +744,11 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
     <div class="section page-break">
       <div class="section-title">DETAILED ISSUES & RECOMMENDATIONS</div>
       ${issues
-        .map(
-          (issue) => `
+        .map((issue) => {
+          const sanitizedSeverity = sanitizeSeverity(issue.severity)
+          return `
         <div class="issue">
-          <span class="issue-severity severity-${sanitizeSeverity(issue.severity)}">${safeString(issue.severity).toUpperCase()}</span>
+          <span class="issue-severity severity-${sanitizedSeverity}">${safeString(issue.severity).toUpperCase()}</span>
           <div class="issue-title">${safeString(issue.title)}</div>
           <div class="issue-description">${safeString(issue.description)}</div>
           ${issue.citation ? `<div class="check-citation">Legal Citation: ${safeString(issue.citation)}</div>` : ""}
@@ -762,8 +763,8 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
               : ""
           }
         </div>
-      `,
-        )
+      `
+        })}
         .join("")}
     </div>
     `
