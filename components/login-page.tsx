@@ -1,21 +1,43 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, LogIn } from "lucide-react"
+import { Eye, EyeOff, LogIn, CheckCircle2, Sparkles } from "lucide-react"
 import Image from "next/image"
 
-// PRESET PASSWORD - Change this to your desired password
-// For production, use an environment variable: process.env.NEXT_PUBLIC_ACCESS_PASSWORD
-const PRESET_PASSWORD = "easi2024"
+// PRESET PASSWORDS - Multiple passwords for different users/purposes
+// Save these somewhere safe! 
+const VALID_PASSWORDS = [
+  "easi2026",      // Primary password
+  "iepguardian",   // Alternate password
+  "innervoice",    // Team password
+  "specialed",     // Educator password
+]
 
 export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [shake, setShake] = useState(false)
   const router = useRouter()
+
+  // Floating particles state
+  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; size: number; duration: number }>>([])
+
+  useEffect(() => {
+    // Generate random floating particles
+    const newParticles = Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      x: Math. random() * 100,
+      y:  Math.random() * 100,
+      size: Math.random() * 4 + 2,
+      duration: Math.random() * 10 + 10,
+    }))
+    setParticles(newParticles)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,151 +46,149 @@ export default function LoginPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    if (password === PRESET_PASSWORD) {
+    if (VALID_PASSWORDS. includes(password)) {
+      setIsSuccess(true)
       localStorage.setItem("isAuthenticated", "true")
       localStorage.setItem("authTimestamp", Date.now().toString())
+      
+      // Wait for success animation before redirect
+      await new Promise((resolve) => setTimeout(resolve, 1500))
       router.push("/")
     } else {
-      setError("Incorrect password. Please try again.")
+      setError("Incorrect password.  Please try again.")
+      setShake(true)
+      setTimeout(() => setShake(false), 500)
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-        {/* Large centered logo */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.04]">
-          <Image src="/easi-logo.png" alt="" width={600} height={600} className="w-[600px] h-[600px] object-contain" />
-        </div>
-        {/* Scattered logos around the page */}
-        <div className="absolute top-[10%] left-[5%] opacity-[0.025] rotate-[-15deg]">
-          <Image src="/easi-logo.png" alt="" width={120} height={120} className="w-[120px] h-[120px]" />
-        </div>
-        <div className="absolute top-[15%] right-[8%] opacity-[0.03] rotate-[20deg]">
-          <Image src="/easi-logo.png" alt="" width={100} height={100} className="w-[100px] h-[100px]" />
-        </div>
-        <div className="absolute bottom-[20%] left-[10%] opacity-[0.025] rotate-[10deg]">
-          <Image src="/easi-logo.png" alt="" width={140} height={140} className="w-[140px] h-[140px]" />
-        </div>
-        <div className="absolute bottom-[15%] right-[5%] opacity-[0.03] rotate-[-10deg]">
-          <Image src="/easi-logo.png" alt="" width={110} height={110} className="w-[110px] h-[110px]" />
-        </div>
-        <div className="absolute top-[40%] left-[2%] opacity-[0.02] rotate-[5deg]">
-          <Image src="/easi-logo.png" alt="" width={80} height={80} className="w-[80px] h-[80px]" />
-        </div>
-        <div className="absolute top-[35%] right-[3%] opacity-[0.02] rotate-[-8deg]">
-          <Image src="/easi-logo.png" alt="" width={90} height={90} className="w-[90px] h-[90px]" />
-        </div>
-        <div className="absolute bottom-[40%] left-[15%] opacity-[0.015] rotate-[25deg]">
-          <Image src="/easi-logo.png" alt="" width={70} height={70} className="w-[70px] h-[70px]" />
-        </div>
-        <div className="absolute top-[5%] left-[40%] opacity-[0.02] rotate-[-5deg]">
-          <Image src="/easi-logo.png" alt="" width={60} height={60} className="w-[60px] h-[60px]" />
-        </div>
-        <div className="absolute bottom-[5%] right-[40%] opacity-[0.02] rotate-[15deg]">
-          <Image src="/easi-logo.png" alt="" width={65} height={65} className="w-[65px] h-[65px]" />
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Animated Gradient Background */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100"
+        style={{
+          backgroundSize: "400% 400%",
+          animation: "gradient-shift 15s ease infinite",
+        }}
+      />
+
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles. map((particle) => (
+          <div
+            key={particle.id}
+            className="absolute rounded-full bg-blue-400/20"
+            style={{
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              animation: `float-particle ${particle.duration}s ease-in-out infinite`,
+              animationDelay:  `${particle.id * 0.5}s`,
+            }}
+          />
+        ))}
       </div>
 
-      <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-8 lg:gap-16 relative z-10">
-        <div className="hidden lg:flex flex-col items-center flex-1 text-center">
-          <div className="relative w-full max-w-md">
-            {/* Teacher images grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-transform">
-                <Image
-                  src="/happy-special-education-teacher-smiling-warmly-in-.jpg"
-                  alt="Happy special education teacher in classroom"
-                  width={200}
-                  height={200}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              <div className="rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-transform mt-8">
-                <Image
-                  src="/relieved-case-manager-celebrating-completing-paper.jpg"
-                  alt="Relieved case manager at desk"
-                  width={200}
-                  height={200}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              <div className="rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-transform -mt-4">
-                <Image
-                  src="/joyful-teacher-high-fiving-student-with-special-ne.jpg"
-                  alt="Teacher high-fiving student"
-                  width={200}
-                  height={200}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              <div className="rounded-2xl overflow-hidden shadow-lg transform hover:scale-105 transition-transform mt-4">
-                <Image
-                  src="/smiling-special-education-team-collaborating-at-ie.jpg"
-                  alt="Special education team at IEP meeting"
-                  width={200}
-                  height={200}
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-            </div>
-            {/* Supportive message */}
-            <div className="mt-6 p-4 bg-white/80 backdrop-blur rounded-xl shadow-sm">
-              <p className="text-gray-700 font-medium text-lg">"EASI IEP gave me my evenings back."</p>
-              <p className="text-gray-500 text-sm mt-1">— Sarah M., Special Education Teacher</p>
-            </div>
-          </div>
-        </div>
+      {/* Decorative EASI logos in background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.04]">
+        <Image src="/easi-logo. png" alt="" width={160} height={160} className="absolute -top-10 -left-10 w-40 h-40 rotate-[-15deg]" />
+        <Image src="/easi-logo.png" alt="" width={128} height={128} className="absolute top-20 right-10 w-32 h-32 rotate-[20deg]" />
+        <Image src="/easi-logo. png" alt="" width={144} height={144} className="absolute bottom-20 left-20 w-36 h-36 rotate-[10deg]" />
+        <Image src="/easi-logo.png" alt="" width={176} height={176} className="absolute -bottom-10 -right-10 w-44 h-44 rotate-[-20deg]" />
+      </div>
 
-        {/* Right side - Login form */}
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white mb-4 shadow-lg p-2">
-              <Image
-                src="/easi-logo.png"
-                alt="EASI IEP Logo"
-                width={64}
-                height={64}
-                className="w-16 h-16 object-contain"
+      <div className={`w-full max-w-md relative z-10 ${shake ? 'animate-shake' : ''}`}>
+        {/* Logo/Brand Section */}
+        <div className="text-center mb-8">
+          <div className="relative inline-block">
+            {/* Glowing ring behind logo */}
+            <div 
+              className="absolute inset-0 bg-blue-400/30 rounded-full blur-xl"
+              style={{ animation: "pulse-slow 3s ease-in-out infinite" }}
+            />
+            
+            {/* EASI IEP Logo */}
+            <div 
+              className="relative w-24 h-24 mx-auto mb-4"
+              style={{ animation: "float 3s ease-in-out infinite" }}
+            >
+              <Image 
+                src="/easi-logo.png" 
+                alt="EASI IEP" 
+                width={96}
+                height={96}
+                className="w-full h-full object-contain drop-shadow-lg"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">EASI IEP</h1>
-            <p className="text-gray-600">Compliant IEPs in minutes, not hours</p>
           </div>
+          
+          <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
+            <span>EASI IEP</span>
+            <Sparkles 
+              className="w-6 h-6 text-blue-500"
+              style={{ animation: "sparkle 2s ease-in-out infinite" }}
+            />
+          </h1>
+          <p className="text-gray-600">Your IEP compliance guardian</p>
+        </div>
 
-          {/* Login Card */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        {/* Success State */}
+        {isSuccess ?  (
+          <div 
+            className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-100 text-center"
+            style={{ animation: "success-pop 0.5s ease-out forwards" }}
+          >
+            <div 
+              className="w-20 h-20 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center"
+              style={{ animation: "success-check 0.6s ease-out 0.2s forwards", transform: "scale(0)" }}
+            >
+              <CheckCircle2 className="w-12 h-12 text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome! </h2>
+            <p className="text-gray-600">Redirecting to your dashboard...</p>
+            <div className="mt-4 flex justify-center">
+              <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </div>
+        ) : (
+          /* Login Card */
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-gray-100 transition-all duration-300 hover:shadow-2xl">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Password Input */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   Password
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     id="password"
-                    type={showPassword ? "text" : "password"}
+                    type={showPassword ? "text" :  "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => setPassword(e.target. value)}
                     placeholder="Enter your password"
-                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-800 placeholder:text-gray-400"
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus: ring-blue-100 outline-none transition-all text-gray-800 placeholder: text-gray-400 group-hover:border-blue-300"
                     autoComplete="current-password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> :  <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Error Message */}
+              {/* Error Message with shake animation */}
               {error && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm text-center">
+                <div 
+                  className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center"
+                  style={{ animation: "fade-in 0.3s ease-out forwards" }}
+                >
                   {error}
                 </div>
               )}
@@ -177,32 +197,88 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading || !password}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 text-white font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <LogIn className="w-5 h-5" />
-                    Sign In
+                    <LogIn className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                    <span>Sign In</span>
                   </>
                 )}
               </button>
             </form>
-          </div>
 
-          {/* Footer */}
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Protected access. Contact administrator for password.
-          </p>
-
-          {/* Mobile testimonial - only shows on smaller screens */}
-          <div className="lg:hidden mt-8 p-4 bg-white/80 backdrop-blur rounded-xl shadow-sm text-center">
-            <p className="text-gray-700 font-medium">"EASI IEP gave me my evenings back."</p>
-            <p className="text-gray-500 text-sm mt-1">— Sarah M., Special Education Teacher</p>
+            {/* Hint */}
+            <p className="text-center text-gray-400 text-xs mt-4">
+              Need access?  Contact your administrator
+            </p>
           </div>
-        </div>
+        )}
+
+        {/* Footer */}
+        <p className="text-center text-gray-500 text-sm mt-6">
+          Powered by EASI IEP Guardian
+        </p>
       </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes float {
+          0%, 100% { transform:  translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes float-particle {
+          0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+          25% { transform: translateY(-20px) translateX(10px); opacity: 0.6; }
+          50% { transform: translateY(-10px) translateX(-10px); opacity: 0.4; }
+          75% { transform: translateY(-30px) translateX(5px); opacity: 0.5; }
+        }
+        
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        
+        @keyframes sparkle {
+          0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+          50% { opacity: 0.7; transform: scale(1.2) rotate(15deg); }
+        }
+        
+        @keyframes success-pop {
+          0% { transform: scale(0. 8); opacity: 0; }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes success-check {
+          0% { transform: scale(0); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+        
+        @keyframes fade-in {
+          0% { opacity: 0; transform: translateY(-10px); }
+          100% { opacity:  1; transform:  translateY(0); }
+        }
+        
+        . animate-shake {
+          animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+      `}</style>
     </div>
   )
 }
