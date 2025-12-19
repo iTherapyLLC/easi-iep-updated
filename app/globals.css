@@ -683,4 +683,31 @@
       }
     }
   }
+
+  /* =============================================================================
+   * LOGIN PAGE ANIMATIONS - Interactive & Magical
+   * ============================================================================= */
+
+  /* Sparkle animation for icons */
+  .animate-sparkle {
+    animation: sparkle-rotate 2s ease-in-out infinite;
+  }
+  @keyframes sparkle-rotate {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+    25% {
+      opacity: 0.7;
+      transform: scale(1.2) rotate(10deg);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+    75% {
+      opacity: 0.7;
+      transform: scale(1.2) rotate(-10deg);
+    }
+  }
 }
