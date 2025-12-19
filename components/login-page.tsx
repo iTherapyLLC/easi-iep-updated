@@ -245,6 +245,7 @@ export default function LoginPage() {
                         ? "border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-[1.02]"
                         : "hover:border-blue-300"
                     } ${keystrokes > 0 ? "animate-keystroke-ripple" : ""}`}
+                    style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     autoComplete="current-password"
                     required
                   />

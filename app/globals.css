@@ -135,15 +135,16 @@
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Fix for text input displaying backwards/mirrored - force LTR direction */
-  input,
-  textarea,
-  [contenteditable] {
-    direction: ltr !important;
-    unicode-bidi: normal !important;
-    text-align: left;
-  }
+}
+
+/* Force LTR on ALL inputs - outside of layers for maximum priority */
+input,
+textarea,
+[contenteditable] {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  text-align: left !important;
+  transform: none !important;
 }
 
 @layer utilities {
