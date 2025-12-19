@@ -531,7 +531,7 @@ function UploadStep({
         <div className="flex justify-center mb-4">
           <img src="/easi-logo.png" alt="" className="h-12 w-auto opacity-80 hover-logo" aria-hidden="true" />
         </div>
-        <h1 className="text-xl font-semibold text-slate-800 mb-1">Upload the current IEP</h1>
+        <h1 className="text-xl font-semibold text-slate-800 mb-1 hover-title-glow-scale">Upload the current IEP</h1>
         <p className="text-sm text-slate-500">We'll handle everything else</p>
       </div>
 
