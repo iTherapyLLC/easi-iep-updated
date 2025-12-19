@@ -243,6 +243,21 @@
     }
   }
 
+  /* Title hover - warm glow + gentle scale */
+  .hover-title-glow-scale {
+    display: inline-block;
+    transition: transform 0.3s ease, text-shadow 0.3s ease, color 0.3s ease;
+    cursor: default;
+  }
+  .hover-title-glow-scale:hover {
+    transform: scale(1.02);
+    color: var(--primary);
+    text-shadow: 
+      0 0 20px rgba(59, 130, 246, 0.3),
+      0 0 40px rgba(59, 130, 246, 0.15),
+      0 4px 12px rgba(59, 130, 246, 0.1);
+  }
+
   .animate-celebration {
     animation: celebration-entrance 0.5s ease-out forwards;
   }
@@ -640,12 +655,17 @@
     .hover-upload-icon,
     .hover-drop-text,
     .hover-upload-button,
-    .hover-interactive {
+    .hover-interactive,
+    .hover-title-glow-scale {
       animation: none !important;
       transition: none !important;
     }
     .hover-step-label::after {
       display: none;
+    }
+    .hover-title-glow-scale:hover {
+      transform: none;
+      text-shadow: none;
     }
   }
 
