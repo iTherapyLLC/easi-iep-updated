@@ -3081,32 +3081,25 @@ const DownloadIEPButton = ({
   iep,
   state,
   complianceScore,
+  remediation,
   onDownloadComplete,
 }: {
   iep: ExtractedIEP | null
   state: string
   complianceScore: number
+  remediation?: RemediationData | null
   onDownloadComplete?: () => void
 }) => {
   const handleDownload = async () => {
     if (!iep) return
 
     try {
-      const response = await fetch("/api/download-iep", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iep, state, complianceScore }),
+      await downloadIEP({
+        iep,
+        state,
+        complianceScore,
+        remediation,
       })
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `EASI_IEP_${state}_${new Date().toISOString().split("T")[0]}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
       onDownloadComplete?.()
     } catch (error) {
       console.error("Error downloading IEP:", error)
@@ -3445,6 +3438,7 @@ function ClinicalReviewStep({
           iep={iep}
           state={state}
           complianceScore={complianceScore}
+          remediation={remediation}
           onDownloadComplete={() => logEvent("FINAL_IEP_DOWNLOADED", { complianceScore })}
         />
         {onDownloadReport && ( // Conditionally render download report button
