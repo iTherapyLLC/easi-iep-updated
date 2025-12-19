@@ -234,7 +234,10 @@ export function EditAndFixStep({
       }
 
       case "goal_measurability":
-      case "goal_baseline": {
+      case "goal_baseline":
+      case "goal_feasibility":
+      case "goal_accommodation_alignment":
+      case "goal_zpd": {
         const goalMatch = issue.id.match(/goal_(\d+)/)
         if (goalMatch && issue.suggested_fix) {
           const goalIndex = Number.parseInt(goalMatch[1]) - 1
@@ -257,7 +260,9 @@ export function EditAndFixStep({
         break
       }
 
-      case "plaafp": {
+      case "plaafp":
+      case "present_levels":
+      case "assessment_currency": {
         if (issue.suggested_fix) {
           const currentPlaafp =
             typeof editedIEP.plaafp === "string"
@@ -450,18 +455,16 @@ export function EditAndFixStep({
 
         {expandedSections.has("student") && (
           <CardContent className="space-y-4">
-            {/* Student Name Issue Alert */}
-            {[...getIssuesForField("student_info"), ...getIssuesForField("student_name")]
-              .filter((i) => i.id.includes("name"))
-              .map((issue) => (
-                <IssueAlert
-                  key={issue.id}
-                  issue={issue}
-                  onFix={applyFix}
-                  onMarkResolved={markResolved}
-                  severityColors={severityColors}
-                />
-              ))}
+            {/* Student Info Issues */}
+            {[...getIssuesForField("student_info"), ...getIssuesForField("student_name")].map((issue) => (
+              <IssueAlert
+                key={issue.id}
+                issue={issue}
+                onFix={applyFix}
+                onMarkResolved={markResolved}
+                severityColors={severityColors}
+              />
+            ))}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -475,6 +478,16 @@ export function EditAndFixStep({
                       ? "border-red-300"
                       : ""
                   }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date of Birth</label>
+                <Input
+                  value={editedIEP.student.dob || ""}
+                  onChange={(e) => updateStudentField("dob", e.target.value)}
+                  placeholder="MM/DD/YYYY"
+                  type="date"
                 />
               </div>
 
@@ -672,9 +685,17 @@ export function EditAndFixStep({
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg">Goals</CardTitle>
               {(getIssuesForField("goal_measurability").length > 0 ||
-                getIssuesForField("goal_baseline").length > 0) && (
+                getIssuesForField("goal_baseline").length > 0 ||
+                getIssuesForField("goal_feasibility").length > 0 ||
+                getIssuesForField("goal_accommodation_alignment").length > 0 ||
+                getIssuesForField("goal_zpd").length > 0) && (
                 <Badge variant="destructive">
-                  {getIssuesForField("goal_measurability").length + getIssuesForField("goal_baseline").length} issues
+                  {getIssuesForField("goal_measurability").length +
+                    getIssuesForField("goal_baseline").length +
+                    getIssuesForField("goal_feasibility").length +
+                    getIssuesForField("goal_accommodation_alignment").length +
+                    getIssuesForField("goal_zpd").length}{" "}
+                  issues
                 </Badge>
               )}
             </div>
@@ -684,7 +705,13 @@ export function EditAndFixStep({
 
         {expandedSections.has("goals") && (
           <CardContent className="space-y-4">
-            {[...getIssuesForField("goal_measurability"), ...getIssuesForField("goal_baseline")].map((issue) => (
+            {[
+              ...getIssuesForField("goal_measurability"),
+              ...getIssuesForField("goal_baseline"),
+              ...getIssuesForField("goal_feasibility"),
+              ...getIssuesForField("goal_accommodation_alignment"),
+              ...getIssuesForField("goal_zpd"),
+            ].map((issue) => (
               <IssueAlert
                 key={issue.id}
                 issue={issue}
@@ -744,8 +771,15 @@ export function EditAndFixStep({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CardTitle className="text-lg">Present Levels (PLAAFP)</CardTitle>
-              {getIssuesForField("plaafp").length > 0 && (
-                <Badge variant="destructive">{getIssuesForField("plaafp").length} issues</Badge>
+              {(getIssuesForField("plaafp").length > 0 ||
+                getIssuesForField("present_levels").length > 0 ||
+                getIssuesForField("assessment_currency").length > 0) && (
+                <Badge variant="destructive">
+                  {getIssuesForField("plaafp").length +
+                    getIssuesForField("present_levels").length +
+                    getIssuesForField("assessment_currency").length}{" "}
+                  issues
+                </Badge>
               )}
             </div>
             {expandedSections.has("plaafp") ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -754,7 +788,11 @@ export function EditAndFixStep({
 
         {expandedSections.has("plaafp") && (
           <CardContent className="space-y-4">
-            {getIssuesForField("plaafp").map((issue) => (
+            {[
+              ...getIssuesForField("plaafp"),
+              ...getIssuesForField("present_levels"),
+              ...getIssuesForField("assessment_currency"),
+            ].map((issue) => (
               <IssueAlert
                 key={issue.id}
                 issue={issue}
