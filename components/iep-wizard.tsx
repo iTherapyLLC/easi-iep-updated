@@ -3867,7 +3867,7 @@ function IEPWizard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Left side watermarks - 8-10 logos running down the left margin */}
+        {/* Left side watermarks - 8 logos running down the left margin */}
         <img
           src="/easi-logo.png"
           alt=""
