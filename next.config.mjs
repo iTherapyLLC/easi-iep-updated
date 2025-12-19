@@ -9,9 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config) => {
-    return config
-  },
+  // Explicitly use empty turbopack config to silence the webpack warning
+  // but force webpack mode via package.json build script
+  turbopack: {},
 }
 
 export default nextConfig
