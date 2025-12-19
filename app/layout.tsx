@@ -17,17 +17,12 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: "EASI IEP",
-  description: "Your IEP compliance guardian",
+  title: "EASI - IEP Compliance Platform",
+  description: "A supportive platform helping special education teachers create compliant IEPs with confidence",
   generator: "v0.app",
   icons: {
-    icon: [
-      { url: "/easi-logo.png", type: "image/png" },
-    ],
-    apple: [
-      { url: "/easi-logo.png", type: "image/png" },
-    ],
-    shortcut: "/easi-logo.png",
+    icon: "/easi-logo.png",
+    apple: "/easi-logo.png",
   },
 }
 
