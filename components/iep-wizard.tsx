@@ -3884,84 +3884,84 @@ function IEPWizard() {
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[5%] -left-4 w-20 h-20 opacity-[0.12] rotate-[-10deg]"
+          className="absolute top-[5%] -left-4 w-44 h-44 opacity-[0.12] rotate-[-10deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[15%] left-2 w-10 h-10 opacity-[0.14] rotate-[5deg]"
+          className="absolute top-[15%] left-2 w-32 h-32 opacity-[0.14] rotate-[5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[28%] -left-2 w-16 h-16 opacity-[0.13] rotate-[-5deg]"
+          className="absolute top-[28%] -left-2 w-40 h-40 opacity-[0.13] rotate-[-5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[40%] left-4 w-20 h-20 opacity-[0.12] rotate-[8deg]"
+          className="absolute top-[40%] left-4 w-44 h-44 opacity-[0.12] rotate-[8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[52%] -left-4 w-10 h-10 opacity-[0.15] rotate-[-8deg]"
+          className="absolute top-[52%] -left-4 w-32 h-32 opacity-[0.15] rotate-[-8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[65%] left-0 w-16 h-16 opacity-[0.13] rotate-[12deg]"
+          className="absolute top-[65%] left-0 w-40 h-40 opacity-[0.13] rotate-[12deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[78%] left-2 w-20 h-20 opacity-[0.12] rotate-[-15deg]"
+          className="absolute top-[78%] left-2 w-44 h-44 opacity-[0.12] rotate-[-15deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[90%] -left-2 w-10 h-10 opacity-[0.14] rotate-[3deg]"
+          className="absolute top-[90%] -left-2 w-32 h-32 opacity-[0.14] rotate-[3deg]"
         />
 
         {/* Right side watermarks - staggered vertically from left side */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[10%] -right-4 w-16 h-16 opacity-[0.13] rotate-[15deg]"
+          className="absolute top-[10%] -right-4 w-40 h-40 opacity-[0.13] rotate-[15deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[22%] right-2 w-20 h-20 opacity-[0.12] rotate-[-8deg]"
+          className="absolute top-[22%] right-2 w-44 h-44 opacity-[0.12] rotate-[-8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] -right-2 w-10 h-10 opacity-[0.15] rotate-[10deg]"
+          className="absolute top-[35%] -right-2 w-32 h-32 opacity-[0.15] rotate-[10deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[47%] right-4 w-16 h-16 opacity-[0.13] rotate-[-12deg]"
+          className="absolute top-[47%] right-4 w-40 h-40 opacity-[0.13] rotate-[-12deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[60%] -right-4 w-20 h-20 opacity-[0.12] rotate-[5deg]"
+          className="absolute top-[60%] -right-4 w-44 h-44 opacity-[0.12] rotate-[5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[72%] right-0 w-10 h-10 opacity-[0.14] rotate-[-5deg]"
+          className="absolute top-[72%] right-0 w-32 h-32 opacity-[0.14] rotate-[-5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[85%] right-2 w-16 h-16 opacity-[0.13] rotate-[18deg]"
+          className="absolute top-[85%] right-2 w-40 h-40 opacity-[0.13] rotate-[18deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[95%] -right-2 w-20 h-20 opacity-[0.12] rotate-[-10deg]"
+          className="absolute top-[95%] -right-2 w-44 h-44 opacity-[0.12] rotate-[-10deg]"
         />
       </div>
 
