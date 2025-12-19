@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, LogIn, CheckCircle2, Sparkles } from "lucide-react"
 
@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [keystrokes, setKeystrokes] = useState(0)
   const [mounted, setMounted] = useState(false)
   const idleTimerRef = useRef<NodeJS.Timeout>()
+  const keystrokeTimeoutRef = useRef<NodeJS.Timeout>()
   const router = useRouter()
 
   // Initialize particles on mount
@@ -49,8 +50,9 @@ export default function LoginPage() {
     }))
     setParticles(initialParticles)
 
-    // Animate particles
-    const animateParticles = setInterval(() => {
+    // Animate particles using requestAnimationFrame for better performance
+    let animationFrameId: number
+    const animateParticles = () => {
       setParticles((prev) =>
         prev.map((p) => ({
           ...p,
@@ -58,9 +60,22 @@ export default function LoginPage() {
           y: (p.y + p.speedY + 100) % 100,
         }))
       )
-    }, 50)
+      animationFrameId = requestAnimationFrame(animateParticles)
+    }
+    animationFrameId = requestAnimationFrame(animateParticles)
 
-    return () => clearInterval(animateParticles)
+    return () => cancelAnimationFrame(animationFrameId)
+  }, [])
+
+  // Idle detection - using useCallback for stable reference
+  const resetIdleTimer = useCallback(() => {
+    setIsIdle(false)
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current)
+    }
+    idleTimerRef.current = setTimeout(() => {
+      setIsIdle(true)
+    }, 3000)
   }, [])
 
   // Track mouse position
@@ -75,18 +90,7 @@ export default function LoginPage() {
 
     window.addEventListener("mousemove", handleMouseMove)
     return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
-
-  // Idle detection
-  const resetIdleTimer = () => {
-    setIsIdle(false)
-    if (idleTimerRef.current) {
-      clearTimeout(idleTimerRef.current)
-    }
-    idleTimerRef.current = setTimeout(() => {
-      setIsIdle(true)
-    }, 3000)
-  }
+  }, [resetIdleTimer])
 
   useEffect(() => {
     resetIdleTimer()
@@ -95,7 +99,7 @@ export default function LoginPage() {
         clearTimeout(idleTimerRef.current)
       }
     }
-  }, [])
+  }, [resetIdleTimer])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,7 +125,15 @@ export default function LoginPage() {
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value)
     setKeystrokes((prev) => prev + 1)
-    setTimeout(() => setKeystrokes((prev) => Math.max(0, prev - 1)), 300)
+    
+    // Clear previous timeout to prevent accumulation
+    if (keystrokeTimeoutRef.current) {
+      clearTimeout(keystrokeTimeoutRef.current)
+    }
+    keystrokeTimeoutRef.current = setTimeout(() => {
+      setKeystrokes((prev) => Math.max(0, prev - 1))
+    }, 300)
+    
     resetIdleTimer()
   }
 
