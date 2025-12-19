@@ -2505,7 +2505,6 @@ function EditIEPStep({
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                       style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                       placeholder="MM/DD/YYYY or June 18, 2019"
-                      style={{ direction: 'ltr', textAlign: 'left' }}
                     />
                     <p className="text-xs text-gray-500">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
                     {editError && <p className="text-xs text-red-600">{editError}</p>}

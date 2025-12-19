@@ -144,8 +144,7 @@ textarea,
 input[type="text"],
 input[type="date"],
 input[type="email"],
-input[type="password"],
-.min-h-\[100px\] {
+input[type="password"] {
   direction: ltr !important;
   unicode-bidi: normal !important;
   text-align: left !important;
