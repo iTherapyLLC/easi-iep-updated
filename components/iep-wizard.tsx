@@ -529,7 +529,7 @@ function UploadStep({
     <div className="flex flex-col px-4 py-6 max-w-lg mx-auto">
       <div className="text-center mb-6">
         <div className="flex justify-center mb-4">
-          <img src="/easi-logo.png" alt="" className="h-12 w-auto opacity-80" aria-hidden="true" />
+          <img src="/easi-logo.png" alt="" className="h-12 w-auto opacity-80 hover-logo" aria-hidden="true" />
         </div>
         <h1 className="text-xl font-semibold text-slate-800 mb-1">Upload the current IEP</h1>
         <p className="text-sm text-slate-500">We'll handle everything else</p>
@@ -545,7 +545,7 @@ function UploadStep({
         className={`
           relative rounded-2xl p-8 text-center cursor-pointer
           transition-all duration-300 ease-out
-          border-2 border-dashed
+          border-2 border-dashed hover-interactive
           ${
             showSuccess
               ? "border-green-400 bg-green-50 scale-[1.02]"
@@ -597,7 +597,7 @@ function UploadStep({
           ) : (
             <Upload
               className={`
-                w-8 h-8 transition-all duration-300
+                w-8 h-8 transition-all duration-300 hover-upload-icon
                 ${isDragOver ? "text-white scale-110" : isHovering ? "text-blue-600" : "text-slate-400"}
                 ${!hasIEP && !isDragOver && !isHovering ? "animate-icon-float" : ""}
                 ${iconHovered && isHovering ? "animate-icon-bounce" : ""}
@@ -608,7 +608,7 @@ function UploadStep({
 
         <p
           className={`
-          text-base font-medium mb-1 transition-colors duration-200
+          text-base font-medium mb-1 transition-colors duration-200 hover-drop-text
           ${hasIEP ? "text-green-700" : isDragOver ? "text-blue-700" : "text-slate-700"}
         `}
         >
@@ -683,7 +683,7 @@ function UploadStep({
         className={`
           mt-6 w-full py-4 rounded-xl font-medium text-base
           flex items-center justify-center gap-2
-          transition-all duration-300 group
+          transition-all duration-300 group hover-upload-button
           ${
             hasIEP
               ? "bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200/50 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 animate-gradient-shimmer"
@@ -3870,54 +3870,54 @@ function IEPWizard() {
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg]"
+          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg] hover-watermark"
         />
-        <img src="/easi-logo.png" alt="" className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg]" />
+        <img src="/easi-logo.png" alt="" className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg] hover-watermark" />
         {/* Top right cluster */}
-        <img src="/easi-logo.png" alt="" className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg]" />
-        <img src="/easi-logo.png" alt="" className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg]" />
+        <img src="/easi-logo.png" alt="" className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg] hover-watermark" />
+        <img src="/easi-logo.png" alt="" className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg] hover-watermark" />
         {/* Middle scattered */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg]"
+          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg] hover-watermark"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg]"
+          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg] hover-watermark"
         />
         {/* Bottom cluster */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg]"
+          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg] hover-watermark"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg]"
+          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg] hover-watermark"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg]"
+          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg] hover-watermark"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg]"
+          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg] hover-watermark"
         />
         {/* Extra fill for large screens */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block"
+          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block hover-watermark"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block"
+          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block hover-watermark"
         />
       </div>
 
@@ -3927,7 +3927,7 @@ function IEPWizard() {
           <div className="flex justify-between items-center mb-6">
             <div className="flex-1" />
             <div className="flex items-center gap-3">
-              <img src="/easi-logo.png" alt="EASI IEP" className="h-10 w-auto" />
+              <img src="/easi-logo.png" alt="EASI IEP" className="h-10 w-auto hover-logo" />
               <span className="text-xl font-semibold text-slate-700 tracking-tight">EASI IEP</span>
             </div>
             <div className="flex-1 flex justify-end">
@@ -3945,7 +3945,7 @@ function IEPWizard() {
                 <div key={step.id} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 hover-step-number ${
                         isComplete
                           ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200 animate-step-shimmer"
                           : isCurrent
@@ -3956,7 +3956,7 @@ function IEPWizard() {
                       {isComplete ? <Check className="w-5 h-5" /> : index + 1}
                     </div>
                     <span
-                      className={`mt-2 text-xs text-center max-w-[80px] transition-all duration-200 ${isCurrent ? "text-blue-600 font-semibold" : "text-gray-500"}`}
+                      className={`mt-2 text-xs text-center max-w-[80px] transition-all duration-200 hover-step-label ${isCurrent ? "text-blue-600 font-semibold" : "text-gray-500"}`}
                     >
                       {step.label}
                     </span>
