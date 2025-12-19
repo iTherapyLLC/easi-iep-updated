@@ -656,7 +656,22 @@
     .hover-drop-text,
     .hover-upload-button,
     .hover-interactive,
-    .hover-title-glow-scale {
+    .hover-title-glow-scale,
+    .progress-ring-glow,
+    .progress-ring-sparkle,
+    .checkmark-draw,
+    .done-slide-in,
+    .active-step-glow,
+    .waiting-step-breathe,
+    .owl-float-1,
+    .owl-float-2,
+    .owl-float-3,
+    .owl-float-4,
+    .owl-blink,
+    .title-shimmer,
+    .banner-slide-in,
+    .banner-attention-pulse,
+    .floating-particle {
       animation: none !important;
       transition: none !important;
     }
@@ -835,6 +850,198 @@
     75% {
       opacity: 0.7;
       transform: scale(1.2) rotate(-10deg);
+    }
+  }
+
+  /* =============================================================================
+   * BUILDING IEP LOADING ANIMATIONS - Engaging & Reassuring
+   * ============================================================================= */
+
+  /* Progress ring glow pulse */
+  .progress-ring-glow {
+    animation: ring-glow-pulse 2s ease-in-out infinite;
+  }
+  @keyframes ring-glow-pulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+    }
+    50% {
+      filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.7));
+    }
+  }
+
+  /* Orbiting sparkle */
+  .progress-ring-sparkle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    animation: orbit-ring 3s linear infinite;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  }
+  @keyframes orbit-ring {
+    from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
+    to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+  }
+
+  /* Checkmark draw-in */
+  .checkmark-draw {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    animation: draw-check 0.4s ease-out forwards;
+  }
+  @keyframes draw-check {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Done text slide in */
+  .done-slide-in {
+    animation: done-appear 0.3s ease-out forwards;
+  }
+  @keyframes done-appear {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Active step spinner glow */
+  .active-step-glow {
+    animation: step-glow 1.5s ease-in-out infinite;
+  }
+  @keyframes step-glow {
+    0%, 100% { 
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+    }
+    50% { 
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+    }
+  }
+
+  /* Waiting steps breathing */
+  .waiting-step-breathe {
+    animation: step-breathe 2.5s ease-in-out infinite;
+  }
+  @keyframes step-breathe {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Floating owl animation with stagger */
+  .owl-float-1 {
+    animation: owl-float 6s ease-in-out infinite;
+  }
+  .owl-float-2 {
+    animation: owl-float 7s ease-in-out infinite 1s;
+  }
+  .owl-float-3 {
+    animation: owl-float 5s ease-in-out infinite 0.5s;
+  }
+  .owl-float-4 {
+    animation: owl-float 8s ease-in-out infinite 2s;
+  }
+  @keyframes owl-float {
+    0%, 100% { transform: translateY(0) rotate(var(--owl-rotate, 0deg)); }
+    50% { transform: translateY(-8px) rotate(var(--owl-rotate, 0deg)); }
+  }
+
+  /* Occasional blink */
+  .owl-blink {
+    animation: owl-blink 8s ease-in-out infinite;
+  }
+  @keyframes owl-blink {
+    0%, 45%, 55%, 100% { opacity: var(--owl-opacity, 0.1); }
+    50% { opacity: calc(var(--owl-opacity, 0.1) * 1.5); }
+  }
+
+  /* Title shimmer */
+  .title-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--foreground) 0%,
+      var(--primary) 25%,
+      var(--foreground) 50%,
+      var(--primary) 75%,
+      var(--foreground) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: title-shimmer 4s ease-in-out infinite;
+  }
+  @keyframes title-shimmer {
+    0% { background-position: 100% center; }
+    100% { background-position: -100% center; }
+  }
+
+  /* Status text fade transition */
+  .status-text-fade {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .status-text-fade.changing {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  /* Banner slide in */
+  .banner-slide-in {
+    animation: banner-appear 0.5s ease-out forwards;
+  }
+  @keyframes banner-appear {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Banner attention pulse */
+  .banner-attention-pulse {
+    animation: banner-pulse 3s ease-in-out infinite 1s;
+  }
+  @keyframes banner-pulse {
+    0%, 100% { 
+      box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.2);
+    }
+    50% { 
+      box-shadow: 0 4px 25px -3px rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  /* Floating particle */
+  .floating-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    animation: particle-float 10s ease-in-out infinite;
+  }
+  @keyframes particle-float {
+    0%, 100% {
+      transform: translateY(0) translateX(0);
+      opacity: 0.3;
+    }
+    25% {
+      transform: translateY(-30px) translateX(10px);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(-20px) translateX(-10px);
+      opacity: 0.4;
+    }
+    75% {
+      transform: translateY(-40px) translateX(5px);
+      opacity: 0.5;
     }
   }
 }

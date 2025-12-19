@@ -912,7 +912,7 @@ function AnimatedProgressRing({ progress, size = 120 }: { progress: number; size
   return (
     <div className="relative" style={{ width: size, height: size }}>
       {/* Background ring */}
-      <svg className="transform -rotate-90" width={size} height={size}>
+      <svg className="transform -rotate-90 progress-ring-glow" width={size} height={size}>
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -935,6 +935,8 @@ function AnimatedProgressRing({ progress, size = 120 }: { progress: number; size
           className="text-blue-500 transition-all duration-500 ease-out"
         />
       </svg>
+      {/* Orbiting sparkle */}
+      <div className="progress-ring-sparkle" style={{ top: '50%', left: '50%', marginLeft: '-3px', marginTop: '-3px' }} />
       {/* Center content */}
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-2xl font-bold text-blue-600">{Math.round(progress)}%</span>
@@ -963,11 +965,10 @@ function FloatingParticles() {
       {[...Array(12)].map((_, i) => (
         <div
           key={i}
-          className="absolute w-2 h-2 bg-blue-200 rounded-full opacity-60"
+          className="floating-particle"
           style={{
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
-            animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
             animationDelay: `${Math.random() * 2}s`,
           }}
         />
@@ -1087,11 +1088,11 @@ function BuildingStep({
             )}
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">
+          <h1 className={`text-2xl font-bold text-slate-900 mb-2 ${!allComplete && !error ? 'title-shimmer' : ''}`}>
             {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
           </h1>
 
-          <p className="text-slate-600">{currentMessage}</p>
+          <p className="text-slate-600 status-text-fade">{currentMessage}</p>
         </div>
 
         {error && (
@@ -1113,18 +1114,18 @@ function BuildingStep({
                 key={task.id}
                 className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
                   task.status === "loading"
-                    ? "bg-blue-50 border border-blue-100"
+                    ? "bg-blue-50 border border-blue-100 active-step-glow"
                     : task.status === "complete"
                       ? "bg-green-50/50"
                       : task.status === "error"
                         ? "bg-red-50 border border-red-100"
-                        : "bg-slate-50/50"
+                        : "bg-slate-50/50 waiting-step-breathe"
                 }`}
               >
                 <div className="flex-shrink-0">
                   {task.status === "complete" ? (
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-white" />
+                      <Check className="w-5 h-5 text-white checkmark-draw" />
                     </div>
                   ) : task.status === "loading" ? (
                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -1156,7 +1157,7 @@ function BuildingStep({
                 >
                   {task.label}
                 </span>
-                {task.status === "complete" && <span className="text-green-600 text-sm font-medium">Done</span>}
+                {task.status === "complete" && <span className="text-green-600 text-sm font-medium done-slide-in">Done</span>}
                 {task.status === "loading" && <span className="text-blue-600 text-sm">Processing...</span>}
                 {task.status === "error" && <span className="text-red-600 text-sm">Failed</span>}
               </div>
@@ -1177,7 +1178,7 @@ function BuildingStep({
 
         {/* State validation info */}
         {!error && (
-          <div className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-100">
+          <div className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-100 banner-slide-in banner-attention-pulse">
             <p className="text-blue-700 text-sm">
               Validating against <span className="font-semibold">{stateName}</span> regulations and federal IDEA
               requirements
@@ -3870,54 +3871,79 @@ function IEPWizard() {
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg] hover-watermark"
+          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg] hover-watermark owl-float-1 owl-blink"
+          style={{ '--owl-rotate': '-15deg', '--owl-opacity': '0.04' } as React.CSSProperties}
         />
-        <img src="/easi-logo.png" alt="" className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg] hover-watermark" />
+        <img 
+          src="/easi-logo.png" 
+          alt="" 
+          className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg] hover-watermark owl-float-2 owl-blink" 
+          style={{ '--owl-rotate': '10deg', '--owl-opacity': '0.03' } as React.CSSProperties}
+        />
         {/* Top right cluster */}
-        <img src="/easi-logo.png" alt="" className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg] hover-watermark" />
-        <img src="/easi-logo.png" alt="" className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg] hover-watermark" />
+        <img 
+          src="/easi-logo.png" 
+          alt="" 
+          className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg] hover-watermark owl-float-3 owl-blink" 
+          style={{ '--owl-rotate': '20deg', '--owl-opacity': '0.04' } as React.CSSProperties}
+        />
+        <img 
+          src="/easi-logo.png" 
+          alt="" 
+          className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg] hover-watermark owl-float-4 owl-blink" 
+          style={{ '--owl-rotate': '-8deg', '--owl-opacity': '0.03' } as React.CSSProperties}
+        />
         {/* Middle scattered */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg] hover-watermark"
+          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg] hover-watermark owl-float-1 owl-blink"
+          style={{ '--owl-rotate': '5deg', '--owl-opacity': '0.09' } as React.CSSProperties}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg] hover-watermark"
+          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg] hover-watermark owl-float-2 owl-blink"
+          style={{ '--owl-rotate': '-12deg', '--owl-opacity': '0.10' } as React.CSSProperties}
         />
         {/* Bottom cluster */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg] hover-watermark"
+          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg] hover-watermark owl-float-3 owl-blink"
+          style={{ '--owl-rotate': '15deg', '--owl-opacity': '0.10' } as React.CSSProperties}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg] hover-watermark"
+          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg] hover-watermark owl-float-4 owl-blink"
+          style={{ '--owl-rotate': '-5deg', '--owl-opacity': '0.08' } as React.CSSProperties}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg] hover-watermark"
+          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg] hover-watermark owl-float-1 owl-blink"
+          style={{ '--owl-rotate': '8deg', '--owl-opacity': '0.09' } as React.CSSProperties}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg] hover-watermark"
+          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg] hover-watermark owl-float-2 owl-blink"
+          style={{ '--owl-rotate': '-20deg', '--owl-opacity': '0.10' } as React.CSSProperties}
         />
         {/* Extra fill for large screens */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block hover-watermark"
+          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block hover-watermark owl-float-3 owl-blink"
+          style={{ '--owl-rotate': '25deg', '--owl-opacity': '0.07' } as React.CSSProperties}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block hover-watermark"
+          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block hover-watermark owl-float-4 owl-blink"
+          style={{ '--owl-rotate': '-30deg', '--owl-opacity': '0.06' } as React.CSSProperties}
+        />
         />
       </div>
 
