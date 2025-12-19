@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Edit3, ArrowLeft, ArrowRight } from "lucide-react"
+import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Edit3, ArrowLeft, ArrowRight, Lightbulb } from "lucide-react"
 
 interface ComplianceIssue {
   id: string
@@ -102,44 +102,162 @@ const IDEA_CATEGORIES = [
   "Visual Impairment",
 ]
 
+// Clinical categories that should always be treated as suggestions
+const CLINICAL_CATEGORIES = [
+  'assessment_currency',
+  'goal_feasibility',
+  'goal_accommodation_alignment',
+  'goal_zpd',
+  'behaviorist_language',
+  'service_intensity'
+]
+
+// Issues that require manual input from the user
+const INPUT_REQUIRED_IDS = ['dob_missing', 'student_name_missing']
+
+// Clinical categories that require acknowledgment
+const ACKNOWLEDGMENT_CATEGORIES = ['assessment_currency', 'goal_feasibility', 'goal_accommodation_alignment', 'goal_zpd']
+
+// Determine the issue type based on category and severity
+const getIssueType = (issue: ComplianceIssue): 'must-fix' | 'should-fix' | 'suggestion' => {
+  if (CLINICAL_CATEGORIES.includes(issue.category)) return 'suggestion'
+  if (issue.severity === 'critical') return 'must-fix'
+  if (issue.severity === 'high') return 'should-fix'
+  return 'suggestion'
+}
+
+// Configuration for each issue type
+const issueTypeConfig = {
+  'must-fix': {
+    label: 'Must Fix',
+    sublabel: 'Required for compliance',
+    icon: AlertTriangle,
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    text: 'text-red-800',
+    badge: 'bg-red-100 text-red-700',
+    iconColor: 'text-red-600',
+    defaultExpanded: true,
+    dismissable: false
+  },
+  'should-fix': {
+    label: 'Should Fix',
+    sublabel: 'Recommended before meeting',
+    icon: AlertCircle,
+    bg: 'bg-orange-50',
+    border: 'border-orange-200',
+    text: 'text-orange-800',
+    badge: 'bg-orange-100 text-orange-700',
+    iconColor: 'text-orange-600',
+    defaultExpanded: true,
+    dismissable: false
+  },
+  'suggestion': {
+    label: 'Suggestion',
+    sublabel: 'Would strengthen the IEP',
+    icon: Lightbulb,
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-800',
+    badge: 'bg-blue-100 text-blue-700',
+    iconColor: 'text-blue-600',
+    defaultExpanded: false,
+    dismissable: true
+  }
+}
+
+// Helper functions for issue behavior
+const requiresManualInput = (issue: ComplianceIssue) => INPUT_REQUIRED_IDS.includes(issue.id)
+const requiresAcknowledgment = (issue: ComplianceIssue) => ACKNOWLEDGMENT_CATEGORIES.includes(issue.category)
+const canAutoFix = (issue: ComplianceIssue) => {
+  return issue.auto_fixable && issue.suggested_fix && !requiresManualInput(issue) && !requiresAcknowledgment(issue)
+}
+
 // Issue Alert Component
 function IssueAlert({
   issue,
   onFix,
   onMarkResolved,
-  severityColors,
+  onDismiss,
+  onUpdateField,
 }: {
   issue: ComplianceIssue
   onFix: (issue: ComplianceIssue) => void
   onMarkResolved: (issueId: string) => void
-  severityColors: Record<string, string>
+  onDismiss?: (issueId: string) => void
+  onUpdateField: (field: string, value: string) => void
 }) {
+  const issueType = getIssueType(issue)
+  const config = issueTypeConfig[issueType]
+  const IconComponent = config.icon
+
   return (
-    <div className={`p-3 rounded-lg border ${severityColors[issue.severity]} mb-2`}>
+    <div className={`p-3 rounded-lg border ${config.bg} ${config.border} mb-2`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <AlertCircle className="w-4 h-4" />
-            <span className="font-medium text-sm">{issue.title}</span>
-            <Badge variant="outline" className="text-xs">
-              -{issue.points_deducted} pts
-            </Badge>
+            <IconComponent className={`w-4 h-4 ${config.iconColor}`} />
+            <span className={`font-medium text-sm ${config.text}`}>{issue.title}</span>
+            <Badge variant="outline" className={`text-xs ${config.badge}`}>{config.label}</Badge>
+            <Badge variant="outline" className="text-xs">-{issue.points_deducted} pts</Badge>
           </div>
-          <p className="text-sm opacity-90">{issue.description}</p>
-          {issue.current_text && <p className="text-xs mt-1 opacity-75">Current: "{issue.current_text}"</p>}
-          {issue.suggested_fix && <p className="text-xs mt-1 font-medium">Suggested: "{issue.suggested_fix}"</p>}
+          <p className={`text-sm ${config.text} opacity-90`}>{issue.description}</p>
+
+          {/* DOB Input - inline date picker */}
+          {issue.id === 'dob_missing' && (
+            <div className="mt-3 p-3 bg-white rounded-lg border border-red-200">
+              <label className="text-sm font-medium text-gray-700 block mb-2">Enter Date of Birth:</label>
+              <Input
+                type="date"
+                className="w-44"
+                onChange={(e) => e.target.value && onUpdateField('dob', e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Name Input - inline text field */}
+          {issue.id === 'student_name_missing' && (
+            <div className="mt-3 p-3 bg-white rounded-lg border border-red-200">
+              <label className="text-sm font-medium text-gray-700 block mb-2">Enter Student's Full Legal Name:</label>
+              <Input
+                type="text"
+                placeholder="e.g., Marcus Anthony Johnson"
+                className="w-72"
+                onChange={(e) => {
+                  const value = e.target.value.trim()
+                  if (value && value.toLowerCase() !== 'the student') onUpdateField('name', value)
+                }}
+              />
+            </div>
+          )}
+
+          {/* Acknowledgment for clinical issues */}
+          {requiresAcknowledgment(issue) && (
+            <div className="mt-3">
+              <p className="text-xs text-blue-700 mb-2 italic">{issue.fix_explanation}</p>
+              <Button size="sm" variant="outline" className="text-blue-700 border-blue-300" onClick={() => onMarkResolved(issue.id)}>
+                I'll address this
+              </Button>
+            </div>
+          )}
         </div>
+
         <div className="flex flex-col gap-1">
-          {issue.auto_fixable !== false && issue.suggested_fix && (
-            <Button size="sm" variant="outline" className="text-xs h-7 bg-transparent" onClick={() => onFix(issue)}>
-              <Sparkles className="w-3 h-3 mr-1" />
-              Fix it
+          {canAutoFix(issue) && (
+            <>
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => onFix(issue)}>
+                <Sparkles className="w-3 h-3 mr-1" />Fix it for me
+              </Button>
+              <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => onMarkResolved(issue.id)}>
+                <Edit3 className="w-3 h-3 mr-1" />Edit manually
+              </Button>
+            </>
+          )}
+          {config.dismissable && onDismiss && (
+            <Button size="sm" variant="ghost" className="text-xs h-7 text-slate-500" onClick={() => onDismiss(issue.id)}>
+              Dismiss
             </Button>
           )}
-          <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => onMarkResolved(issue.id)}>
-            <Edit3 className="w-3 h-3 mr-1" />
-            Edit manually
-          </Button>
         </div>
       </div>
     </div>
@@ -160,6 +278,8 @@ export function EditAndFixStep({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["student", "services"]))
   const [currentScore, setCurrentScore] = useState(remediationData.original_score)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [dismissedIssues, setDismissedIssues] = useState<Set<string>>(new Set())
 
   const issues = remediationData.issues || []
 
@@ -199,6 +319,20 @@ export function EditAndFixStep({
   const markResolved = (issueId: string) => {
     setResolvedIssues(new Set([...resolvedIssues, issueId]))
     onLogEvent?.("FIX_MANUAL_ENTERED", { issueId })
+  }
+
+  const dismissIssue = (issueId: string) => {
+    setDismissedIssues(new Set([...dismissedIssues, issueId]))
+    onLogEvent?.("SUGGESTION_DISMISSED", { issueId })
+  }
+
+  const getIssuesByType = () => {
+    const activeIssues = issues.filter(i => !resolvedIssues.has(i.id) && !dismissedIssues.has(i.id))
+    return {
+      mustFix: activeIssues.filter(i => getIssueType(i) === 'must-fix'),
+      shouldFix: activeIssues.filter(i => getIssueType(i) === 'should-fix'),
+      suggestions: activeIssues.filter(i => getIssueType(i) === 'suggestion')
+    }
   }
 
   const applyFix = (issue: ComplianceIssue) => {
@@ -303,9 +437,8 @@ export function EditAndFixStep({
     low: "bg-blue-50 text-blue-800 border-blue-200",
   }
 
-  const criticalIssuesRemaining = issues.filter((i) => i.severity === "critical" && !resolvedIssues.has(i.id)).length
-
-  const canProceed = criticalIssuesRemaining === 0
+  const { mustFix, shouldFix, suggestions } = getIssuesByType()
+  const canProceed = mustFix.length === 0
 
   const updateStudentField = (field: string, value: string) => {
     setEditedIEP({
@@ -313,11 +446,21 @@ export function EditAndFixStep({
       student: { ...editedIEP.student, [field]: value },
     })
 
-    // Auto-resolve related issues
-    if (field === "name" && value && value.toLowerCase() !== "the student") {
-      const nameIssue = issues.find((i) => i.category === "student_info" || i.category === "student_name")
+    // Auto-resolve DOB issue
+    if (field === "dob" && value) {
+      const dobIssue = issues.find(i => i.id === "dob_missing" || (i.category === "student_info" && i.id.includes("dob")))
+      if (dobIssue) {
+        setResolvedIssues(new Set([...resolvedIssues, dobIssue.id]))
+        onLogEvent?.("DOB_ENTERED", { field: "dob" })
+      }
+    }
+
+    // Auto-resolve name issue
+    if (field === "name" && value && value.trim().length > 0 && value.toLowerCase() !== "the student") {
+      const nameIssue = issues.find(i => i.id === "student_name_missing" || (i.category === "student_info" && i.id.includes("name")))
       if (nameIssue) {
         setResolvedIssues(new Set([...resolvedIssues, nameIssue.id]))
+        onLogEvent?.("NAME_ENTERED", { field: "name" })
       }
     }
   }
@@ -422,17 +565,99 @@ export function EditAndFixStep({
             />
           </div>
 
-          {criticalIssuesRemaining > 0 && (
+          {mustFix.length > 0 && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <span className="text-red-800 text-sm">
-                {criticalIssuesRemaining} critical issue{criticalIssuesRemaining > 1 ? "s" : ""} must be fixed before
-                continuing
+                {mustFix.length} issue{mustFix.length > 1 ? "s" : ""} must be fixed before continuing
               </span>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Must Fix Issues Section */}
+      {mustFix.length > 0 && (
+        <Card className="border-red-200 bg-red-50/50">
+          <CardHeader className="py-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <CardTitle className="text-base text-red-800">Must Fix Issues</CardTitle>
+              <Badge className="bg-red-100 text-red-700 border-red-200">{mustFix.length} required</Badge>
+            </div>
+            <p className="text-sm text-red-600 mt-1">These issues must be resolved to continue</p>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            {mustFix.map((issue) => (
+              <IssueAlert
+                key={issue.id}
+                issue={issue}
+                onFix={applyFix}
+                onMarkResolved={markResolved}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Should Fix Issues Section */}
+      {shouldFix.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader className="py-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-600" />
+              <CardTitle className="text-base text-orange-800">Should Fix Issues</CardTitle>
+              <Badge className="bg-orange-100 text-orange-700 border-orange-200">{shouldFix.length} recommended</Badge>
+            </div>
+            <p className="text-sm text-orange-600 mt-1">Recommended to fix before the IEP meeting</p>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            {shouldFix.map((issue) => (
+              <IssueAlert
+                key={issue.id}
+                issue={issue}
+                onFix={applyFix}
+                onMarkResolved={markResolved}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Suggestions Section - Collapsed by Default */}
+      {suggestions.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader className="cursor-pointer hover:bg-blue-100/50 transition-colors py-3" onClick={() => setShowSuggestions(!showSuggestions)}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-blue-600" />
+                <CardTitle className="text-base text-blue-800">Suggestions to Strengthen This IEP</CardTitle>
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200">{suggestions.length} optional</Badge>
+              </div>
+              {showSuggestions ? <ChevronUp className="w-5 h-5 text-blue-600" /> : <ChevronDown className="w-5 h-5 text-blue-600" />}
+            </div>
+            <p className="text-sm text-blue-600 mt-1">These would make the IEP stronger but won't block your progress</p>
+          </CardHeader>
+          {showSuggestions && (
+            <CardContent className="space-y-2 pt-0">
+              {suggestions.map((issue) => (
+                <IssueAlert
+                  key={issue.id}
+                  issue={issue}
+                  onFix={applyFix}
+                  onMarkResolved={markResolved}
+                  onDismiss={dismissIssue}
+                  onUpdateField={updateStudentField}
+                />
+              ))}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Student Information Section */}
       <Card>
@@ -455,16 +680,6 @@ export function EditAndFixStep({
 
         {expandedSections.has("student") && (
           <CardContent className="space-y-4">
-            {/* Student Info Issues */}
-            {[...getIssuesForField("student_info"), ...getIssuesForField("student_name")].map((issue) => (
-              <IssueAlert
-                key={issue.id}
-                issue={issue}
-                onFix={applyFix}
-                onMarkResolved={markResolved}
-                severityColors={severityColors}
-              />
-            ))}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -553,7 +768,8 @@ export function EditAndFixStep({
                 issue={issue}
                 onFix={applyFix}
                 onMarkResolved={markResolved}
-                severityColors={severityColors}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
               />
             ))}
 
@@ -604,7 +820,8 @@ export function EditAndFixStep({
                 issue={issue}
                 onFix={applyFix}
                 onMarkResolved={markResolved}
-                severityColors={severityColors}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
               />
             ))}
 
@@ -717,7 +934,8 @@ export function EditAndFixStep({
                 issue={issue}
                 onFix={applyFix}
                 onMarkResolved={markResolved}
-                severityColors={severityColors}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
               />
             ))}
 
@@ -798,7 +1016,8 @@ export function EditAndFixStep({
                 issue={issue}
                 onFix={applyFix}
                 onMarkResolved={markResolved}
-                severityColors={severityColors}
+                onDismiss={dismissIssue}
+                onUpdateField={updateStudentField}
               />
             ))}
 
@@ -862,7 +1081,7 @@ export function EditAndFixStep({
         </Button>
       </div>
 
-      {!canProceed && <p className="text-center text-sm text-gray-500">Resolve all critical issues to continue</p>}
+      {!canProceed && <p className="text-center text-sm text-gray-500">Resolve all "Must Fix" issues to continue</p>}
     </div>
   )
 }
