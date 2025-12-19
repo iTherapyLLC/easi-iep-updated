@@ -140,11 +140,7 @@
 /* Force LTR on ALL inputs - outside of layers for maximum priority */
 input,
 textarea,
-[contenteditable],
-input[type="text"],
-input[type="date"],
-input[type="email"],
-input[type="password"] {
+[contenteditable] {
   direction: ltr !important;
   unicode-bidi: normal !important;
   text-align: left !important;
