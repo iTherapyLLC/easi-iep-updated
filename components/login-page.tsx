@@ -247,8 +247,6 @@ export default function LoginPage() {
                         : "hover:border-blue-300"
                     } ${keystrokes > 0 ? "animate-keystroke-ripple" : ""}`}
                     style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
-                  />
-                    style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     autoComplete="current-password"
                     required
                   />
