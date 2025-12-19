@@ -3944,7 +3944,6 @@ function IEPWizard() {
           className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block hover-watermark owl-float-4 owl-blink"
           style={{ '--owl-rotate': '-30deg', '--owl-opacity': '0.06' } as React.CSSProperties}
         />
-        />
       </div>
 
       {/* Progress Header */}
