@@ -3865,44 +3865,44 @@ function IEPWizard() {
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.035] rotate-[5deg]"
+          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.04] rotate-[-12deg]"
+          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg]"
         />
         {/* Bottom cluster */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.04] rotate-[15deg]"
+          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.03] rotate-[-5deg]"
+          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.035] rotate-[8deg]"
+          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.04] rotate-[-20deg]"
+          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg]"
         />
         {/* Extra fill for large screens */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.025] rotate-[25deg] hidden lg:block"
+          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.02] rotate-[-30deg] hidden xl:block"
+          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block"
         />
       </div>
 
