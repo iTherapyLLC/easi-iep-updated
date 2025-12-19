@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" dir="ltr">
       <body className={`${quicksand.variable} ${poppins.variable} font-sans antialiased`}>
         <IEPProvider>{children}</IEPProvider>
         <Analytics />

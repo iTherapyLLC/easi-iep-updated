@@ -490,6 +490,7 @@ export function CopyPasteInterface({ iep, onScreenshotUpload, logEvent }: CopyPa
           <label className="cursor-pointer">
             <input
               type="file"
+              dir="ltr"
               accept=".png,.jpg,.jpeg,.heic"
               onChange={handleFileUpload}
               className="hidden"

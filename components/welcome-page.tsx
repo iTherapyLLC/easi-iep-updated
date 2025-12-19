@@ -95,6 +95,7 @@ export function WelcomePage() {
             <input
               ref={fileInputRef}
               type="file"
+              dir="ltr"
               onChange={handleInputChange}
               accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx"
               className="hidden"

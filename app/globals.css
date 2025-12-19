@@ -1,3 +1,23 @@
+/* NUCLEAR FIX: Force LTR on absolutely everything */
+*, *::before, *::after {
+  direction: ltr !important;
+}
+
+html, body, #__next, #root, [data-radix-portal] {
+  direction: ltr !important;
+}
+
+input, textarea, [contenteditable], 
+input[type], textarea[class],
+.min-h-\[100px\], [class*="min-h-"] {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+  text-align: left !important;
+  writing-mode: horizontal-tb !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 

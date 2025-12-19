@@ -121,6 +121,7 @@ export function AdditionalInfoPage() {
               ref={fileInputRef}
               type="file"
               multiple
+              dir="ltr"
               onChange={(e) => handleFiles(e.target.files)}
               accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx"
               className="hidden"
