@@ -237,6 +237,19 @@ export function DraftReviewPage() {
     remediation?.issues.filter((i) => i.severity === "critical" && !fixedIssues.has(i.id)).length || 0
   const remainingIssueCount = remediation?.issues.filter((i) => !fixedIssues.has(i.id)).length || 0
 
+  // Helper function to identify clinical categories
+  const isClinicalCategory = (category: string): boolean => {
+    const clinicalCategories = [
+      "assessment_currency",
+      "goal_feasibility",
+      "goal_accommodation_alignment",
+      "behaviorist_language",
+      "goal_zpd",
+      "service_intensity",
+    ]
+    return clinicalCategories.includes(category)
+  }
+
   // Severity styling
   const severityConfig = {
     critical: {
@@ -516,6 +529,16 @@ export function DraftReviewPage() {
                               >
                                 {isFixed ? "Fixed" : issue.severity.toUpperCase()}
                               </span>
+                              {!isFixed && isClinicalCategory(issue.category) && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                                  CLINICAL
+                                </span>
+                              )}
+                              {!isFixed && !isClinicalCategory(issue.category) && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                  COMPLIANCE
+                                </span>
+                              )}
                               {!isFixed && (
                                 <span className="text-xs text-slate-500">-{issue.points_deducted} points</span>
                               )}
