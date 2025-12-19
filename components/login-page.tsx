@@ -279,7 +279,7 @@ export default function LoginPage() {
                 </span>
 
                 {isLoading ? (
-                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-premium-spin" />
+                  <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-premium-spin" />
                 ) : (
                   <>
                     <LogIn className="w-5 h-5 transition-transform group-hover:translate-x-1" />
