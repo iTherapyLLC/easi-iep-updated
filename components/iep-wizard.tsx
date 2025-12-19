@@ -3895,88 +3895,56 @@ function IEPWizard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Left side watermarks - 8 logos running down the left margin */}
+        {/* Left side watermarks - 4 logos with 250px+ vertical spacing */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[5%] -left-4 w-44 h-44 opacity-[0.12] rotate-[-10deg]"
+          className="absolute w-36 h-36 opacity-[0.12] rotate-[-8deg]"
+          style={{ top: '80px', left: '-20px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[15%] left-2 w-32 h-32 opacity-[0.14] rotate-[5deg]"
+          className="absolute w-40 h-40 opacity-[0.14] rotate-[5deg]"
+          style={{ top: '330px', left: '10px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[28%] -left-2 w-40 h-40 opacity-[0.13] rotate-[-5deg]"
+          className="absolute w-36 h-36 opacity-[0.13] rotate-[-12deg]"
+          style={{ top: '580px', left: '-20px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[40%] left-4 w-44 h-44 opacity-[0.12] rotate-[8deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[52%] -left-4 w-32 h-32 opacity-[0.15] rotate-[-8deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[65%] left-0 w-40 h-40 opacity-[0.13] rotate-[12deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[78%] left-2 w-44 h-44 opacity-[0.12] rotate-[-15deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[90%] -left-2 w-32 h-32 opacity-[0.14] rotate-[3deg]"
+          className="absolute w-40 h-40 opacity-[0.12] rotate-[8deg]"
+          style={{ top: '830px', left: '10px' }}
         />
 
-        {/* Right side watermarks - staggered vertically from left side */}
+        {/* Right side watermarks - 4 logos offset by 100px vertically */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[10%] -right-4 w-40 h-40 opacity-[0.13] rotate-[15deg]"
+          className="absolute w-40 h-40 opacity-[0.13] rotate-[12deg]"
+          style={{ top: '180px', right: '-20px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[22%] right-2 w-44 h-44 opacity-[0.12] rotate-[-8deg]"
+          className="absolute w-36 h-36 opacity-[0.12] rotate-[-6deg]"
+          style={{ top: '430px', right: '10px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] -right-2 w-32 h-32 opacity-[0.15] rotate-[10deg]"
+          className="absolute w-40 h-40 opacity-[0.14] rotate-[8deg]"
+          style={{ top: '680px', right: '-20px' }}
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[47%] right-4 w-40 h-40 opacity-[0.13] rotate-[-12deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[60%] -right-4 w-44 h-44 opacity-[0.12] rotate-[5deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[72%] right-0 w-32 h-32 opacity-[0.14] rotate-[-5deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[85%] right-2 w-40 h-40 opacity-[0.13] rotate-[18deg]"
-        />
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[95%] -right-2 w-44 h-44 opacity-[0.12] rotate-[-10deg]"
+          className="absolute w-36 h-36 opacity-[0.13] rotate-[-10deg]"
+          style={{ top: '930px', right: '10px' }}
         />
       </div>
 
