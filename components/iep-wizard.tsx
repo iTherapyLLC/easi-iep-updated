@@ -39,6 +39,7 @@ import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHa
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { LogoutButton } from "@/components/logout-button"
+import { VerifyExtractedDataStep } from "@/components/VerifyExtractedDataStep"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -3492,7 +3493,7 @@ function ClinicalReviewStep({
 
 function IEPWizard() {
   // Step management
-  type WizardStep = "upload" | "tell" | "building" | "review" | "edit" | "myslp"
+  type WizardStep = "upload" | "verify" | "tell" | "building" | "review" | "edit" | "myslp"
   const [currentStep, setCurrentStep] = useState<WizardStep>("upload")
 
   // File uploads
@@ -3753,7 +3754,13 @@ function IEPWizard() {
 
   const handleNext = () => {
     if (currentStep === "upload" && files.length > 0) {
+      // After upload, extract IEP data then go to verify step
+      handleExtractIEP()
+      logEvent("UPLOAD_COMPLETED")
+    } else if (currentStep === "verify") {
+      // After verification, go to tell step
       setCurrentStep("tell")
+      logEvent("VERIFICATION_STEP_COMPLETED")
     } else if (currentStep === "tell") {
       // Just transition to building step - BuildingStep will trigger the API call
       console.log("[v0] handleNext: Transitioning to building step")
@@ -3781,8 +3788,11 @@ function IEPWizard() {
   }
 
   const handleBack = () => {
-    if (currentStep === "tell") {
+    if (currentStep === "verify") {
       setCurrentStep("upload")
+      logEvent("NAVIGATED_BACK", { fromStep: "verify" })
+    } else if (currentStep === "tell") {
+      setCurrentStep("verify")
       logEvent("NAVIGATED_BACK", { fromStep: "tell" })
     } else if (currentStep === "review") {
       setCurrentStep("building")
@@ -3808,6 +3818,70 @@ function IEPWizard() {
     setBuildError(null)
     setBuildTasks([])
     logEvent("SESSION_RESTARTED")
+  }
+
+  // Handle verification completion
+  const handleVerificationComplete = (verifiedData: any) => {
+    // Update the extracted IEP with verified data
+    setExtractedIEP(verifiedData)
+    logEvent("VERIFIED_DATA_SAVED", {
+      sectionsVerified: verifiedData.verifications?.length || 0,
+      hasCalculatedAge: !!verifiedData.calculatedAge,
+      hasCalculatedGrade: !!verifiedData.calculatedGrade,
+    })
+    // Move to next step
+    handleNext()
+  }
+
+  // Extract IEP data immediately after upload
+  const handleExtractIEP = async () => {
+    const primaryFile = files.find((f) => f.type === "iep") || files[0]
+    if (!primaryFile) {
+      console.error("No file to extract")
+      return
+    }
+
+    try {
+      logEvent("EXTRACTION_STARTED")
+      setIsFileReady(false)
+
+      const formData = new FormData()
+      formData.append("file", primaryFile.file, primaryFile.name)
+      formData.append("extractOnly", "true") // Flag to only extract, not generate
+
+      const response = await fetch("/api/extract-iep", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract IEP")
+      }
+
+      // Extract IEP data
+      const newIEP = extractIEPFromResponse(data)
+      console.log("[DEBUG] Extracted IEP for verification:", {
+        hasStudent: !!newIEP.student,
+        studentName: newIEP.student?.name,
+        goalsCount: newIEP.goals?.length,
+        servicesCount: newIEP.services?.length,
+      })
+
+      setExtractedIEP(newIEP)
+      setIsFileReady(true)
+      logEvent("EXTRACTION_COMPLETED")
+
+      // Auto-advance to verify step
+      handleNext()
+    } catch (err) {
+      console.error("[v0] Extraction error:", err)
+      logEvent("EXTRACTION_ERROR", { error: String(err) })
+      setIsFileReady(true)
+      // Still allow to proceed - user can enter data manually
+      handleNext()
+    }
   }
 
   // Download handlers
@@ -3844,6 +3918,7 @@ function IEPWizard() {
   // Progress steps for header
   const progressSteps = [
     { id: "upload", label: "Upload Materials" },
+    { id: "verify", label: "Verify & Update" },
     { id: "tell", label: "Tell Us About Progress" },
     { id: "building", label: "Building Your IEP" },
     { id: "review", label: "Review Draft" },
@@ -3851,7 +3926,7 @@ function IEPWizard() {
     { id: "myslp", label: "Clinical Review" },
   ]
 
-  const stepOrder: WizardStep[] = ["upload", "tell", "building", "review", "edit", "myslp"]
+  const stepOrder: WizardStep[] = ["upload", "verify", "tell", "building", "review", "edit", "myslp"]
   const currentStepIndex = stepOrder.indexOf(currentStep)
 
   return (
@@ -3973,6 +4048,17 @@ function IEPWizard() {
             onRemoveFile={handleRemoveFile}
             onFilesSelected={handleFileUpload} // Pass handleFileUpload
             onNext={handleNext}
+            logEvent={logEvent}
+          />
+        )}
+
+        {/* Verify & Update Step */}
+        {currentStep === "verify" && (
+          <VerifyExtractedDataStep
+            extractedIEP={extractedIEP}
+            iepDate={iepDate}
+            onVerificationComplete={handleVerificationComplete}
+            onBack={handleBack}
             logEvent={logEvent}
           />
         )}
