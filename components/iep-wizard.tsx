@@ -1767,6 +1767,7 @@ function EditIEPStep({
   const [activeSection, setActiveSection] = useState<string>("copy")
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>("")
+  const [editError, setEditError] = useState<string>("")
   const [showCelebration, setShowCelebration] = useState(false)
   const [verificationScreenshot, setVerificationScreenshot] = useState<File | null>(null)
   const [lastFixedIssue, setLastFixedIssue] = useState<string | null>(null)
@@ -1828,12 +1829,14 @@ function EditIEPStep({
   const handleStartEdit = (field: string, currentValue: string) => {
     setEditingField(field)
     setEditValue(currentValue)
+    setEditError("")
     logEvent("FIELD_EDIT_STARTED", { field })
   }
 
   const handleCancelEdit = () => {
     setEditingField(null)
     setEditValue("")
+    setEditError("")
     logEvent("FIELD_EDIT_CANCELLED", { field: editingField })
   }
 
@@ -2487,26 +2490,32 @@ function EditIEPStep({
                     <input
                       type="text"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => {
+                        setEditValue(e.target.value)
+                        setEditError("")
+                      }}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                       placeholder="MM/DD/YYYY or June 18, 2019"
                       style={{ direction: 'ltr', textAlign: 'left' }}
                     />
                     <p className="text-xs text-gray-500">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
+                    {editError && <p className="text-xs text-red-600">{editError}</p>}
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                         Cancel
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() =>
-                          handleSaveEdit("student-dob", (value) => {
-                            const parsed = parseDateFlexible(value)
-                            if (parsed) {
+                        onClick={() => {
+                          const parsed = parseDateFlexible(editValue)
+                          if (parsed) {
+                            handleSaveEdit("student-dob", (value) => {
                               setIep((prev) => (prev ? { ...prev, student: { ...prev.student, dob: parsed } } : null))
-                            }
-                          })
-                        }
+                            })
+                          } else {
+                            setEditError("Please enter a valid date (e.g., 06/18/2019 or June 18, 2019)")
+                          }
+                        }}
                       >
                         Save
                       </Button>

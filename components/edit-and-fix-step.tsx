@@ -711,11 +711,10 @@ export function EditAndFixStep({
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date of Birth</label>
                 <Input
-                  value={formatDateForDisplay(editedIEP.student.dob) || ""}
-                  onChange={(e) => {
+                  defaultValue={formatDateForDisplay(editedIEP.student.dob) || ""}
+                  onBlur={(e) => {
                     const parsed = parseDateFlexible(e.target.value)
                     if (parsed) updateStudentField("dob", parsed)
-                    else updateStudentField("dob", e.target.value) // Keep raw value until valid
                   }}
                   placeholder="MM/DD/YYYY or June 18, 2019"
                   type="text"
