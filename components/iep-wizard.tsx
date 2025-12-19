@@ -3867,82 +3867,88 @@ function IEPWizard() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Top left cluster */}
+        {/* Left side watermarks - 8 logos running down the left margin */}
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -top-10 -left-10 w-48 h-48 opacity-[0.04] rotate-[-15deg] hover-watermark owl-float-1 owl-blink"
-          style={{ '--owl-rotate': '-15deg', '--owl-opacity': '0.04' } as React.CSSProperties}
-        />
-        <img 
-          src="/easi-logo.png" 
-          alt="" 
-          className="absolute top-32 left-20 w-32 h-32 opacity-[0.03] rotate-[10deg] hover-watermark owl-float-2 owl-blink" 
-          style={{ '--owl-rotate': '10deg', '--owl-opacity': '0.03' } as React.CSSProperties}
-        />
-        {/* Top right cluster */}
-        <img 
-          src="/easi-logo.png" 
-          alt="" 
-          className="absolute -top-5 right-10 w-40 h-40 opacity-[0.04] rotate-[20deg] hover-watermark owl-float-3 owl-blink" 
-          style={{ '--owl-rotate': '20deg', '--owl-opacity': '0.04' } as React.CSSProperties}
-        />
-        <img 
-          src="/easi-logo.png" 
-          alt="" 
-          className="absolute top-48 right-32 w-28 h-28 opacity-[0.03] rotate-[-8deg] hover-watermark owl-float-4 owl-blink" 
-          style={{ '--owl-rotate': '-8deg', '--owl-opacity': '0.03' } as React.CSSProperties}
-        />
-        {/* Middle scattered */}
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[40%] -left-8 w-36 h-36 opacity-[0.09] rotate-[5deg] hover-watermark owl-float-1 owl-blink"
-          style={{ '--owl-rotate': '5deg', '--owl-opacity': '0.09' } as React.CSSProperties}
+          className="absolute top-[5%] -left-4 w-20 h-20 opacity-[0.12] rotate-[-10deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[35%] right-0 w-44 h-44 opacity-[0.10] rotate-[-12deg] hover-watermark owl-float-2 owl-blink"
-          style={{ '--owl-rotate': '-12deg', '--owl-opacity': '0.10' } as React.CSSProperties}
-        />
-        {/* Bottom cluster */}
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute bottom-20 left-16 w-40 h-40 opacity-[0.10] rotate-[15deg] hover-watermark owl-float-3 owl-blink"
-          style={{ '--owl-rotate': '15deg', '--owl-opacity': '0.10' } as React.CSSProperties}
+          className="absolute top-[15%] left-2 w-10 h-10 opacity-[0.14] rotate-[5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-10 left-[30%] w-32 h-32 opacity-[0.08] rotate-[-5deg] hover-watermark owl-float-4 owl-blink"
-          style={{ '--owl-rotate': '-5deg', '--owl-opacity': '0.08' } as React.CSSProperties}
+          className="absolute top-[28%] -left-2 w-16 h-16 opacity-[0.13] rotate-[-5deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute bottom-32 right-20 w-36 h-36 opacity-[0.09] rotate-[8deg] hover-watermark owl-float-1 owl-blink"
-          style={{ '--owl-rotate': '8deg', '--owl-opacity': '0.09' } as React.CSSProperties}
+          className="absolute top-[40%] left-4 w-20 h-20 opacity-[0.12] rotate-[8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute -bottom-5 -right-10 w-48 h-48 opacity-[0.10] rotate-[-20deg] hover-watermark owl-float-2 owl-blink"
-          style={{ '--owl-rotate': '-20deg', '--owl-opacity': '0.10' } as React.CSSProperties}
-        />
-        {/* Extra fill for large screens */}
-        <img
-          src="/easi-logo.png"
-          alt=""
-          className="absolute top-[60%] left-[45%] w-24 h-24 opacity-[0.07] rotate-[25deg] hidden lg:block hover-watermark owl-float-3 owl-blink"
-          style={{ '--owl-rotate': '25deg', '--owl-opacity': '0.07' } as React.CSSProperties}
+          className="absolute top-[52%] -left-4 w-10 h-10 opacity-[0.15] rotate-[-8deg]"
         />
         <img
           src="/easi-logo.png"
           alt=""
-          className="absolute top-[20%] left-[40%] w-20 h-20 opacity-[0.06] rotate-[-30deg] hidden xl:block hover-watermark owl-float-4 owl-blink"
-          style={{ '--owl-rotate': '-30deg', '--owl-opacity': '0.06' } as React.CSSProperties}
+          className="absolute top-[65%] left-0 w-16 h-16 opacity-[0.13] rotate-[12deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[78%] left-2 w-20 h-20 opacity-[0.12] rotate-[-15deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[90%] -left-2 w-10 h-10 opacity-[0.14] rotate-[3deg]"
+        />
+
+        {/* Right side watermarks - staggered vertically from left side */}
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[10%] -right-4 w-16 h-16 opacity-[0.13] rotate-[15deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[22%] right-2 w-20 h-20 opacity-[0.12] rotate-[-8deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[35%] -right-2 w-10 h-10 opacity-[0.15] rotate-[10deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[47%] right-4 w-16 h-16 opacity-[0.13] rotate-[-12deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[60%] -right-4 w-20 h-20 opacity-[0.12] rotate-[5deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[72%] right-0 w-10 h-10 opacity-[0.14] rotate-[-5deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[85%] right-2 w-16 h-16 opacity-[0.13] rotate-[18deg]"
+        />
+        <img
+          src="/easi-logo.png"
+          alt=""
+          className="absolute top-[95%] -right-2 w-20 h-20 opacity-[0.12] rotate-[-10deg]"
         />
       </div>
 
