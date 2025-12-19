@@ -218,7 +218,7 @@ function IssueAlert({
                 placeholder="MM/DD/YYYY or June 18, 2019"
                 className="w-56"
                 style={{ direction: 'ltr', textAlign: 'left' }}
-                onChange={(e) => {
+                onBlur={(e) => {
                   const parsed = parseDateFlexible(e.target.value)
                   if (parsed) onUpdateField('dob', parsed)
                 }}

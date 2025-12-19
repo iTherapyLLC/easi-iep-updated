@@ -3,9 +3,14 @@
  * Supports multiple input formats and validates date existence
  */
 
+// Constants for date validation
+const MIN_INPUT_LENGTH = 6 // Minimum for shortest valid format like "1/1/22"
+const MIN_YEAR = 1900 // Earliest reasonable birth year for IEPs
+const MAX_YEAR = 2100 // Latest reasonable year for date entries
+
 // Flexible date parser - accepts multiple formats, returns ISO (YYYY-MM-DD) or null
 export function parseDateFlexible(input: string): string | null {
-  if (!input || input.trim().length < 6) return null
+  if (!input || input.trim().length < MIN_INPUT_LENGTH) return null
   
   const cleaned = input.trim()
   
@@ -59,7 +64,7 @@ export function parseDateFlexible(input: string): string | null {
 export function isValidDate(year: number, month: number, day: number): boolean {
   if (month < 1 || month > 12) return false
   if (day < 1 || day > 31) return false
-  if (year < 1900 || year > 2100) return false
+  if (year < MIN_YEAR || year > MAX_YEAR) return false
   
   const date = new Date(year, month - 1, day)
   return date.getFullYear() === year && 
