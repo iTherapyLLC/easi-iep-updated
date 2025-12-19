@@ -216,8 +216,44 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
       color: #333;
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 0;
       background: #f9fafb;
+    }
+    .print-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      padding: 16px;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .print-header button {
+      background: white;
+      color: #1d4ed8;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .print-header button:hover {
+      background: #f0f9ff;
+    }
+    .print-header p {
+      color: white;
+      margin: 8px 0 0 0;
+      font-size: 14px;
+    }
+    .content-wrapper {
+      padding-top: 100px;
+      padding-left: 20px;
+      padding-right: 20px;
+      padding-bottom: 20px;
     }
     .container {
       background: white;
@@ -291,24 +327,6 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
     li {
       margin: 5px 0;
     }
-    .print-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      z-index: 1000;
-    }
-    .print-button:hover {
-      background: #2563eb;
-    }
     .footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -320,8 +338,14 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
   </style>
 </head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+  <div class="print-header no-print">
+    <button onclick="window.print()">
+      🖨️ Print / Save as PDF
+    </button>
+    <p>Click the button above, then select "Save as PDF" as your printer</p>
+  </div>
   
+  <div class="content-wrapper">
   <div class="container">
     <div class="header">
       <h1>INDIVIDUALIZED EDUCATION PROGRAM (IEP)</h1>
@@ -434,6 +458,7 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
       <p>Document generated on ${today}</p>
     </div>
   </div>
+  </div>
 </body>
 </html>`
 }
@@ -469,8 +494,44 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       color: #333;
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 0;
       background: #f9fafb;
+    }
+    .print-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      padding: 16px;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .print-header button {
+      background: white;
+      color: #1d4ed8;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .print-header button:hover {
+      background: #f0f9ff;
+    }
+    .print-header p {
+      color: white;
+      margin: 8px 0 0 0;
+      font-size: 14px;
+    }
+    .content-wrapper {
+      padding-top: 100px;
+      padding-left: 20px;
+      padding-right: 20px;
+      padding-bottom: 20px;
     }
     .container {
       background: white;
@@ -628,24 +689,6 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       font-size: 14px;
       margin-top: 5px;
     }
-    .print-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      z-index: 1000;
-    }
-    .print-button:hover {
-      background: #2563eb;
-    }
     .footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -657,8 +700,14 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
   </style>
 </head>
 <body>
-  <button class="print-button no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+  <div class="print-header no-print">
+    <button onclick="window.print()">
+      🖨️ Print / Save as PDF
+    </button>
+    <p>Click the button above, then select "Save as PDF" as your printer</p>
+  </div>
   
+  <div class="content-wrapper">
   <div class="container">
     <div class="header">
       <h1>IEP COMPLIANCE REPORT</h1>
@@ -776,64 +825,53 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       <p>Report generated on ${today}</p>
     </div>
   </div>
+  </div>
 </body>
 </html>`
 }
 
 /**
- * Download IEP as HTML file
+ * Download IEP as HTML file - opens in new tab with print button
  */
 export async function downloadIEP(params: DownloadIEPParams): Promise<void> {
   try {
-    const { iep, state } = params
-    const studentName = getStudentName(iep)
-    const today = new Date().toISOString().split("T")[0]
-
     const html = generateIEPHTML(params)
 
-    // Create blob and download
-    const blob = new Blob([html], { type: "text/html" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `EASI_IEP_${sanitizeFilename(studentName)}_${sanitizeFilename(state)}_${today}.html`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    console.log("[download-iep] IEP downloaded successfully")
+    // Open HTML in new tab instead of downloading
+    const newWindow = window.open("", "_blank")
+    if (newWindow) {
+      newWindow.document.write(html)
+      newWindow.document.close()
+      console.log("[download-iep] IEP opened in new tab successfully")
+    } else {
+      console.error("[download-iep] Failed to open new window - popup may be blocked")
+      alert("Please allow popups for this site to view the IEP document.")
+    }
   } catch (error) {
-    console.error("[download-iep] Error downloading IEP:", error)
+    console.error("[download-iep] Error opening IEP:", error)
     throw error
   }
 }
 
 /**
- * Download compliance report as HTML file
+ * Download compliance report as HTML file - opens in new tab with print button
  */
 export async function downloadComplianceReport(params: DownloadComplianceReportParams): Promise<void> {
   try {
-    const { iep, state } = params
-    const studentName = getStudentName(iep)
-    const today = new Date().toISOString().split("T")[0]
-
     const html = generateComplianceReportHTML(params)
 
-    // Create blob and download
-    const blob = new Blob([html], { type: "text/html" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `EASI_Compliance_Report_${sanitizeFilename(studentName)}_${sanitizeFilename(state)}_${today}.html`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    console.log("[download-iep] Compliance report downloaded successfully")
+    // Open HTML in new tab instead of downloading
+    const newWindow = window.open("", "_blank")
+    if (newWindow) {
+      newWindow.document.write(html)
+      newWindow.document.close()
+      console.log("[download-iep] Compliance report opened in new tab successfully")
+    } else {
+      console.error("[download-iep] Failed to open new window - popup may be blocked")
+      alert("Please allow popups for this site to view the compliance report.")
+    }
   } catch (error) {
-    console.error("[download-iep] Error downloading compliance report:", error)
+    console.error("[download-iep] Error opening compliance report:", error)
     throw error
   }
 }
