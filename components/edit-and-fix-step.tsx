@@ -115,8 +115,13 @@ const CLINICAL_CATEGORIES = [
 // Issues that require manual input from the user
 const INPUT_REQUIRED_IDS = ['dob_missing', 'student_name_missing']
 
-// Clinical categories that require acknowledgment
-const ACKNOWLEDGMENT_CATEGORIES = ['assessment_currency', 'goal_feasibility', 'goal_accommodation_alignment', 'goal_zpd']
+// Clinical categories that require acknowledgment (subset of clinical categories)
+const ACKNOWLEDGMENT_CATEGORIES = [
+  'assessment_currency', 
+  'goal_feasibility', 
+  'goal_accommodation_alignment', 
+  'goal_zpd'
+]
 
 // Determine the issue type based on category and severity
 const getIssueType = (issue: ComplianceIssue): 'must-fix' | 'should-fix' | 'suggestion' => {
