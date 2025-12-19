@@ -38,6 +38,7 @@ import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
+import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 import { LogoutButton } from "@/components/logout-button"
 
 // =============================================================================
@@ -2488,8 +2489,10 @@ function EditIEPStep({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="MM/DD/YYYY"
+                      placeholder="MM/DD/YYYY or June 18, 2019"
+                      style={{ direction: 'ltr', textAlign: 'left' }}
                     />
+                    <p className="text-xs text-gray-500">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
                         Cancel
@@ -2498,7 +2501,10 @@ function EditIEPStep({
                         size="sm"
                         onClick={() =>
                           handleSaveEdit("student-dob", (value) => {
-                            setIep((prev) => (prev ? { ...prev, student: { ...prev.student, dob: value } } : null))
+                            const parsed = parseDateFlexible(value)
+                            if (parsed) {
+                              setIep((prev) => (prev ? { ...prev, student: { ...prev.student, dob: parsed } } : null))
+                            }
                           })
                         }
                       >

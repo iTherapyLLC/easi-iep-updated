@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Edit3, ArrowLeft, ArrowRight, Lightbulb } from "lucide-react"
+import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 
 interface ComplianceIssue {
   id: string
@@ -213,10 +214,16 @@ function IssueAlert({
             <div className="mt-3 p-3 bg-white rounded-lg border border-red-200">
               <label className="text-sm font-medium text-gray-700 block mb-2">Enter Date of Birth:</label>
               <Input
-                type="date"
-                className="w-44"
-                onChange={(e) => e.target.value && onUpdateField('dob', e.target.value)}
+                type="text"
+                placeholder="MM/DD/YYYY or June 18, 2019"
+                className="w-56"
+                style={{ direction: 'ltr', textAlign: 'left' }}
+                onChange={(e) => {
+                  const parsed = parseDateFlexible(e.target.value)
+                  if (parsed) onUpdateField('dob', parsed)
+                }}
               />
+              <p className="text-xs text-gray-500 mt-1">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
             </div>
           )}
 
@@ -704,10 +711,15 @@ export function EditAndFixStep({
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date of Birth</label>
                 <Input
-                  value={editedIEP.student.dob || ""}
-                  onChange={(e) => updateStudentField("dob", e.target.value)}
-                  placeholder="MM/DD/YYYY"
-                  type="date"
+                  value={formatDateForDisplay(editedIEP.student.dob) || ""}
+                  onChange={(e) => {
+                    const parsed = parseDateFlexible(e.target.value)
+                    if (parsed) updateStudentField("dob", parsed)
+                    else updateStudentField("dob", e.target.value) // Keep raw value until valid
+                  }}
+                  placeholder="MM/DD/YYYY or June 18, 2019"
+                  type="text"
+                  style={{ direction: 'ltr', textAlign: 'left' }}
                 />
               </div>
 
