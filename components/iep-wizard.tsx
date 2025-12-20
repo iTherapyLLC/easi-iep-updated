@@ -3830,7 +3830,8 @@ function IEPWizard() {
           const assessmentFixed = [...fixedIssues].some(id =>
             id.toLowerCase().includes("assessment") ||
             id.toLowerCase().includes("currency") ||
-            id.toLowerCase().includes("data")
+            id.toLowerCase().includes("assessment_data") ||
+            id.toLowerCase().includes("data_currency")
           )
           if (assessmentFixed) {
             console.log("[DEBUG] Filtering out assessment check as fixed:", check.name)
