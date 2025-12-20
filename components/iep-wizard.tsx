@@ -3608,7 +3608,7 @@ function IEPWizard() {
         
         const data = await response.json()
         
-        if (data.status === 'completed') {
+        if (data.status === 'complete') {
           console.log(`[v0] POLL: Job ${jobId} completed`)
           return data
         }
