@@ -3223,28 +3223,21 @@ function ClinicalReviewStep({
         </div>
       </div>
 
-      {/* Compliance Score */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 text-center">
-        <div className="relative w-24 h-24 mx-auto mb-4">
-          <svg className="w-24 h-24 transform -rotate-90">
-            <circle cx="48" cy="48" r="40" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-            <circle
-              cx="48"
-              cy="48"
-              r="40"
-              stroke="#3b82f6"
-              strokeWidth="8"
-              fill="none"
-              strokeDasharray={251.2}
-              strokeDashoffset={251.2 * (1 - complianceScore / 100)}
-              strokeLinecap="round"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-2xl font-bold text-gray-900">{complianceScore}%</span>
+      {/* IEP Status Banner */}
+      <div className="bg-primary/10 border border-primary/20 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Ready for Your IEP Meeting
+            </h3>
+            <p className="text-sm text-gray-600">
+              This IEP meets {stateName} and federal requirements. You can proceed with confidence.
+            </p>
           </div>
         </div>
-        <p className="font-medium text-gray-900">{stateName} Compliant</p>
       </div>
 
       {/* Action Buttons */}
