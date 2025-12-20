@@ -3595,20 +3595,38 @@ function IEPWizard() {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       console.log(`[v0] POLL: Attempt ${attempt + 1}/${maxAttempts} for job ${jobId}`)
       
-      const response = await fetch(`/api/extract-iep/status/${jobId}`)
-      const data = await response.json()
-      
-      if (data.status === 'completed') {
-        console.log(`[v0] POLL: Job ${jobId} completed`)
-        return data
+      try {
+        const response = await fetch(`/api/extract-iep/status/${jobId}`)
+        
+        if (!response.ok) {
+          // For non-200 responses, try to extract error message
+          const errorData = await response.json().catch(() => ({ error: 'Status check failed' }))
+          throw new Error(errorData.error || `Status check failed with status ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        if (data.status === 'completed') {
+          console.log(`[v0] POLL: Job ${jobId} completed`)
+          return data
+        }
+        
+        if (data.status === 'failed' || data.status === 'error') {
+          throw new Error(data.error || 'Job processing failed')
+        }
+        
+        // Still processing, wait and retry
+        console.log(`[v0] POLL: Job ${jobId} still processing, waiting ${intervalMs}ms...`)
+        await new Promise(resolve => setTimeout(resolve, intervalMs))
+      } catch (error) {
+        // If this is our last attempt, throw the error
+        if (attempt === maxAttempts - 1) {
+          throw error
+        }
+        // For network errors or temporary failures, log and retry
+        console.warn(`[v0] POLL: Error on attempt ${attempt + 1}, will retry:`, error)
+        await new Promise(resolve => setTimeout(resolve, intervalMs))
       }
-      
-      if (data.status === 'failed' || data.status === 'error') {
-        throw new Error(data.error || 'Job processing failed')
-      }
-      
-      // Still processing, wait and retry
-      await new Promise(resolve => setTimeout(resolve, intervalMs))
     }
     
     throw new Error('Job timed out after maximum polling attempts')
