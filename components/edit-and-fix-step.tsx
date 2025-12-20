@@ -176,7 +176,12 @@ const issueTypeConfig = {
 const requiresManualInput = (issue: ComplianceIssue) => INPUT_REQUIRED_IDS.includes(issue.id)
 const requiresAcknowledgment = (issue: ComplianceIssue) => ACKNOWLEDGMENT_CATEGORIES.includes(issue.category)
 const canAutoFix = (issue: ComplianceIssue) => {
-  return issue.auto_fixable && issue.suggested_fix && !requiresManualInput(issue) && !requiresAcknowledgment(issue)
+  const hasRealSuggestion = issue.suggested_fix && 
+    !issue.suggested_fix.startsWith("[") && 
+    !issue.suggested_fix.includes("Enter ") &&
+    issue.suggested_fix.trim().length > 0;
+  
+  return issue.auto_fixable && hasRealSuggestion && !requiresManualInput(issue) && !requiresAcknowledgment(issue)
 }
 
 // Issue Alert Component
