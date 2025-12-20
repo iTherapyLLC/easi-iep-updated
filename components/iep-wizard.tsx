@@ -1755,6 +1755,55 @@ function EditIEPStep({
   const handleSaveEdit = (field: string, updateFn: (value: string) => void) => {
     updateFn(editValue)
     logEvent("FIELD_EDIT_SAVED", { field })
+    
+    // Auto-resolve related compliance issues when fields are edited
+    if (editValue && editValue.trim()) {
+      // Check for DOB-related issues
+      if (field === "student-dob") {
+        const dobIssues = issues.filter(i => 
+          i.id === "dob_missing" || 
+          i.category === "student_info" && i.id.includes("dob") ||
+          i.title?.toLowerCase().includes("date of birth")
+        )
+        dobIssues.forEach(issue => {
+          if (!fixedIssues.has(issue.id)) {
+            setFixedIssues(prev => new Set([...prev, issue.id]))
+            logEvent("DOB_ENTERED", { field: "dob", issueId: issue.id })
+          }
+        })
+      }
+      
+      // Check for name-related issues
+      if (field === "student-name" && editValue.toLowerCase() !== "the student") {
+        const nameIssues = issues.filter(i => 
+          i.id === "student_name_missing" || 
+          i.category === "student_info" && i.id.includes("name") ||
+          i.title?.toLowerCase().includes("student name")
+        )
+        nameIssues.forEach(issue => {
+          if (!fixedIssues.has(issue.id)) {
+            setFixedIssues(prev => new Set([...prev, issue.id]))
+            logEvent("NAME_ENTERED", { field: "name", issueId: issue.id })
+          }
+        })
+      }
+      
+      // Check for assessment currency issues when PLAAFP fields are edited
+      if (field.includes("plaafp")) {
+        const assessmentIssues = issues.filter(i => 
+          i.id === "assessment_data_currency" || 
+          i.category === "assessment_currency" ||
+          i.title?.toLowerCase().includes("assessment") && i.title?.toLowerCase().includes("currency")
+        )
+        assessmentIssues.forEach(issue => {
+          if (!fixedIssues.has(issue.id)) {
+            setFixedIssues(prev => new Set([...prev, issue.id]))
+            logEvent("ASSESSMENT_DATA_UPDATED", { field, issueId: issue.id })
+          }
+        })
+      }
+    }
+    
     setEditingField(null)
     setEditValue("")
   }
@@ -1775,9 +1824,34 @@ function EditIEPStep({
       return
     }
 
-    // TODO: Update the actual IEP data based on the issue type
-    // For now, we require text input before marking fixed to prevent bypassing compliance.
-    // Future enhancement: Apply newText to the corresponding IEP field based on issue.id
+    // Update the actual IEP data based on the issue type
+    const issue = issues.find(i => i.id === issueId)
+    if (issue) {
+      // Handle DOB issues
+      if (issue.id === "dob_missing" || (issue.category === "student_info" && issue.id.includes("dob"))) {
+        setIep(prev => prev ? { ...prev, student: { ...prev.student, dob: newText } } : null)
+      }
+      // Handle name issues
+      else if (issue.id === "student_name_missing" || (issue.category === "student_info" && issue.id.includes("name"))) {
+        setIep(prev => prev ? { ...prev, student: { ...prev.student, name: newText } } : null)
+      }
+      // Handle assessment currency issues
+      else if (issue.id === "assessment_data_currency" || issue.category === "assessment_currency") {
+        setIep(prev => {
+          if (!prev) return null
+          const currentPlaafp = prev.plaafp || {}
+          return {
+            ...prev,
+            plaafp: {
+              ...currentPlaafp,
+              academic: typeof currentPlaafp === 'object' && 'academic' in currentPlaafp 
+                ? (currentPlaafp.academic || '') + '\n\n' + newText 
+                : newText
+            }
+          }
+        })
+      }
+    }
 
     setFixedIssues((prev) => new Set([...prev, issueId]))
     logEvent("FIX_MANUAL_ENTERED", { issueId, textLength: newText.length })
