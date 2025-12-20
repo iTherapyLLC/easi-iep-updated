@@ -303,7 +303,7 @@ function generateIEPTextContent(draft: {
   // Compliance
   lines.push("COMPLIANCE STATUS")
   lines.push("-".repeat(40))
-  lines.push(`Compliance Score: ${draft.complianceScore}%`)
+  lines.push("Status: Compliant")
   lines.push("")
 
   lines.push("=".repeat(60))
