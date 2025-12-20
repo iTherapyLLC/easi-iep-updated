@@ -213,17 +213,16 @@ function IssueAlert({
           {issue.id === 'dob_missing' && (
             <div className="mt-3 p-3 bg-white rounded-lg border border-red-200">
               <label className="text-sm font-medium text-gray-700 block mb-2">Enter Date of Birth:</label>
-              <Input
-                type="text"
-                placeholder="MM/DD/YYYY or June 18, 2019"
-                className="w-56"
-                style={{ direction: 'ltr', textAlign: 'left' }}
-                onBlur={(e) => {
-                  const parsed = parseDateFlexible(e.target.value)
-                  if (parsed) onUpdateField('dob', parsed)
+              <input
+                type="date"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                aria-label="Select student date of birth"
+                aria-describedby="dob-help-text"
+                onChange={(e) => {
+                  if (e.target.value) onUpdateField('dob', e.target.value)
                 }}
               />
-              <p className="text-xs text-gray-500 mt-1">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
+              <p id="dob-help-text" className="text-xs text-gray-500 mt-1">Select date from calendar</p>
             </div>
           )}
 
