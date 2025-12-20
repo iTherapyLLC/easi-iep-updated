@@ -705,6 +705,24 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       font-size: 14px;
       margin-top: 5px;
     }
+    .all-resolved {
+      background: #ecfdf5;
+      border: 2px solid #10b981;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      color: #065f46;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .all-resolved .check-icon {
+      font-size: 32px;
+      color: #10b981;
+    }
     .footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -833,7 +851,17 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
         .join("")}
     </div>
     `
-        : ""
+        : checksFailed.length === 0 && issues.length === 0
+          ? `
+    <div class="section page-break">
+      <div class="section-title">COMPLIANCE STATUS</div>
+      <div class="all-resolved">
+        <span class="check-icon">✓</span>
+        All compliance issues have been addressed
+      </div>
+    </div>
+    `
+          : ""
     }
 
     <div class="footer">
