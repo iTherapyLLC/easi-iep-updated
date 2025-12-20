@@ -7,12 +7,19 @@ import { sanitizeObject } from "@/utils/strip-rtl"
 const IEP_GUARDIAN_URL =
   process.env.IEP_GUARDIAN_URL || "https://meii3s7r6y344klxifj7bzo22m0dzkcu.lambda-url.us-east-1.on.aws/"
 
+// Timeout slightly less than Vercel's max to allow graceful error response
+const LAMBDA_TIMEOUT_MS = 280000 // 280 seconds
+
 export async function POST(request: NextRequest) {
+  const requestStartTime = Date.now()
   console.log("[extract-iep] === REQUEST RECEIVED ===")
   console.log("[extract-iep] Content-Type:", request.headers.get("content-type"))
 
   try {
+    // --- TIMING: FormData parsing ---
+    const formDataStart = Date.now()
     const formData = await request.formData()
+    console.log(`[extract-iep] FormData parsed in ${Date.now() - formDataStart}ms`)
 
     // Log ALL FormData keys to see what was actually sent
     const allKeys = [...formData.keys()]
@@ -72,12 +79,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File is empty" }, { status: 400 })
     }
 
+    // --- TIMING: File to Base64 conversion ---
+    const base64Start = Date.now()
     const arrayBuffer = await file.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString("base64")
+    console.log(`[extract-iep] Base64 conversion completed in ${Date.now() - base64Start}ms`)
 
     console.log("[extract-iep] ArrayBuffer size:", arrayBuffer.byteLength)
     console.log("[extract-iep] Base64 length:", base64.length)
-    console.log("[extract-iep] Base64 first 100 chars:", base64.substring(0, 100))
 
     const payload = {
       action: "analyze",
@@ -101,19 +110,51 @@ export async function POST(request: NextRequest) {
     console.log("[extract-iep] - action:", payload.action)
     console.log("[extract-iep] - base64 length:", base64.length)
     console.log("[extract-iep] - state:", payload.state)
-    console.log("[extract-iep] - iep_date:", payload.iep_date)
-    console.log("[extract-iep] - user_notes length:", userNotes.length)
     console.log("[extract-iep] - filename:", payload.filename)
 
-    const lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    // --- TIMING: Lambda call with timeout ---
+    const lambdaStart = Date.now()
+    console.log("[extract-iep] Starting Lambda call...")
 
-    console.log("[extract-iep] Lambda response status:", lambdaResponse.status)
+    // Create AbortController for timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      console.log(`[extract-iep] Lambda timeout after ${LAMBDA_TIMEOUT_MS}ms - aborting request`)
+      controller.abort()
+    }, LAMBDA_TIMEOUT_MS)
 
+    let lambdaResponse: Response
+    try {
+      lambdaResponse = await fetch(IEP_GUARDIAN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      })
+    } catch (fetchError) {
+      clearTimeout(timeoutId)
+      const elapsed = Date.now() - lambdaStart
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.error(`[extract-iep] Lambda request aborted after ${elapsed}ms (timeout: ${LAMBDA_TIMEOUT_MS}ms)`)
+        return NextResponse.json(
+          { 
+            error: "Request timed out - the document may be too large or complex. Please try again or use a smaller file.",
+            timeout: true,
+            elapsed_ms: elapsed
+          },
+          { status: 504 }
+        )
+      }
+      throw fetchError
+    }
+    
+    clearTimeout(timeoutId)
+    console.log(`[extract-iep] Lambda responded in ${Date.now() - lambdaStart}ms with status ${lambdaResponse.status}`)
+
+    // --- TIMING: Response parsing ---
+    const parseStart = Date.now()
     const result = await lambdaResponse.json()
+    console.log(`[extract-iep] Response parsed in ${Date.now() - parseStart}ms`)
 
     console.log("[extract-iep] Lambda response keys:", Object.keys(result))
     if (result.error) {
@@ -127,9 +168,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(sanitizeObject(result))
+    // --- TIMING: Sanitization ---
+    const sanitizeStart = Date.now()
+    const sanitizedResult = sanitizeObject(result)
+    console.log(`[extract-iep] Sanitization completed in ${Date.now() - sanitizeStart}ms`)
+
+    console.log(`[extract-iep] === REQUEST COMPLETE === Total time: ${Date.now() - requestStartTime}ms`)
+    
+    return NextResponse.json(sanitizedResult)
   } catch (error) {
-    console.error("[extract-iep] EXCEPTION:", error)
+    console.error(`[extract-iep] EXCEPTION after ${Date.now() - requestStartTime}ms:`, error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 })
   }
 }
