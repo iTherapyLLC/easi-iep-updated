@@ -4,8 +4,7 @@ textarea,
 [contenteditable="true"],
 .issue-edit-textarea,
 [class*="textarea"],
-[class*="input"],
-[class*="min-h-"] {
+[class*="input"] {
   direction: ltr !important;
   unicode-bidi: normal !important;
   text-align: left !important;
@@ -28,17 +27,12 @@ textarea,
 }
 
 /* NUCLEAR FIX: Force LTR on absolutely everything */
-*, *::before, *::after {
-  direction: ltr !important;
-}
-
 html, body, #__next, #root, [data-radix-portal] {
   direction: ltr !important;
 }
 
 input, textarea, [contenteditable], 
-input[type], textarea[class],
-.min-h-\[100px\], [class*="min-h-"] {
+input[type], textarea[class] {
   direction: ltr !important;
   unicode-bidi: normal !important;
   text-align: left !important;
