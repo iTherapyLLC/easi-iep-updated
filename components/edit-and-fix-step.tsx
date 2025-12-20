@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Edit3, ArrowLeft, ArrowRight, Lightbulb } from "lucide-react"
-import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
 
 interface ComplianceIssue {
@@ -216,6 +215,9 @@ function IssueAlert({
               <label className="text-sm font-medium text-gray-700 block mb-2">Enter Date of Birth:</label>
               <input
                 type="date"
+                dir="ltr"
+                lang="en"
+                style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 aria-label="Select student date of birth"
                 aria-describedby="dob-help-text"
@@ -710,15 +712,14 @@ export function EditAndFixStep({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date of Birth</label>
-                <Input
-                  defaultValue={formatDateForDisplay(editedIEP.student.dob) || ""}
-                  onBlur={(e) => {
-                    const parsed = parseDateFlexible(e.target.value)
-                    if (parsed) updateStudentField("dob", parsed)
-                  }}
-                  placeholder="MM/DD/YYYY or June 18, 2019"
-                  type="text"
-                  style={{ direction: 'ltr', textAlign: 'left' }}
+                <input
+                  type="date"
+                  dir="ltr"
+                  lang="en"
+                  style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  defaultValue={editedIEP.student.dob || ""}
+                  onChange={(e) => updateStudentField("dob", e.target.value)}
                 />
               </div>
 
