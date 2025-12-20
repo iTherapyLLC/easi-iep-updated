@@ -1980,7 +1980,6 @@ function EditIEPStep({
               type={issue.id?.includes("dob") ? "date" : "text"}
               value={editText}
               onChange={(v) => {
-                setEditText(v)
                 handleManualFix(issue.id, v)
                 setEditingIssueId(null)
                 setEditText("")

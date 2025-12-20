@@ -46,8 +46,7 @@ interface ComplianceFixInputProps {
 // LAMBDA API FUNCTIONS
 // =============================================================================
 
-const IEP_GUARDIAN_URL = process.env.NEXT_PUBLIC_IEP_GUARDIAN_URL || 
-  "https://meii3s7r6y344klxifj7bzo22m0dzkcu.lambda-url.us-east-1.on.aws/"
+const IEP_GUARDIAN_URL = process.env.NEXT_PUBLIC_IEP_GUARDIAN_URL || ""
 
 interface AutoFixResponse {
   success: boolean
@@ -348,6 +347,7 @@ function TextInput({
   const [isLoading, setIsLoading] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidateFixResponse | null>(null)
   const [showValidation, setShowValidation] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   
   const { isListening, transcript, startListening, stopListening, isSupported: voiceSupported } = useSpeechRecognition()
 
@@ -361,11 +361,13 @@ function TextInput({
   const handleAutoFix = async () => {
     if (!issueId || !issueType || !field || !state) {
       console.error("[ComplianceFixInput] Missing required params for auto-fix")
+      setErrorMessage("Unable to auto-fix: missing required parameters")
       return
     }
 
     setIsLoading(true)
     setMode("auto_fix")
+    setErrorMessage(null)
 
     const result = await requestAutoFix({
       issueId,
@@ -382,7 +384,7 @@ function TextInput({
       setEditText(stripRTL(result.fixedText))
     } else {
       console.error("[ComplianceFixInput] Auto-fix failed:", result.error)
-      alert(`Auto-fix failed: ${result.error || "Unknown error"}`)
+      setErrorMessage(`Auto-fix failed: ${result.error || "Unknown error"}`)
       setMode("select")
     }
   }
@@ -401,9 +403,11 @@ function TextInput({
     const finalText = stripRTL(editText.trim())
     
     if (!finalText) {
-      alert("Please enter some text before saving")
+      setErrorMessage("Please enter some text before saving")
       return
     }
+
+    setErrorMessage(null)
 
     // Validate the fix if we have the required params
     if (issueId && issueType && field && state) {
@@ -501,6 +505,13 @@ function TextInput({
             Edit manually
           </Button>
         </div>
+
+        {errorMessage && (
+          <p className="text-sm text-red-600 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {errorMessage}
+          </p>
+        )}
 
         {error && (
           <p className="text-sm text-red-600 flex items-center gap-1">
@@ -678,6 +689,13 @@ function TextInput({
           Cancel
         </Button>
       </div>
+
+      {errorMessage && (
+        <p className="text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-4 h-4" />
+          {errorMessage}
+        </p>
+      )}
 
       {error && (
         <p className="text-sm text-red-600 flex items-center gap-1">
