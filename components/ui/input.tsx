@@ -14,8 +14,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     
     // Wrap onChange to strip RTL characters from input
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      e.target.value = stripRTL(e.target.value);
-      onChange?.(e);
+      if (onChange) {
+        // Create a new event-like object with sanitized value
+        const sanitizedValue = stripRTL(e.target.value);
+        // Create synthetic event with cleaned value
+        Object.defineProperty(e, 'target', {
+          writable: true,
+          value: { ...e.target, value: sanitizedValue }
+        });
+        onChange(e);
+      }
     };
     
     return (

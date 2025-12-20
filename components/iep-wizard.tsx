@@ -2507,12 +2507,14 @@ function EditIEPStep({
                     <input
                       type="date"
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Select student date of birth"
+                      aria-describedby="dob-edit-help-text"
                       onChange={(e) => {
                         setEditValue(e.target.value)
                         setEditError("")
                       }}
                     />
-                    <p className="text-xs text-gray-500">Select date from calendar</p>
+                    <p id="dob-edit-help-text" className="text-xs text-gray-500">Select date from calendar</p>
                     {editError && <p className="text-xs text-red-600">{editError}</p>}
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>

@@ -216,11 +216,13 @@ function IssueAlert({
               <input
                 type="date"
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                aria-label="Select student date of birth"
+                aria-describedby="dob-help-text"
                 onChange={(e) => {
                   if (e.target.value) onUpdateField('dob', e.target.value)
                 }}
               />
-              <p className="text-xs text-gray-500 mt-1">Select date from calendar</p>
+              <p id="dob-help-text" className="text-xs text-gray-500 mt-1">Select date from calendar</p>
             </div>
           )}
 
