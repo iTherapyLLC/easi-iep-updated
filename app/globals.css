@@ -11,7 +11,7 @@ input, textarea, [contenteditable],
 input[type], textarea[class],
 .min-h-\[100px\], [class*="min-h-"] {
   direction: ltr !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
   text-align: left !important;
   writing-mode: horizontal-tb !important;
   transform: none !important;
