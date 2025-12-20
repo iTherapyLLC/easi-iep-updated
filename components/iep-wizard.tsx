@@ -3695,14 +3695,21 @@ function IEPWizard() {
       console.error("No IEP data to download")
       return
     }
-    const score = remediation?.original_score || remediation?.score || 0
+    
+    // Calculate current score based on fixed issues
+    const totalIssues = remediation?.issues?.length || 0
+    const unresolvedIssues = (remediation?.issues || []).filter(issue => !fixedIssues.has(issue.id))
+    const currentScore = totalIssues > 0 
+      ? Math.round(((totalIssues - unresolvedIssues.length) / totalIssues) * 100)
+      : (remediation?.original_score || remediation?.score || 100)
+    
     await downloadIEP({
-      iep: extractedIEP,
+      iep: extractedIEP, // This already contains user edits from EditIEPStep
       state: selectedState || "CA",
-      complianceScore: score,
+      complianceScore: currentScore, // Use current score after fixes
       remediation,
     })
-    logEvent("IEP_DOWNLOADED", { complianceScore: score })
+    logEvent("IEP_DOWNLOADED", { complianceScore: currentScore })
   }
 
   const handleDownloadComplianceReport = async () => {
@@ -3710,14 +3717,46 @@ function IEPWizard() {
       console.error("No IEP data to download")
       return
     }
-    const score = remediation?.original_score || remediation?.score || 0
+    
+    // Filter out resolved issues - only show unresolved ones
+    const unresolvedIssues = (remediation?.issues || []).filter(
+      issue => !fixedIssues.has(issue.id)
+    )
+    
+    // Filter out resolved checks from checks_failed
+    const unresolvedChecksFailed = (remediation?.checks_failed || []).filter(
+      check => {
+        // Find the corresponding issue ID for this check
+        const issue = (remediation?.issues || []).find(i => i.title === check.name)
+        return !issue || !fixedIssues.has(issue.id)
+      }
+    )
+    
+    // Calculate current score based on unresolved issues
+    const totalIssues = remediation?.issues?.length || 0
+    const currentScore = totalIssues > 0 
+      ? Math.round(((totalIssues - unresolvedIssues.length) / totalIssues) * 100)
+      : (remediation?.original_score || remediation?.score || 100)
+    
+    // Create filtered remediation object with only unresolved issues
+    const currentRemediation = remediation ? {
+      ...remediation,
+      issues: unresolvedIssues,
+      checks_failed: unresolvedChecksFailed,
+      failed_count: unresolvedIssues.length,
+    } : null
+    
     await downloadComplianceReport({
       iep: extractedIEP,
       state: selectedState || "CA",
-      complianceScore: score,
-      remediation,
+      complianceScore: currentScore, // Use current score after fixes
+      remediation: currentRemediation, // Use filtered issues
     })
-    logEvent("COMPLIANCE_REPORT_DOWNLOADED", { complianceScore: score })
+    logEvent("COMPLIANCE_REPORT_DOWNLOADED", { 
+      complianceScore: currentScore,
+      unresolvedIssues: unresolvedIssues.length,
+      fixedIssues: fixedIssues.size
+    })
   }
 
   // Sign out handler
