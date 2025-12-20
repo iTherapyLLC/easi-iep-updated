@@ -50,35 +50,66 @@ export function ProcessingPage() {
   useEffect(() => {
     if (!uploadedFile) return
 
+    let isCancelled = false
+
     const processDocument = async () => {
       setError(null)
-      setProcessingStatus("Uploading document to IEP Guardian...")
-
-      // Step 1: Extracting student information
+      setProcessingStatus("Uploading document...")
       setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "processing" } : step)))
 
       try {
-        // Create FormData and send to API
+        // Step 1: Start the job
         const formData = new FormData()
         formData.append("file", uploadedFile)
 
-        setProcessingStatus("Analyzing document... (this may take 30-60 seconds)")
-
-        const response = await fetch("/api/extract-iep", {
+        const startResponse = await fetch("/api/extract-iep", {
           method: "POST",
           body: formData,
         })
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to process document")
+        const startData = await startResponse.json()
+
+        if (!startResponse.ok) {
+          throw new Error(startData.error || "Failed to start processing")
         }
 
-        const data = await response.json()
+        const jobId = startData.jobId
+        if (!jobId) {
+          throw new Error("No job ID returned")
+        }
+
+        console.log("[v0] Job started:", jobId)
+        setProcessingStatus("Analyzing document... This may take 1-3 minutes.")
+        setSteps((prev) => prev.map((step, idx) => (idx === 0 ? { ...step, status: "complete" } : step)))
+        setSteps((prev) => prev.map((step, idx) => (idx === 1 ? { ...step, status: "processing" } : step)))
+
+        // Step 2: Poll for completion
+        const pollForResult = async (): Promise<any> => {
+          if (isCancelled) return null
+
+          const statusResponse = await fetch(`/api/extract-iep/status/${jobId}`)
+          const statusData = await statusResponse.json()
+
+          if (statusData.status === "complete" || statusData.success) {
+            return statusData
+          }
+
+          if (statusData.error) {
+            throw new Error(statusData.error)
+          }
+
+          // Still processing - wait and poll again
+          await new Promise((resolve) => setTimeout(resolve, 5000)) // 5 second intervals
+          return pollForResult()
+        }
+
+        const data = await pollForResult()
+        
+        if (!data || isCancelled) return
 
         console.log("[v0] Full API response:", JSON.stringify(data, null, 2))
 
-        if (!data.success) {
+        if (!data.success && data.status !== "complete") {
           throw new Error(data.error || "Extraction failed")
         }
 
@@ -167,31 +198,37 @@ export function ProcessingPage() {
         setProcessingStatus(null)
         setIsComplete(true)
       } catch (err) {
-        console.error("Processing error:", err)
-        setError(err instanceof Error ? err.message : "Unknown error occurred")
-        setProcessingStatus(null)
+        if (!isCancelled) {
+          console.error("Processing error:", err)
+          setError(err instanceof Error ? err.message : "Unknown error occurred")
+          setProcessingStatus(null)
 
-        // Mark current step as error
-        setSteps((prev) => prev.map((step) => (step.status === "processing" ? { ...step, status: "error" } : step)))
+          // Mark current step as error
+          setSteps((prev) => prev.map((step) => (step.status === "processing" ? { ...step, status: "error" } : step)))
 
-        // Fall back to letting user enter info manually
-        const fallbackInfo: ExtractedInfo = {
-          name: "",
-          grade: "",
-          school: "",
-          district: "",
-          primaryDisability: "",
-          secondaryDisability: "",
-          goalCount: 0,
+          // Fall back to letting user enter info manually
+          const fallbackInfo: ExtractedInfo = {
+            name: "",
+            grade: "",
+            school: "",
+            district: "",
+            primaryDisability: "",
+            secondaryDisability: "",
+            goalCount: 0,
+          }
+          setExtractedInfo(fallbackInfo)
+          setEditedInfo(fallbackInfo)
+          setIsEditing(true)
+          setIsComplete(true)
         }
-        setExtractedInfo(fallbackInfo)
-        setEditedInfo(fallbackInfo)
-        setIsEditing(true)
-        setIsComplete(true)
       }
     }
 
     processDocument()
+
+    return () => {
+      isCancelled = true
+    }
   }, [uploadedFile, addSessionLog, setExtractedData])
 
   const handleConfirm = () => {
