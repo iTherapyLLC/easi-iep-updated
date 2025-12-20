@@ -5,6 +5,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { saveAs } from "file-saver"
 import { Button } from "@/components/ui/button"
 import { Download, Loader2 } from "lucide-react"
+import { COMPLIANT_COLOR_DOCX } from "@/utils/download-iep"
 
 interface IEPData {
   student?: {
@@ -115,7 +116,7 @@ export function DownloadIEPButton({
               new TextRun({
                 text: `${stateName || state || ""} Compliant`,
                 bold: true,
-                color: "22863A", // Always green
+                color: COMPLIANT_COLOR_DOCX, // Always green
               }),
             ],
           }),

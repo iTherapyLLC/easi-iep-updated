@@ -3,6 +3,16 @@
  * Provides client-side download functionality for IEP documents and compliance reports
  */
 
+/**
+ * Color constants for compliance badges
+ * Using consistent green color to indicate compliance across all formats
+ */
+const COMPLIANT_COLOR_HEX = "#16a34a" // Green color for PDF/HTML formats
+const COMPLIANT_COLOR_DOCX = "16A34A" // Green color for DOCX format (without #)
+
+// Export for use in other components
+export { COMPLIANT_COLOR_DOCX }
+
 interface IEPData {
   student?: {
     name?: string
@@ -196,7 +206,7 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const scoreColor = "#16a34a" // Always green - document is compliant
+  const scoreColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -471,7 +481,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const scoreColor = "#16a34a" // Always green - document is compliant
+  const scoreColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
   const checksPassed = remediation?.checks_passed || []
   const checksFailed = remediation?.checks_failed || []
   const issues = remediation?.issues || []
