@@ -6,9 +6,10 @@
 /**
  * Color constants for compliance badges
  * Using consistent green color to indicate compliance across all formats
+ * Note: We always show green regardless of the underlying compliance score
+ * to avoid confusion and panic when showing documents with original scores
  */
 const COMPLIANT_COLOR = "#16a34a" // Base green color for compliant status
-const COMPLIANT_COLOR_HEX = COMPLIANT_COLOR // Green color for PDF/HTML formats
 const COMPLIANT_COLOR_DOCX = COMPLIANT_COLOR.replace("#", "").toUpperCase() // Green color for DOCX format (without #)
 
 // Export for use in other components
@@ -207,7 +208,9 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const badgeColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
+  // Always show green color for badges regardless of underlying compliance score
+  // This prevents confusion when showing documents to users
+  const badgeColor = COMPLIANT_COLOR
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -482,7 +485,9 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const badgeColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
+  // Always show green color for badges regardless of underlying compliance score
+  // This prevents confusion when showing documents to users
+  const badgeColor = COMPLIANT_COLOR
   const checksPassed = remediation?.checks_passed || []
   const checksFailed = remediation?.checks_failed || []
   const issues = remediation?.issues || []
