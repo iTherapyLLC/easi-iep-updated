@@ -39,6 +39,7 @@ import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHa
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
+import { stripRTL } from "@/utils/strip-rtl"
 import { LogoutButton } from "@/components/logout-button"
 
 // =============================================================================
@@ -814,8 +815,8 @@ function TellUsStep({
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
         <textarea
           dir="ltr"
-          value={studentUpdate}
-          onChange={(e) => setStudentUpdate(e.target.value)}
+          value={stripRTL(studentUpdate)}
+          onChange={(e) => setStudentUpdate(stripRTL(e.target.value))}
           placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
           className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
           style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
@@ -2038,8 +2039,8 @@ function EditIEPStep({
           <div className="mt-3 space-y-2 w-full">
             <textarea
               dir="ltr"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
+              value={stripRTL(editText)}
+              onChange={(e) => setEditText(stripRTL(e.target.value))}
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
               autoFocus
@@ -2504,18 +2505,14 @@ function EditIEPStep({
                 {editingField === "student-dob" ? (
                   <div className="space-y-2">
                     <input
-                      type="text"
-                      dir="ltr"
-                      value={editValue}
+                      type="date"
+                      className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                       onChange={(e) => {
                         setEditValue(e.target.value)
                         setEditError("")
                       }}
-                      className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
-                      placeholder="MM/DD/YYYY or June 18, 2019"
                     />
-                    <p className="text-xs text-gray-500">Accepts: 06/18/2019, June 18, 2019, 2019-06-18</p>
+                    <p className="text-xs text-gray-500">Select date from calendar</p>
                     {editError && <p className="text-xs text-red-600">{editError}</p>}
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2524,13 +2521,12 @@ function EditIEPStep({
                       <Button
                         size="sm"
                         onClick={() => {
-                          const parsed = parseDateFlexible(editValue)
-                          if (parsed) {
+                          if (editValue) {
                             handleSaveEdit("student-dob", (value) => {
-                              setIep((prev) => (prev ? { ...prev, student: { ...prev.student, dob: parsed } } : null))
+                              setIep((prev) => (prev ? { ...prev, student: { ...prev.student, dob: editValue } } : null))
                             })
                           } else {
-                            setEditError("Please enter a valid date (e.g., 06/18/2019 or June 18, 2019)")
+                            setEditError("Please select a date")
                           }
                         }}
                       >
@@ -2666,8 +2662,8 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <textarea
                       dir="ltr"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={stripRTL(editValue)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
                     />
@@ -2717,8 +2713,8 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <textarea
                       dir="ltr"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={stripRTL(editValue)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
                     />
@@ -2770,8 +2766,8 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <textarea
                       dir="ltr"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={stripRTL(editValue)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
                     />
@@ -2823,8 +2819,8 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <textarea
                       dir="ltr"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      value={stripRTL(editValue)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
                     />
@@ -2898,8 +2894,8 @@ function EditIEPStep({
                       <div className="space-y-2">
                         <textarea
                           dir="ltr"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
+                          value={stripRTL(editValue)}
+                          onChange={(e) => setEditValue(stripRTL(e.target.value))}
                           className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                           style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
                         />
