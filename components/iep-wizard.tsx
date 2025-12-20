@@ -804,7 +804,7 @@ function TellUsStep({
                 logEvent("DATE_CHANGED", { newDate: e.target.value }) // Log date change
               }}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
             />
           </div>
         </div>
@@ -820,7 +820,7 @@ function TellUsStep({
           onChange={(e) => setStudentUpdate(stripRTL(e.target.value))}
           placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
           className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-          style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+          style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
         />
         <div className="flex items-center justify-between mt-3">
           <button
@@ -1970,7 +1970,7 @@ function EditIEPStep({
               value={stripRTL(editText)}
               onChange={(e) => setEditText(stripRTL(e.target.value))}
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
               autoFocus
               aria-label={`Enter corrected information for: ${issue.title}`}
               aria-required="true"
@@ -2260,7 +2260,7 @@ function EditIEPStep({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2305,7 +2305,7 @@ function EditIEPStep({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2350,7 +2350,7 @@ function EditIEPStep({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2395,7 +2395,7 @@ function EditIEPStep({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2597,7 +2597,7 @@ function EditIEPStep({
                       value={stripRTL(editValue)}
                       onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2648,7 +2648,7 @@ function EditIEPStep({
                       value={stripRTL(editValue)}
                       onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2701,7 +2701,7 @@ function EditIEPStep({
                       value={stripRTL(editValue)}
                       onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2754,7 +2754,7 @@ function EditIEPStep({
                       value={stripRTL(editValue)}
                       onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2829,7 +2829,7 @@ function EditIEPStep({
                           value={stripRTL(editValue)}
                           onChange={(e) => setEditValue(stripRTL(e.target.value))}
                           className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                          style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+                          style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                         />
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -3370,7 +3370,7 @@ function ClinicalReviewStep({
               onKeyDown={handleKeyDown}
               placeholder="Ask a question about the IEP..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ direction: 'ltr', unicodeBidi: 'plaintext', textAlign: 'left' }}
+              style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
               disabled={isSending || isLoading}
             />
             <Button onClick={handleSendMessage} disabled={isSending || isLoading || !inputValue.trim()}>
