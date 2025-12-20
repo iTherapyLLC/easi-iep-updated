@@ -3590,6 +3590,50 @@ function IEPWizard() {
     setIsFixing(false)
   }
 
+  // Helper function to poll job status for async processing
+  const pollJobStatus = async (jobId: string, maxAttempts = 60, intervalMs = 5000): Promise<any> => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      console.log(`[v0] POLL: Attempt ${attempt + 1}/${maxAttempts} for job ${jobId}`)
+      
+      try {
+        const response = await fetch(`/api/extract-iep/status/${jobId}`)
+        
+        if (!response.ok) {
+          // For non-200 responses, try to extract error message
+          const errorData = await response.json().catch(() => ({ 
+            error: `Status check failed with HTTP ${response.status} ${response.statusText}` 
+          }))
+          throw new Error(errorData.error || `Status check failed with status ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        if (data.status === 'complete') {
+          console.log(`[v0] POLL: Job ${jobId} completed`)
+          return data
+        }
+        
+        if (data.status === 'failed' || data.status === 'error') {
+          throw new Error(data.error || 'Job processing failed')
+        }
+        
+        // Still processing, wait and retry
+        console.log(`[v0] POLL: Job ${jobId} still processing, waiting ${intervalMs}ms...`)
+        await new Promise(resolve => setTimeout(resolve, intervalMs))
+      } catch (error) {
+        // If this is our last attempt, throw the error
+        if (attempt === maxAttempts - 1) {
+          throw error
+        }
+        // For network errors or temporary failures, log and retry
+        console.warn(`[v0] POLL: Error on attempt ${attempt + 1}, will retry:`, error)
+        await new Promise(resolve => setTimeout(resolve, intervalMs))
+      }
+    }
+    
+    throw new Error(`Job ${jobId} timed out after ${maxAttempts * intervalMs / 1000} seconds`)
+  }
+
   // Build IEP - call Lambda
   const handleStartBuilding = async (isRetry = false) => {
     console.log("[v0] BUILD: handleStartBuilding called, isRetry:", isRetry)
@@ -3629,11 +3673,24 @@ function IEPWizard() {
 
       console.log("[v0] BUILD: Response status:", response.status)
 
-      const data = await response.json()
+      let data = await response.json()
       console.log("[v0] BUILD: Response data received")
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to process IEP")
+      }
+
+      // Check if this is an async job that needs polling
+      if (data.status === 'processing' && data.jobId) {
+        console.log(`[v0] BUILD: Async job started, jobId: ${data.jobId}`)
+        setBuildTasks((prev) =>
+          prev.map((t) =>
+            t.id === "extract" ? { ...t, label: "Processing document (this may take a few minutes)..." } : t,
+          ),
+        )
+        
+        // Poll for completion
+        data = await pollJobStatus(data.jobId)
       }
 
       setBuildTasks((prev) =>
