@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { sanitizeObject } from "@/utils/strip-rtl"
 
 // This route connects the frontend to IEP Guardian's remediation capabilities
 // Guardian now returns both extraction AND remediation in one call
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        remediation: result.remediation,
+        remediation: sanitizeObject(result.remediation),
       })
     }
 

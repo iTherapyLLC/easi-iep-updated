@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Check, Loader2, AlertCircle, FileText, Edit2, X, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 
 interface ProcessingStep {
   id: string
@@ -81,7 +82,10 @@ export function ProcessingPage() {
           throw new Error(data.error || "Extraction failed")
         }
 
-        const iep = data.iep || {}
+        // Sanitize the entire response to remove RTL characters
+        const sanitizedData = sanitizeObject(data)
+
+        const iep = sanitizedData.iep || {}
 
         const student = iep.student || {}
         const eligibility = iep.eligibility || {}
@@ -328,7 +332,7 @@ export function ProcessingPage() {
                         <Input
                           id="name"
                           value={displayInfo.name}
-                          onChange={(e) => updateEditedInfo("name", e.target.value)}
+                          onChange={(e) => updateEditedInfo("name", stripRTL(e.target.value))}
                           placeholder="Enter student name"
                         />
                       </div>
@@ -370,7 +374,7 @@ export function ProcessingPage() {
                     <Input
                       id="grade"
                       value={displayInfo.grade}
-                      onChange={(e) => updateEditedInfo("grade", e.target.value)}
+                      onChange={(e) => updateEditedInfo("grade", stripRTL(e.target.value))}
                       placeholder="e.g., 2nd Grade"
                     />
                   </div>
@@ -381,7 +385,7 @@ export function ProcessingPage() {
                     <Input
                       id="school"
                       value={displayInfo.school}
-                      onChange={(e) => updateEditedInfo("school", e.target.value)}
+                      onChange={(e) => updateEditedInfo("school", stripRTL(e.target.value))}
                       placeholder="e.g., Lincoln Elementary"
                     />
                   </div>
@@ -392,7 +396,7 @@ export function ProcessingPage() {
                     <Input
                       id="district"
                       value={displayInfo.district}
-                      onChange={(e) => updateEditedInfo("district", e.target.value)}
+                      onChange={(e) => updateEditedInfo("district", stripRTL(e.target.value))}
                       placeholder="e.g., Springfield USD"
                     />
                   </div>
@@ -403,7 +407,7 @@ export function ProcessingPage() {
                     <Input
                       id="primaryDisability"
                       value={displayInfo.primaryDisability}
-                      onChange={(e) => updateEditedInfo("primaryDisability", e.target.value)}
+                      onChange={(e) => updateEditedInfo("primaryDisability", stripRTL(e.target.value))}
                       placeholder="e.g., Other Health Impairment (OHI)"
                     />
                   </div>
@@ -414,7 +418,7 @@ export function ProcessingPage() {
                     <Input
                       id="secondaryDisability"
                       value={displayInfo.secondaryDisability}
-                      onChange={(e) => updateEditedInfo("secondaryDisability", e.target.value)}
+                      onChange={(e) => updateEditedInfo("secondaryDisability", stripRTL(e.target.value))}
                       placeholder="e.g., Specific Learning Disability (SLD)"
                     />
                   </div>

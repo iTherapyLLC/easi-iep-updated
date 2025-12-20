@@ -41,7 +41,7 @@ import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHa
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
-import { stripRTL } from "@/utils/strip-rtl"
+import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
 
@@ -827,7 +827,7 @@ function TellUsStep({
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
         <Textarea
           value={studentUpdate}
-          onChange={(e) => setStudentUpdate(e.target.value)}
+          onChange={(e) => setStudentUpdate(stripRTL(e.target.value))}
           placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
           className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
         />
@@ -1976,7 +1976,7 @@ function EditIEPStep({
           <div className="mt-3 space-y-2 w-full">
             <Textarea
               value={editText}
-              onChange={(e) => setEditText(e.target.value)}
+              onChange={(e) => setEditText(stripRTL(e.target.value))}
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               autoFocus
               aria-label={`Enter corrected information for: ${issue.title}`}
@@ -2307,7 +2307,7 @@ function EditIEPStep({
                     <Input
                       type="text"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2350,7 +2350,7 @@ function EditIEPStep({
                     <Input
                       type="text"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2393,7 +2393,7 @@ function EditIEPStep({
                     <Input
                       type="text"
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2488,7 +2488,7 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <select
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 bg-background"
                     >
                       <option value="">Select IDEA disability category...</option>
@@ -2593,7 +2593,7 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <Textarea
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2642,7 +2642,7 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <Textarea
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2693,7 +2693,7 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <Textarea
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2744,7 +2744,7 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <Textarea
                       value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex gap-2 justify-end">
@@ -2817,7 +2817,7 @@ function EditIEPStep({
                       <div className="space-y-2">
                         <Textarea
                           value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
+                          onChange={(e) => setEditValue(stripRTL(e.target.value))}
                           className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                         <div className="flex gap-2 justify-end">
@@ -3354,7 +3354,7 @@ function ClinicalReviewStep({
               ref={inputRef} // Assign ref to the input element
               type="text"
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => setInputValue(stripRTL(e.target.value))}
               onKeyDown={handleKeyDown}
               placeholder="Ask a question about the IEP..."
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

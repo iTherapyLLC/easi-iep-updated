@@ -19,7 +19,7 @@ import {
   Users,
   Target,
 } from "lucide-react"
-import { stripRTL } from "@/utils/strip-rtl"
+import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 
 // ============================================================================
 // TYPES
@@ -118,7 +118,8 @@ export function DraftReviewPage() {
       const data = await response.json()
 
       if (data.success && data.remediation) {
-        setRemediation(data.remediation)
+        // Sanitize the remediation data to remove RTL characters
+        setRemediation(sanitizeObject(data.remediation))
         addSessionLog("Compliance analysis completed")
       } else {
         throw new Error(data.error || "Failed to analyze compliance")
