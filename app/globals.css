@@ -33,7 +33,7 @@ textarea,
 [class*="textarea"],
 [class*="input"] {
   direction: ltr !important;
-  unicode-bidi: normal !important;
+  unicode-bidi: plaintext !important;
   text-align: left !important;
   transform: none !important;
   -webkit-transform: none !important;
@@ -49,7 +49,7 @@ textarea,
 [type="url"],
 [type="number"] {
   direction: ltr !important;
-  unicode-bidi: normal !important;
+  unicode-bidi: plaintext !important;
   text-align: left !important;
 }
 
@@ -61,11 +61,20 @@ html, body, #__next, #root, [data-radix-portal] {
 input, textarea, [contenteditable], 
 input[type], textarea[class] {
   direction: ltr !important;
-  unicode-bidi: normal !important;
+  unicode-bidi: plaintext !important;
   text-align: left !important;
   writing-mode: horizontal-tb !important;
   transform: none !important;
   -webkit-transform: none !important;
+}
+
+/* Date inputs need special handling */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+  text-align: left !important;
 }
 
 @import "tailwindcss";
@@ -212,7 +221,7 @@ input,
 textarea,
 [contenteditable] {
   direction: ltr !important;
-  unicode-bidi: normal !important;
+  unicode-bidi: plaintext !important;
   text-align: left !important;
   transform: none !important;
 }
