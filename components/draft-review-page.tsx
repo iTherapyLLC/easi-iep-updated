@@ -19,6 +19,7 @@ import {
   Users,
   Target,
 } from "lucide-react"
+import { stripRTL } from "@/utils/strip-rtl"
 
 // ============================================================================
 // TYPES
@@ -44,6 +45,19 @@ interface RemediationData {
   issues: ComplianceIssue[]
   summary: string
   priority_order: string[]
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Sanitize text by stripping RTL/bidi markers and trimming whitespace.
+ * Use this for all compliance issue text displays to prevent reverse rendering.
+ */
+const sanitizeText = (text: string | null | undefined): string => {
+  if (!text) return ""
+  return stripRTL(text).trim()
 }
 
 // ============================================================================
@@ -574,7 +588,7 @@ export function DraftReviewPage() {
                               <p className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">
                                 Current (Non-Compliant)
                               </p>
-                              <p className="text-sm text-red-800 font-mono">{issue.current_text}</p>
+                              <p className="text-sm text-red-800 font-mono" dir="ltr">{sanitizeText(issue.current_text)}</p>
                             </div>
 
                             {/* Suggested Fix */}
@@ -583,7 +597,7 @@ export function DraftReviewPage() {
                                 <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">
                                   Suggested Fix
                                 </p>
-                                <p className="text-sm text-emerald-800">{issue.suggested_fix}</p>
+                                <p className="text-sm text-emerald-800" dir="ltr">{sanitizeText(issue.suggested_fix)}</p>
                                 <p className="text-xs text-emerald-600 mt-2 italic">{issue.fix_explanation}</p>
                               </div>
                             )}

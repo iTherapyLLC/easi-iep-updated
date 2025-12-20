@@ -80,6 +80,15 @@ const safeRender = (value: unknown, fallback = "Not specified"): string => {
 }
 
 /**
+ * Sanitize text by stripping RTL/bidi markers and trimming whitespace.
+ * Use this for all compliance issue text displays to prevent reverse rendering.
+ */
+const sanitizeText = (text: string | null | undefined): string => {
+  if (!text) return ""
+  return stripRTL(text).trim()
+}
+
+/**
  * Helper functions to extract data from IEP with multiple possible field paths.
  * The Lambda may return data in different structures, so we check all possibilities.
  */
@@ -1951,7 +1960,7 @@ function EditIEPStep({
         {issue.current_text && (
           <div className="mb-3 p-3 bg-white/50 rounded-lg border border-gray-200">
             <p className="text-xs font-medium text-muted-foreground mb-1">Current Text:</p>
-            <p className="text-sm text-foreground italic">"{safeRender(issue.current_text)}"</p>
+            <p className="text-sm text-foreground italic" dir="ltr">"{sanitizeText(issue.current_text)}"</p>
           </div>
         )}
 
@@ -1959,7 +1968,7 @@ function EditIEPStep({
         {hasRealFix && (
           <div className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
             <p className="text-xs font-medium text-green-700 mb-1">Suggested Fix:</p>
-            <p className="text-sm text-green-800">{issue.suggested_fix}</p>
+            <p className="text-sm text-green-800" dir="ltr">{sanitizeText(issue.suggested_fix)}</p>
           </div>
         )}
 
@@ -2029,7 +2038,7 @@ function EditIEPStep({
             <Button
               onClick={() => {
                 setEditingIssueId(issue.id)
-                setEditText(issue.current_text || issue.suggested_fix || "")
+                setEditText(sanitizeText(issue.current_text || issue.suggested_fix || ""))
               }}
               size="sm"
               variant="outline"
