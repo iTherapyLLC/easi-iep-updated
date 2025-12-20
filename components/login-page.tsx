@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, LogIn, CheckCircle2, Sparkles } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 // PRESET PASSWORDS
 const VALID_PASSWORDS = ["easi2026", "iepguardian", "innervoice", "specialed"]
@@ -229,10 +230,9 @@ export default function LoginPage() {
                   Password
                 </label>
                 <div className="relative group">
-                  <input
+                  <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    dir="ltr"
                     value={password}
                     onChange={handlePasswordChange}
                     onFocus={() => {
@@ -246,7 +246,6 @@ export default function LoginPage() {
                         ? "border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-[1.02]"
                         : "hover:border-blue-300"
                     } ${keystrokes > 0 ? "animate-keystroke-ripple" : ""}`}
-                    style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     autoComplete="current-password"
                     required
                   />

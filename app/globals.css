@@ -1,15 +1,38 @@
-/* NUCLEAR FIX: Force LTR on absolutely everything */
-*, *::before, *::after {
+/* FORCE LTR ON ALL INPUTS - ULTIMATE NUCLEAR OPTION */
+input,
+textarea,
+[contenteditable="true"],
+.issue-edit-textarea,
+[class*="textarea"],
+[class*="input"] {
   direction: ltr !important;
+  unicode-bidi: normal !important;
+  text-align: left !important;
+  transform: none !important;
+  -webkit-transform: none !important;
+  writing-mode: horizontal-tb !important;
 }
 
+/* Also target by attribute */
+[type="text"],
+[type="email"],
+[type="password"],
+[type="search"],
+[type="tel"],
+[type="url"],
+[type="number"] {
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  text-align: left !important;
+}
+
+/* NUCLEAR FIX: Force LTR on absolutely everything */
 html, body, #__next, #root, [data-radix-portal] {
   direction: ltr !important;
 }
 
 input, textarea, [contenteditable], 
-input[type], textarea[class],
-.min-h-\[100px\], [class*="min-h-"] {
+input[type], textarea[class] {
   direction: ltr !important;
   unicode-bidi: normal !important;
   text-align: left !important;

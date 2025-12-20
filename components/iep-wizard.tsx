@@ -34,6 +34,8 @@ import {
   ClipboardCopy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
@@ -814,13 +816,11 @@ function TellUsStep({
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-        <textarea
-          dir="ltr"
-          value={stripRTL(studentUpdate)}
-          onChange={(e) => setStudentUpdate(stripRTL(e.target.value))}
+        <Textarea
+          value={studentUpdate}
+          onChange={(e) => setStudentUpdate(e.target.value)}
           placeholder="Example: Jamie has made good progress on reading fluency - went from 45 to 62 words per minute. Still struggling with math word problems. Behavior has improved with the new check-in system..."
           className="w-full h-40 px-4 py-3 border border-slate-200 rounded-lg resize-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-          style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
         />
         <div className="flex items-center justify-between mt-3">
           <button
@@ -1965,12 +1965,10 @@ function EditIEPStep({
 
         {editingIssueId === issue.id ? (
           <div className="mt-3 space-y-2 w-full">
-            <textarea
-              dir="ltr"
-              value={stripRTL(editText)}
-              onChange={(e) => setEditText(stripRTL(e.target.value))}
+            <Textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
               className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
               autoFocus
               aria-label={`Enter corrected information for: ${issue.title}`}
               aria-required="true"
@@ -2254,13 +2252,11 @@ function EditIEPStep({
                 </div>
                 {editingField === "student-name" ? (
                   <div className="space-y-2">
-                    <input
+                    <Input
                       type="text"
-                      dir="ltr"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2299,13 +2295,11 @@ function EditIEPStep({
                 </div>
                 {editingField === "student-grade" ? (
                   <div className="space-y-2">
-                    <input
+                    <Input
                       type="text"
-                      dir="ltr"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2344,13 +2338,11 @@ function EditIEPStep({
                 </div>
                 {editingField === "student-school" ? (
                   <div className="space-y-2">
-                    <input
+                    <Input
                       type="text"
-                      dir="ltr"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2389,13 +2381,11 @@ function EditIEPStep({
                 </div>
                 {editingField === "student-district" ? (
                   <div className="space-y-2">
-                    <input
+                    <Input
                       type="text"
-                      dir="ltr"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2592,12 +2582,10 @@ function EditIEPStep({
                 </div>
                 {editingField === "plaafp-strengths" ? (
                   <div className="space-y-2">
-                    <textarea
-                      dir="ltr"
-                      value={stripRTL(editValue)}
-                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2643,12 +2631,10 @@ function EditIEPStep({
                 </div>
                 {editingField === "plaafp-academic" ? (
                   <div className="space-y-2">
-                    <textarea
-                      dir="ltr"
-                      value={stripRTL(editValue)}
-                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2696,12 +2682,10 @@ function EditIEPStep({
                 </div>
                 {editingField === "plaafp-functional" ? (
                   <div className="space-y-2">
-                    <textarea
-                      dir="ltr"
-                      value={stripRTL(editValue)}
-                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2749,12 +2733,10 @@ function EditIEPStep({
                 </div>
                 {editingField === "plaafp-impact" ? (
                   <div className="space-y-2">
-                    <textarea
-                      dir="ltr"
-                      value={stripRTL(editValue)}
-                      onChange={(e) => setEditValue(stripRTL(e.target.value))}
+                    <Textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
                       className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                     />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -2824,12 +2806,10 @@ function EditIEPStep({
 
                     {editingField === `goal-${idx}` ? (
                       <div className="space-y-2">
-                        <textarea
-                          dir="ltr"
-                          value={stripRTL(editValue)}
-                          onChange={(e) => setEditValue(stripRTL(e.target.value))}
+                        <Textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
                           className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
-                          style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                         />
                         <div className="flex gap-2 justify-end">
                           <Button size="sm" variant="outline" onClick={handleCancelEdit}>
@@ -3361,10 +3341,9 @@ function ClinicalReviewStep({
         {/* Input Area */}
         <div className="border-t border-gray-200 p-4">
           <div className="flex gap-2">
-            <input
+            <Input
               ref={inputRef} // Assign ref to the input element
               type="text"
-              dir="ltr"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
