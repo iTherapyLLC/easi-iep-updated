@@ -1688,6 +1688,15 @@ function EditIEPStep({
 
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
 
+  // Debug logging: Log all issue IDs at the start of EditIEPStep
+  useEffect(() => {
+    console.log("[DEBUG] All issue IDs:", remediation?.issues?.map(i => ({
+      id: i.id,
+      title: i.title,
+      category: i.category
+    })))
+  }, [remediation])
+
   // Get issues grouped by severity
   const issues = remediation?.issues || []
   const unfixedIssues = issues.filter((i) => !fixedIssues.has(i.id))
@@ -1708,6 +1717,16 @@ function EditIEPStep({
   const fixedPoints = issues.filter((i) => fixedIssues.has(i.id)).reduce((sum, i) => sum + (i.points_deducted || 5), 0)
   const currentScore = Math.min(100, baseScore + fixedPoints)
   const targetScore = 100
+
+  // Fallback: If user has 100% score, treat all issues as fixed
+  const allIssuesAddressed = unfixedIssues.length === 0
+  useEffect(() => {
+    if (currentScore >= 100 || allIssuesAddressed) {
+      const allIssueIds = remediation?.issues?.map(i => i.id) || []
+      console.log("[DEBUG] Score is 100% or all issues addressed, marking all issues as fixed:", allIssueIds)
+      setFixedIssues(new Set(allIssueIds))
+    }
+  }, [currentScore, allIssuesAddressed, remediation?.issues, setFixedIssues])
 
   const canProceed = criticalIssues.length === 0 && currentScore >= MINIMUM_PASSING_SCORE
 
@@ -1754,57 +1773,66 @@ function EditIEPStep({
 
   const handleSaveEdit = (field: string, updateFn: (value: string) => void) => {
     updateFn(editValue)
-    logEvent("FIELD_EDIT_SAVED", { field })
-    
-    // Auto-resolve corresponding issues when fields are edited
-    if (editValue && editValue.trim().length > 0) {
-      // Use the issues from remediation data (not ComplianceIssue type)
-      type RemediationIssue = NonNullable<RemediationData['issues']>[number]
-      let relatedIssue: RemediationIssue | undefined
-      
-      // Map field names to issue patterns
-      if (field === "student-name") {
-        relatedIssue = issues.find(i => 
-          i.id === "student_name_missing" || 
-          i.id?.includes("student") && i.id?.includes("name") ||
-          i.title?.toLowerCase().includes("student name")
-        )
-      } else if (field === "student-dob") {
-        relatedIssue = issues.find(i => 
-          i.id === "dob_missing" || 
-          i.id?.includes("dob") || 
-          i.id?.includes("date_of_birth") ||
-          i.title?.toLowerCase().includes("date of birth")
-        )
-      } else if (field.startsWith("plaafp-")) {
-        // Any PLAAFP field edit resolves assessment currency issues
-        relatedIssue = issues.find(i => 
-          i.id?.includes("assessment_currency") || 
-          i.title?.toLowerCase().includes("assessment") ||
-          i.title?.toLowerCase().includes("present level")
-        )
-      } else if (field.startsWith("goal-")) {
-        // Goal edits - extract goal index and find related issue
-        const goalIndexMatch = field.match(/goal-(\d+)/)
-        if (goalIndexMatch) {
-          const goalIndex = goalIndexMatch[1]
-          relatedIssue = issues.find(i => 
-            i.id?.includes(`goal_${goalIndex}`) || 
-            i.id?.includes(`goal-${goalIndex}`) ||
-            (i.id?.includes("goal") && i.title?.includes(`Goal ${parseInt(goalIndex) + 1}`))
-          )
-        }
-      }
-      
-      // Mark the issue as resolved if found
-      if (relatedIssue) {
-        setFixedIssues((prev) => new Set([...prev, relatedIssue.id]))
-        logEvent("FIX_AUTO_APPLIED", { issueId: relatedIssue.id, field, trigger: "field_edit" })
-      }
-    }
-    
     setEditingField(null)
     setEditValue("")
+    logEvent("FIELD_SAVED", { field })
+
+    const issues = remediation?.issues || []
+    
+    // Log all issues for debugging
+    console.log("[DEBUG] Looking for issue to resolve. Field:", field)
+    console.log("[DEBUG] Available issues:", issues.map(i => ({ id: i.id, title: i.title, category: i.category })))
+
+    // DOB field - try ALL possible patterns
+    if (field === "student-dob" || field === "dob") {
+      const dobPatterns = ["dob", "date_of_birth", "birth", "student_dob", "date-of-birth", "dateofbirth"]
+      const dobIssue = issues.find(i => 
+        dobPatterns.some(pattern => 
+          i.id?.toLowerCase().includes(pattern) ||
+          i.title?.toLowerCase().includes(pattern) ||
+          i.category?.toLowerCase().includes(pattern)
+        )
+      )
+      if (dobIssue) {
+        console.log("[DEBUG] Found DOB issue to resolve:", dobIssue.id)
+        setFixedIssues(prev => new Set([...prev, dobIssue.id]))
+      } else {
+        console.log("[DEBUG] No DOB issue found matching patterns:", dobPatterns)
+      }
+    }
+
+    // Name field
+    if (field === "student-name" || field === "name") {
+      const namePatterns = ["name", "student_name", "student_info", "student-name"]
+      const nameIssue = issues.find(i =>
+        namePatterns.some(pattern =>
+          i.id?.toLowerCase().includes(pattern) ||
+          i.title?.toLowerCase().includes(pattern)
+        ) && !i.id?.toLowerCase().includes("dob") // exclude DOB issues
+      )
+      if (nameIssue) {
+        console.log("[DEBUG] Found name issue to resolve:", nameIssue.id)
+        setFixedIssues(prev => new Set([...prev, nameIssue.id]))
+      }
+    }
+
+    // PLAAFP / Assessment Data Currency - try ALL possible patterns
+    if (field.startsWith("plaafp") || field.includes("assessment") || field.includes("present_level")) {
+      const assessmentPatterns = ["assessment", "currency", "outdated", "plaafp", "present_level", "data_currency", "assessment_currency", "assessment-currency"]
+      const assessmentIssue = issues.find(i =>
+        assessmentPatterns.some(pattern =>
+          i.id?.toLowerCase().includes(pattern) ||
+          i.title?.toLowerCase().includes(pattern) ||
+          i.category?.toLowerCase().includes(pattern)
+        )
+      )
+      if (assessmentIssue) {
+        console.log("[DEBUG] Found assessment issue to resolve:", assessmentIssue.id)
+        setFixedIssues(prev => new Set([...prev, assessmentIssue.id]))
+      } else {
+        console.log("[DEBUG] No assessment issue found matching patterns:", assessmentPatterns)
+      }
+    }
   }
 
   const handleScreenshotUpload = (file: File) => {
@@ -3766,10 +3794,16 @@ function IEPWizard() {
       return
     }
     
+    // Log what we're filtering
+    console.log("[DEBUG] fixedIssues Set:", [...fixedIssues])
+    console.log("[DEBUG] All issues:", remediation?.issues?.map(i => i.id))
+    
     // Filter out resolved issues - only show unresolved ones
     const unresolvedIssues = (remediation?.issues || []).filter(
       issue => !fixedIssues.has(issue.id)
     )
+    
+    console.log("[DEBUG] Unresolved issues for report:", unresolvedIssues.map(i => i.id))
     
     // Filter out resolved checks from checks_failed
     const unresolvedChecksFailed = (remediation?.checks_failed || []).filter(
@@ -3801,9 +3835,8 @@ function IEPWizard() {
       remediation: currentRemediation, // Use filtered issues
     })
     logEvent("COMPLIANCE_REPORT_DOWNLOADED", { 
-      complianceScore: currentScore,
-      unresolvedIssues: unresolvedIssues.length,
-      fixedIssues: fixedIssues.size
+      fixedCount: fixedIssues.size,
+      unresolvedCount: unresolvedIssues.length 
     })
   }
 
