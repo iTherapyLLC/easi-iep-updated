@@ -2,6 +2,7 @@ export const runtime = "nodejs"
 export const maxDuration = 300
 
 import { type NextRequest, NextResponse } from "next/server"
+import { sanitizeObject } from "@/utils/strip-rtl"
 
 const IEP_GUARDIAN_URL =
   process.env.IEP_GUARDIAN_URL || "https://meii3s7r6y344klxifj7bzo22m0dzkcu.lambda-url.us-east-1.on.aws/"
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json(sanitizeObject(result))
   } catch (error) {
     console.error("[extract-iep] EXCEPTION:", error)
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 })

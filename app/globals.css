@@ -1,3 +1,21 @@
+/* ============================================================================
+ * FORCE LTR TEXT DIRECTION PLATFORM-WIDE - ENGLISH ONLY
+ * RTL characters should NEVER appear anywhere in this application.
+ * ============================================================================ */
+
+/* Force LTR on all elements */
+*, *::before, *::after {
+  direction: ltr !important;
+  unicode-bidi: plaintext;
+}
+
+/* Critical: Force LTR on all input fields and editable content */
+input, textarea, [contenteditable] {
+  direction: ltr !important;
+  unicode-bidi: plaintext !important;
+  text-align: left !important;
+}
+
 /* FORCE LTR ON ALL INPUTS - ULTIMATE NUCLEAR OPTION */
 input,
 textarea,
