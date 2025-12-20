@@ -45,6 +45,7 @@ import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
 import BuildingProgressAnimated from "@/components/BuildingProgressAnimated"
+import AnimatedHeader from "@/components/AnimatedHeader"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -3719,6 +3720,15 @@ function IEPWizard() {
     logEvent("COMPLIANCE_REPORT_DOWNLOADED", { complianceScore: score })
   }
 
+  // Sign out handler
+  const handleSignOut = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("isAuthenticated")
+      localStorage.removeItem("authTimestamp")
+      window.location.href = "/login"
+    }
+  }
+
   // Progress steps for header
   const progressSteps = [
     { id: "upload", label: "Upload Materials" },
@@ -3791,16 +3801,7 @@ function IEPWizard() {
       {/* Progress Header */}
       <div className="pt-8 pb-4 px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex-1" />
-            <div className="flex items-center gap-3">
-              <img src="/easi-logo.png" alt="EASI IEP" className="h-10 w-auto hover-logo" />
-              <span className="text-xl font-semibold text-slate-700 tracking-tight">EASI IEP</span>
-            </div>
-            <div className="flex-1 flex justify-end">
-              <LogoutButton />
-            </div>
-          </div>
+          <AnimatedHeader onSignOut={handleSignOut} showSignOut={true} />
 
           <div className="flex items-center justify-between mb-8">
             {progressSteps.map((step, index) => {
