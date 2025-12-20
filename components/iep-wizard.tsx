@@ -40,7 +40,6 @@ import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
-import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
@@ -2435,6 +2434,9 @@ function EditIEPStep({
                   <div className="space-y-2">
                     <input
                       type="date"
+                      dir="ltr"
+                      lang="en"
+                      style={{ direction: 'ltr', unicodeBidi: 'normal', textAlign: 'left' }}
                       className="w-full p-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500"
                       aria-label="Select student date of birth"
                       aria-describedby="dob-edit-help-text"
