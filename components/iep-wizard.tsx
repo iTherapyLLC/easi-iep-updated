@@ -3600,7 +3600,9 @@ function IEPWizard() {
         
         if (!response.ok) {
           // For non-200 responses, try to extract error message
-          const errorData = await response.json().catch(() => ({ error: 'Status check failed' }))
+          const errorData = await response.json().catch(() => ({ 
+            error: `Status check failed with HTTP ${response.status} ${response.statusText}` 
+          }))
           throw new Error(errorData.error || `Status check failed with status ${response.status}`)
         }
         
@@ -3629,7 +3631,7 @@ function IEPWizard() {
       }
     }
     
-    throw new Error('Job timed out after maximum polling attempts')
+    throw new Error(`Job ${jobId} timed out after ${maxAttempts * intervalMs / 1000} seconds`)
   }
 
   // Build IEP - call Lambda
