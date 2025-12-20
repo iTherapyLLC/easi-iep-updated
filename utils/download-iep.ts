@@ -7,8 +7,9 @@
  * Color constants for compliance badges
  * Using consistent green color to indicate compliance across all formats
  */
-const COMPLIANT_COLOR_HEX = "#16a34a" // Green color for PDF/HTML formats
-const COMPLIANT_COLOR_DOCX = "16A34A" // Green color for DOCX format (without #)
+const COMPLIANT_COLOR = "#16a34a" // Base green color for compliant status
+const COMPLIANT_COLOR_HEX = COMPLIANT_COLOR // Green color for PDF/HTML formats
+const COMPLIANT_COLOR_DOCX = COMPLIANT_COLOR.replace("#", "").toUpperCase() // Green color for DOCX format (without #)
 
 // Export for use in other components
 export { COMPLIANT_COLOR_DOCX }
@@ -206,7 +207,7 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const scoreColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
+  const badgeColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -275,7 +276,7 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
       text-align: center;
       margin-bottom: 30px;
       padding-bottom: 20px;
-      border-bottom: 3px solid ${scoreColor};
+      border-bottom: 3px solid ${badgeColor};
     }
     h1 {
       color: #1e40af;
@@ -284,7 +285,7 @@ const generateIEPHTML = (params: DownloadIEPParams): string => {
     }
     .compliance-badge {
       display: inline-block;
-      background: ${scoreColor};
+      background: ${badgeColor};
       color: white;
       padding: 8px 20px;
       border-radius: 20px;
@@ -481,7 +482,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
   const studentName = getStudentName(iep)
   const today = new Date().toLocaleDateString()
 
-  const scoreColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
+  const badgeColor = COMPLIANT_COLOR_HEX // Always green - document is compliant
   const checksPassed = remediation?.checks_passed || []
   const checksFailed = remediation?.checks_failed || []
   const issues = remediation?.issues || []
@@ -553,7 +554,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       text-align: center;
       margin-bottom: 30px;
       padding-bottom: 20px;
-      border-bottom: 3px solid ${scoreColor};
+      border-bottom: 3px solid ${badgeColor};
     }
     h1 {
       color: #1e40af;
@@ -565,7 +566,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
       width: 120px;
       height: 120px;
       border-radius: 50%;
-      background: ${scoreColor};
+      background: ${badgeColor};
       color: white;
       align-items: center;
       justify-content: center;
@@ -575,7 +576,7 @@ const generateComplianceReportHTML = (params: DownloadComplianceReportParams): s
     }
     .compliance-badge {
       display: inline-block;
-      background: ${scoreColor};
+      background: ${badgeColor};
       color: white;
       padding: 8px 20px;
       border-radius: 20px;
