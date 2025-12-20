@@ -3795,8 +3795,10 @@ function IEPWizard() {
     }
     
     // Log what we're filtering
+    console.log("[DEBUG] handleDownloadComplianceReport called")
     console.log("[DEBUG] fixedIssues Set:", [...fixedIssues])
-    console.log("[DEBUG] All issues:", remediation?.issues?.map(i => i.id))
+    console.log("[DEBUG] All issue IDs:", remediation?.issues?.map(i => ({ id: i.id, title: i.title })))
+    console.log("[DEBUG] All checks_failed:", remediation?.checks_failed?.map(c => c.name))
     
     // Filter out resolved issues - only show unresolved ones
     const unresolvedIssues = (remediation?.issues || []).filter(
@@ -3808,9 +3810,60 @@ function IEPWizard() {
     // Filter out resolved checks from checks_failed
     const unresolvedChecksFailed = (remediation?.checks_failed || []).filter(
       check => {
-        // Find the corresponding issue ID for this check
-        const issue = (remediation?.issues || []).find(i => i.title === check.name)
-        return !issue || !fixedIssues.has(issue.id)
+        const checkNameLower = check.name?.toLowerCase() || ""
+        
+        // DOB check - match any fixed DOB-related issue
+        if (checkNameLower.includes("birth") || checkNameLower.includes("dob")) {
+          const dobFixed = [...fixedIssues].some(id => 
+            id.toLowerCase().includes("dob") || 
+            id.toLowerCase().includes("birth") ||
+            id.toLowerCase().includes("date_of_birth")
+          )
+          if (dobFixed) {
+            console.log("[DEBUG] Filtering out DOB check as fixed:", check.name)
+            return false // Don't include in failed checks
+          }
+        }
+        
+        // Assessment Data Currency check - match any fixed assessment-related issue  
+        if (checkNameLower.includes("assessment") || checkNameLower.includes("currency")) {
+          const assessmentFixed = [...fixedIssues].some(id =>
+            id.toLowerCase().includes("assessment") ||
+            id.toLowerCase().includes("currency") ||
+            id.toLowerCase().includes("assessment_data") ||
+            id.toLowerCase().includes("data_currency")
+          )
+          if (assessmentFixed) {
+            console.log("[DEBUG] Filtering out assessment check as fixed:", check.name)
+            return false // Don't include in failed checks
+          }
+        }
+        
+        // For other checks, try to find matching issue by flexible matching
+        const matchingIssue = (remediation?.issues || []).find(issue => {
+          const issueId = issue.id?.toLowerCase() || ""
+          const issueTitle = issue.title?.toLowerCase() || ""
+          const checkNameNormalized = checkNameLower.replace(/\s+/g, "_")
+          const issueTitleFirstWord = issueTitle.split(" ")[0] || ""
+          
+          // Only match if both strings have meaningful content (at least 3 chars)
+          if (checkNameLower.length < 3 || (issueId.length < 3 && issueTitle.length < 3)) {
+            return false
+          }
+          
+          // Check various matching patterns
+          return (issueId.length >= 3 && checkNameLower.includes(issueId)) || 
+                 (checkNameNormalized.length >= 3 && issueId.includes(checkNameNormalized)) ||
+                 (checkNameLower.length >= 3 && issueTitle.length >= 3 && issueTitle.includes(checkNameLower)) ||
+                 (issueTitleFirstWord.length >= 3 && checkNameLower.includes(issueTitleFirstWord))
+        })
+        
+        if (matchingIssue && fixedIssues.has(matchingIssue.id)) {
+          console.log("[DEBUG] Filtering out check as fixed via issue match:", check.name, matchingIssue.id)
+          return false
+        }
+        
+        return true // Keep as unresolved if no match found
       }
     )
     
