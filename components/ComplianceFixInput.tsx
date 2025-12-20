@@ -387,7 +387,11 @@ function DateInput({ value, onChange, placeholder, label, required, error }: {
     // Only update if all three components are selected
     if (components.year && components.month && components.day) {
       const dateStr = `${components.year}-${components.month}-${components.day}`
-      onChange(dateStr)
+      // Validate that the date is actually valid before calling onChange
+      const testDate = new Date(dateStr)
+      if (!isNaN(testDate.getTime())) {
+        onChange(dateStr)
+      }
     } else if (!components.year && !components.month && !components.day) {
       // All cleared
       onChange("")
@@ -448,7 +452,7 @@ function DateInput({ value, onChange, placeholder, label, required, error }: {
             <option value="">Day</option>
             {dayOptions.map((day) => (
               <option key={day} value={day}>
-                {parseInt(day)}
+                {Number(day)}
               </option>
             ))}
           </select>
