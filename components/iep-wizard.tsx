@@ -44,6 +44,7 @@ import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
+import BuildingProgressAnimated from "@/components/BuildingProgressAnimated"
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -1001,6 +1002,23 @@ interface BuildingTask {
   status: "pending" | "loading" | "complete" | "error" // Changed "running" to "loading"
 }
 
+// Helper function to determine current phase from task statuses
+const getCurrentPhase = (tasks: BuildingTask[]): "uploading" | "processing" | "generating" | "validating" | "complete" => {
+  const allComplete = tasks.every(t => t.status === "complete")
+  if (allComplete) return "complete"
+  
+  const currentTask = tasks.find(t => t.status === "loading")
+  if (!currentTask) return "uploading"
+  
+  switch (currentTask.id) {
+    case "upload": return "uploading"
+    case "extract": return "processing"
+    case "generate": return "generating"
+    case "validate": return "validating"
+    default: return "processing"
+  }
+}
+
 function BuildingStep({
   tasks,
   error,
@@ -1008,6 +1026,7 @@ function BuildingStep({
   selectedState,
   onComplete,
   onStartBuild,
+  extractedData,
 }: {
   tasks: BuildingTask[]
   error: string | null
@@ -1015,11 +1034,18 @@ function BuildingStep({
   selectedState: string
   onComplete?: () => void
   onStartBuild?: () => void
+  extractedData?: {
+    studentName?: string
+    pageCount?: number
+    goalCount?: number
+    serviceCount?: number
+    primaryDisability?: string
+  } | null
 }) {
   const stateName = US_STATES.find((s) => s.code === selectedState)?.name || selectedState
   const allComplete = tasks.every((t) => t.status === "complete")
   // Changed condition to check for 'loading' as well
-  const currentTask = tasks.find((t) => t.status === "running" || t.status === "loading")
+  const currentTask = tasks.find((t) => t.status === "loading")
 
   const completedCount = tasks.filter((t) => t.status === "complete").length
   // Added check for tasks.length > 0 to prevent division by zero
@@ -1061,150 +1087,16 @@ function BuildingStep({
 
   // This ensures accurate time tracking for research
 
+  // Compute current phase from tasks
+  const currentPhase = getCurrentPhase(tasks)
+
   return (
-    <div className="min-h-[80vh] flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/soft-watercolor-illustration-of-organized-stack-of.jpg"
-          alt=""
-          className="w-full h-full object-cover opacity-[0.06]"
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-slate-50/90 to-white/95" />
-      </div>
-
-      {/* FloatingParticles removed when not allComplete and no error */}
-      {!allComplete && !error && <FloatingParticles />}
-
-      <div className="max-w-2xl mx-auto px-4 py-8 relative z-10 flex-1 flex flex-col justify-center">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
-            {allComplete ? (
-              <div className="relative">
-                <div className="absolute -inset-8 z-0">
-                  <img
-                    src="/soft-watercolor-confetti-burst-in-blue-and-gold--c.jpg"
-                    alt=""
-                    className="w-full h-full object-contain opacity-30 animate-pulse"
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-blue-200 relative z-10 p-4">
-                  <img
-                    src="/easi-logo.png"
-                    alt="Success"
-                    className="w-full h-full object-contain brightness-0 invert"
-                  />
-                </div>
-              </div>
-            ) : error ? (
-              <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-200">
-                <AlertTriangle className="w-12 h-12 text-white" />
-              </div>
-            ) : (
-              <AnimatedProgressRing progress={progress} size={120} />
-            )}
-          </div>
-
-          <h1 className={`text-2xl font-bold text-slate-900 mb-2 ${!allComplete && !error ? 'title-shimmer' : ''}`}>
-            {allComplete ? "Your IEP is Ready!" : error ? "Oops! Something went wrong" : "Building Your New IEP"}
-          </h1>
-
-          <p className="text-slate-600 status-text-fade">{currentMessage}</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6 text-center">
-            <p className="text-red-800 mb-4">{error}</p>
-            <button
-              onClick={onRetry}
-              className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-200"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8 shadow-sm relative z-10">
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
-                  task.status === "loading"
-                    ? "bg-blue-50 border border-blue-100 active-step-glow"
-                    : task.status === "complete"
-                      ? "bg-green-50/50"
-                      : task.status === "error"
-                        ? "bg-red-50 border border-red-100"
-                        : "bg-slate-50/50 waiting-step-breathe"
-                }`}
-              >
-                <div className="flex-shrink-0">
-                  {task.status === "complete" ? (
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-white checkmark-draw" />
-                    </div>
-                  ) : task.status === "loading" ? (
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 text-white animate-spin" />
-                    </div>
-                  ) : task.status === "error" ? (
-                    <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                      <AlertTriangle className="w-5 h-5 text-white" />
-                    </div>
-                  ) : (
-                    // Changed to show task index + 1 for pending tasks
-                    <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                      <span className="text-slate-500 text-sm font-medium">
-                        {tasks.findIndex((t) => t.id === task.id) + 1}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <span
-                  className={`flex-1 font-medium ${
-                    task.status === "complete"
-                      ? "text-green-700"
-                      : task.status === "loading"
-                        ? "text-blue-700"
-                        : task.status === "error"
-                          ? "text-red-700"
-                          : "text-slate-400"
-                  }`}
-                >
-                  {task.label}
-                </span>
-                {task.status === "complete" && <span className="text-green-600 text-sm font-medium done-slide-in">Done</span>}
-                {task.status === "loading" && <span className="text-blue-600 text-sm">Processing...</span>}
-                {task.status === "error" && <span className="text-red-600 text-sm">Failed</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {allComplete && onComplete && (
-          <div className="text-center">
-            <button
-              onClick={onComplete}
-              className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg shadow-blue-200 text-lg"
-            >
-              Review Your IEP
-            </button>
-          </div>
-        )}
-
-        {/* State validation info */}
-        {!error && (
-          <div className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 text-center border border-blue-100 banner-slide-in banner-attention-pulse">
-            <p className="text-blue-700 text-sm">
-              Validating against <span className="font-semibold">{stateName}</span> regulations and federal IDEA
-              requirements
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+    <BuildingProgressAnimated
+      currentPhase={currentPhase}
+      extractedData={extractedData || undefined}
+      selectedState={selectedState}
+      error={error}
+    />
   )
 }
 
@@ -3428,6 +3320,15 @@ function IEPWizard() {
   const [extractedIEP, setExtractedIEP] = useState<ExtractedIEP | null>(null)
   const [remediation, setRemediation] = useState<RemediationData | null>(null)
   const [fixedIssues, setFixedIssues] = useState<Set<string>>(new Set())
+  
+  // Build extracted data for progress animation
+  const [buildExtractedData, setBuildExtractedData] = useState<{
+    studentName?: string
+    pageCount?: number
+    goalCount?: number
+    serviceCount?: number
+    primaryDisability?: string
+  } | null>(null)
 
   // Loading/error states
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -3692,6 +3593,16 @@ function IEPWizard() {
 
       if (newIEP) {
         setExtractedIEP(newIEP)
+        
+        // Extract real data for progress animation
+        setBuildExtractedData({
+          studentName: data.student_info?.student_name || newIEP.student?.name,
+          pageCount: data.page_count || data.textract?.page_count,
+          goalCount: newIEP.goals?.length,
+          serviceCount: newIEP.services?.length,
+          primaryDisability: data.student_info?.primary_disability || newIEP.eligibility?.primary_disability
+        })
+        
         setBuildTasks((prev) =>
           prev.map((t) =>
             t.id === "generate" ? { ...t, status: "complete" } : t.id === "validate" ? { ...t, status: "loading" } : t,
@@ -3976,6 +3887,7 @@ function IEPWizard() {
             onRetry={handleStartBuilding}
             selectedState={selectedState}
             onStartBuild={handleStartBuilding}
+            extractedData={buildExtractedData}
             // Pass onComplete prop
             onComplete={() => {
               console.log("BuildingStep finished, calling handleNext from IEPWizard")
