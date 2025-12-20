@@ -40,6 +40,7 @@ import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 import { stripRTL } from "@/utils/strip-rtl"
+import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
 
 // =============================================================================
@@ -1891,81 +1892,6 @@ function EditIEPStep({
     triggerCelebration(issue.id)
   }
 
-  // Helper function to generate default suggestions for issues without suggested_fix
-  const getDefaultSuggestion = (issue: ComplianceIssue, iepData: ExtractedIEP | null): string => {
-    const issueId = issue.id?.toLowerCase() || ""
-    const issueTitle = issue.title?.toLowerCase() || ""
-
-    // Student name
-    if (issueId.includes("name") || issueTitle.includes("name")) {
-      return iepData?.student?.name || "[Enter Student Full Legal Name]"
-    }
-
-    // Primary disability
-    if (issueId.includes("disability") || issueTitle.includes("disability")) {
-      const disability =
-        iepData?.eligibility?.primary_disability ||
-        iepData?.eligibility?.primaryDisability ||
-        iepData?.student?.disability ||
-        iepData?.student?.primary_disability
-      return disability || "Other Health Impairment"
-    }
-
-    // Grade
-    if (issueId.includes("grade") || issueTitle.includes("grade")) {
-      return iepData?.student?.grade || "[Enter Grade Level]"
-    }
-
-    // School
-    if (issueId.includes("school") || issueTitle.includes("school")) {
-      return iepData?.student?.school || "[Enter School Name]"
-    }
-
-    // District
-    if (issueId.includes("district") || issueTitle.includes("district")) {
-      return iepData?.student?.district || "[Enter School District]"
-    }
-
-    // Date of birth
-    if (issueId.includes("dob") || issueId.includes("birth") || issueTitle.includes("birth")) {
-      return iepData?.student?.dob || iepData?.student?.date_of_birth || "[Enter Date of Birth]"
-    }
-
-    // Present levels / PLAAFP
-    if (issueId.includes("plaafp") || issueId.includes("present") || issueTitle.includes("present level")) {
-      const strengths = iepData?.plaafp?.strengths || ""
-      const academic = iepData?.plaafp?.academic || ""
-      const functional = iepData?.plaafp?.functional || ""
-
-      if (strengths || academic || functional) {
-        const parts = []
-        if (strengths) parts.push(`Strengths: ${strengths}`)
-        if (academic) parts.push(`Academic: ${academic}`)
-        if (functional) parts.push(`Functional: ${functional}`)
-        return parts.join(". ") + "."
-      }
-      return "[Enter Present Levels of Academic and Functional Performance]"
-    }
-
-    // Goals
-    if (issueId.includes("goal") || issueTitle.includes("goal")) {
-      return "[Enter measurable annual goal with baseline, target criteria, and measurement method]"
-    }
-
-    // Services
-    if (issueId.includes("service") || issueTitle.includes("service")) {
-      return "[Enter service type, frequency, duration, location, and provider]"
-    }
-
-    // LRE / Placement
-    if (issueId.includes("lre") || issueId.includes("placement") || issueTitle.includes("placement")) {
-      return iepData?.placement?.setting || iepData?.lre?.setting || "General education classroom with supports"
-    }
-
-    // Default fallback
-    return "[Enter required information]"
-  }
-
   const IssueCard = ({ issue }: { issue: ComplianceIssue }) => {
     // Changed type to ComplianceIssue
     const severityCategory = getSeverityCategory(issue.severity)
@@ -2001,8 +1927,8 @@ function EditIEPStep({
     const config = severityConfig[severityCategory as keyof typeof severityConfig]
     const IconComponent = config.icon
 
-    // Get suggestion - either from Lambda or generate default
-    const suggestion = issue.suggested_fix || getDefaultSuggestion(issue, iep)
+    // Check if there's a real fix (not placeholder text)
+    const hasRealFix = hasRealSuggestedFix(issue.suggested_fix)
 
     return (
       <div className={`rounded-lg p-4 ${config.bg} border ${config.border}`}>
@@ -2029,11 +1955,13 @@ function EditIEPStep({
           </div>
         )}
 
-        {/* Always show suggested fix section */}
-        <div className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
-          <p className="text-xs font-medium text-green-700 mb-1">Suggested Fix:</p>
-          <p className="text-sm text-green-800">{suggestion}</p>
-        </div>
+        {/* Only show suggested fix section when there's a real fix */}
+        {hasRealFix && (
+          <div className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-xs font-medium text-green-700 mb-1">Suggested Fix:</p>
+            <p className="text-sm text-green-800">{issue.suggested_fix}</p>
+          </div>
+        )}
 
         {editingIssueId === issue.id ? (
           <div className="mt-3 space-y-2 w-full">
@@ -2083,25 +2011,27 @@ function EditIEPStep({
           </div>
         ) : (
           <div className="flex gap-2">
-            {/* Always show "Fix it for me" button */}
-            <Button
-              onClick={() => {
-                handleApplyFix({ ...issue, suggested_fix: suggestion })
-                logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
-              }}
-              disabled={isFixing}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Wand2 className="w-4 h-4 mr-1" />
-              Fix it for me
-            </Button>
+            {/* Only show "Fix it for me" button when there's a real fix */}
+            {hasRealFix && (
+              <Button
+                onClick={() => {
+                  handleApplyFix({ ...issue, suggested_fix: issue.suggested_fix })
+                  logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
+                }}
+                disabled={isFixing}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Wand2 className="w-4 h-4 mr-1" />
+                Fix it for me
+              </Button>
+            )}
 
             {/* Keep Edit manually as secondary option */}
             <Button
               onClick={() => {
                 setEditingIssueId(issue.id)
-                setEditText(issue.current_text || suggestion)
+                setEditText(issue.current_text || issue.suggested_fix || "")
               }}
               size="sm"
               variant="outline"
