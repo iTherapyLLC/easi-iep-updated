@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useVoice } from "@/hooks/use-voice" // Added useVoice hook import
 import { useHashChainLogger } from "@/hooks/use-hashchain-logger" // Added useHashChainLogger hook import
 import { CopyPasteInterface } from "@/components/CopyPasteInterface"
+import ComplianceFixInput from "@/components/ComplianceFixInput"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { stripRTL, sanitizeObject } from "@/utils/strip-rtl"
 import { hasRealSuggestedFix } from "@/utils/validation-utils"
@@ -370,6 +371,7 @@ interface ComplianceIssue {
   title: string
   description: string
   legal_citation: string
+  citation?: string
   current_text: string // Added for display in EditIEPStep
   suggested_fix: string
   fix_explanation: string
@@ -1973,68 +1975,26 @@ function EditIEPStep({
         )}
 
         {editingIssueId === issue.id ? (
-          <div className="mt-3 space-y-2 w-full">
-            <Textarea
+          <div className="mt-3 w-full">
+            <ComplianceFixInput
+              type={issue.id?.includes("dob") ? "date" : "text"}
               value={editText}
-              onChange={(e) => setEditText(stripRTL(e.target.value))}
-              className="w-full min-h-[100px] p-3 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              autoFocus
-              aria-label={`Enter corrected information for: ${issue.title}`}
-              aria-required="true"
-              aria-invalid={editText.trim().length === 0}
+              onChange={(v) => {
+                handleManualFix(issue.id, v)
+                setEditingIssueId(null)
+                setEditText("")
+              }}
+              suggestedFix={issue.suggested_fix}
+              issueId={issue.id}
+              issueType={issue.category || issue.id}
+              field={issue.id}
+              state={selectedState}
+              iepData={iep}
+              hasAutoFix={hasRealSuggestedFix(issue.suggested_fix)}
             />
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (editText.trim().length > 0) {
-                    handleManualFix(issue.id, editText.trim())
-                    setEditingIssueId(null)
-                    setEditText("")
-                  }
-                }}
-                disabled={editText.trim().length === 0}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Check className="w-4 h-4 mr-1" />
-                Save Changes
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setEditingIssueId(null)
-                  setEditText("")
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-            {editText.trim().length === 0 && (
-              <p className="text-xs text-red-600" role="alert" aria-live="polite">
-                Please enter the corrected text for this compliance issue
-              </p>
-            )}
           </div>
         ) : (
           <div className="flex gap-2">
-            {/* Only show "Fix it for me" button when there's a real fix */}
-            {hasRealFix && (
-              <Button
-                onClick={() => {
-                  handleApplyFix({ ...issue, suggested_fix: issue.suggested_fix })
-                  logEvent("FIX_AUTO_APPLIED", { issueId: issue.id })
-                }}
-                disabled={isFixing}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <Wand2 className="w-4 h-4 mr-1" />
-                Fix it for me
-              </Button>
-            )}
-
-            {/* Keep Edit manually as secondary option */}
             <Button
               onClick={() => {
                 setEditingIssueId(issue.id)
@@ -2044,7 +2004,7 @@ function EditIEPStep({
               variant="outline"
             >
               <Pencil className="w-4 h-4 mr-1" />
-              Edit manually
+              {hasRealFix ? "Edit or Fix" : "Edit manually"}
             </Button>
           </div>
         )}
