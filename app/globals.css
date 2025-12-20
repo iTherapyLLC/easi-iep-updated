@@ -1,16 +1,25 @@
 /* ============================================================================
  * FORCE LTR TEXT DIRECTION PLATFORM-WIDE - ENGLISH ONLY
  * RTL characters should NEVER appear anywhere in this application.
+ * The !important flags are intentional - this is a critical security/UX fix.
  * ============================================================================ */
 
-/* Force LTR on all elements */
+/* Force LTR on all elements - English-only platform requirement */
 *, *::before, *::after {
   direction: ltr !important;
   unicode-bidi: plaintext;
 }
 
 /* Critical: Force LTR on all input fields and editable content */
-input, textarea, [contenteditable] {
+input, textarea, [contenteditable],
+[contenteditable="true"],
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"] {
   direction: ltr !important;
   unicode-bidi: plaintext !important;
   text-align: left !important;

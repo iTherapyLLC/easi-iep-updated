@@ -2,6 +2,13 @@
  * Strips ALL Unicode bidirectional and zero-width formatting characters.
  * This is an English-only platform - RTL text is NEVER valid.
  * These invisible characters cause text to display/type backwards.
+ * 
+ * Removed characters:
+ * - \u200E, \u200F: LTR/RTL marks
+ * - \u202A-\u202E: Embedding/Override characters  
+ * - \u2066-\u2069: Isolate characters
+ * - \u200B-\u200D: Zero-width spaces (word joiner, non-joiner, joiner)
+ * - \uFEFF: Zero-width no-break space (BOM)
  */
 export function stripRTL(text: string | null | undefined): string {
   if (!text) return '';
