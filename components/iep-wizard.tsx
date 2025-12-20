@@ -40,6 +40,7 @@ import { CopyPasteInterface } from "@/components/CopyPasteInterface"
 import { downloadIEP, downloadComplianceReport } from "@/utils/download-iep"
 import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
 import { stripRTL } from "@/utils/strip-rtl"
+import { hasRealSuggestedFix } from "@/utils/validation-utils"
 import { LogoutButton } from "@/components/logout-button"
 
 // =============================================================================
@@ -1927,10 +1928,7 @@ function EditIEPStep({
     const IconComponent = config.icon
 
     // Check if there's a real fix (not placeholder text)
-    const hasRealFix = issue.suggested_fix && 
-      !issue.suggested_fix.startsWith("[") && 
-      !issue.suggested_fix.includes("Enter ") &&
-      issue.suggested_fix.trim().length > 0
+    const hasRealFix = hasRealSuggestedFix(issue.suggested_fix)
 
     return (
       <div className={`rounded-lg p-4 ${config.bg} border ${config.border}`}>

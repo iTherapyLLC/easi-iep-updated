@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, Edit3, ArrowLeft, ArrowRight, Lightbulb } from "lucide-react"
 import { parseDateFlexible, formatDateForDisplay } from "@/utils/date-utils"
+import { hasRealSuggestedFix } from "@/utils/validation-utils"
 
 interface ComplianceIssue {
   id: string
@@ -176,12 +177,7 @@ const issueTypeConfig = {
 const requiresManualInput = (issue: ComplianceIssue) => INPUT_REQUIRED_IDS.includes(issue.id)
 const requiresAcknowledgment = (issue: ComplianceIssue) => ACKNOWLEDGMENT_CATEGORIES.includes(issue.category)
 const canAutoFix = (issue: ComplianceIssue) => {
-  const hasRealSuggestion = issue.suggested_fix && 
-    !issue.suggested_fix.startsWith("[") && 
-    !issue.suggested_fix.includes("Enter ") &&
-    issue.suggested_fix.trim().length > 0;
-  
-  return issue.auto_fixable && hasRealSuggestion && !requiresManualInput(issue) && !requiresAcknowledgment(issue)
+  return issue.auto_fixable && hasRealSuggestedFix(issue.suggested_fix) && !requiresManualInput(issue) && !requiresAcknowledgment(issue)
 }
 
 // Issue Alert Component
