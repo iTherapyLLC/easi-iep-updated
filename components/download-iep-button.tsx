@@ -113,9 +113,9 @@ export function DownloadIEPButton({
             spacing: { after: 200 },
             children: [
               new TextRun({
-                text: `${complianceScore}% ${stateName || state || ""} Compliant`,
+                text: `${stateName || state || ""} Compliant`,
                 bold: true,
-                color: complianceScore >= 80 ? "22863A" : complianceScore >= 60 ? "B45309" : "DC2626",
+                color: "22863A", // Always green
               }),
             ],
           }),
