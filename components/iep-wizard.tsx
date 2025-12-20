@@ -3842,7 +3842,7 @@ function IEPWizard() {
         <div className="max-w-4xl mx-auto">
           <AnimatedHeader onSignOut={handleSignOut} showSignOut={true} />
 
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8 mt-6">
             {progressSteps.map((step, index) => {
               const stepIndex = stepOrder.indexOf(step.id as WizardStep)
               const isComplete = stepIndex < currentStepIndex
