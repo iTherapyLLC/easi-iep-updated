@@ -462,6 +462,7 @@ interface RemediationData {
     title: string
     description: string
     severity: "critical" | "warning" | "suggestion" | "high" | "medium" | "low" // Added high, medium, low
+    category?: string // Optional category field for issue classification
     citation?: string
     suggested_fix?: string
     auto_fixable?: boolean
@@ -1647,6 +1648,21 @@ function ReviewStep({
 // STEP 5: EDIT & FIX (Previously Clinical Review)
 // =============================================================================
 
+// Helper function to update PLAAFP academic field with new text
+function updatePlaafpAcademic(iep: ExtractedIEP | null, newText: string): ExtractedIEP | null {
+  if (!iep) return null
+  const currentPlaafp = iep.plaafp || {}
+  return {
+    ...iep,
+    plaafp: {
+      ...currentPlaafp,
+      academic: typeof currentPlaafp === 'object' && 'academic' in currentPlaafp 
+        ? (currentPlaafp.academic || '') + '\n\n' + newText 
+        : newText
+    }
+  }
+}
+
 // NOTE: This component is intended to replace the previous `EditIEPStep`
 // and integrate the "fix" functionality more directly.
 function EditIEPStep({
@@ -1761,7 +1777,7 @@ function EditIEPStep({
       // Check for DOB-related issues
       if (field === "student-dob") {
         const dobIssues = issues.filter(i => {
-          const category = (i as any).category || ''
+          const category = i.category || ''
           return i.id === "dob_missing" || 
                  (category === "student_info" && i.id.includes("dob")) ||
                  i.title?.toLowerCase().includes("date of birth")
@@ -1777,7 +1793,7 @@ function EditIEPStep({
       // Check for name-related issues
       if (field === "student-name" && editValue.toLowerCase() !== "the student") {
         const nameIssues = issues.filter(i => {
-          const category = (i as any).category || ''
+          const category = i.category || ''
           return i.id === "student_name_missing" || 
                  (category === "student_info" && i.id.includes("name")) ||
                  i.title?.toLowerCase().includes("student name")
@@ -1793,7 +1809,7 @@ function EditIEPStep({
       // Check for assessment currency issues when PLAAFP fields are edited
       if (field.includes("plaafp")) {
         const assessmentIssues = issues.filter(i => {
-          const category = (i as any).category || ''
+          const category = i.category || ''
           return i.id === "assessment_data_currency" || 
                  category === "assessment_currency" ||
                  (i.title?.toLowerCase().includes("assessment") && i.title?.toLowerCase().includes("currency"))
@@ -1830,7 +1846,7 @@ function EditIEPStep({
     // Update the actual IEP data based on the issue type
     const issue = issues.find(i => i.id === issueId)
     if (issue) {
-      const issueCategory = (issue as any).category || '' // Use type assertion for optional field
+      const issueCategory = issue.category || '' // Now using optional field from RemediationData
       
       // Handle DOB issues
       if (issue.id === "dob_missing" || (issueCategory === "student_info" && issue.id.includes("dob"))) {
@@ -1842,19 +1858,7 @@ function EditIEPStep({
       }
       // Handle assessment currency issues
       else if (issue.id === "assessment_data_currency" || issueCategory === "assessment_currency") {
-        setIep(prev => {
-          if (!prev) return null
-          const currentPlaafp = prev.plaafp || {}
-          return {
-            ...prev,
-            plaafp: {
-              ...currentPlaafp,
-              academic: typeof currentPlaafp === 'object' && 'academic' in currentPlaafp 
-                ? (currentPlaafp.academic || '') + '\n\n' + newText 
-                : newText
-            }
-          }
-        })
+        setIep(prev => updatePlaafpAcademic(prev, newText))
       }
     }
 
