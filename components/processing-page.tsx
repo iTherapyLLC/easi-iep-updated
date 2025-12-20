@@ -26,6 +26,17 @@ interface ExtractedInfo {
   goalCount: number
 }
 
+interface StatusResponse {
+  status: string
+  success?: boolean
+  error?: string
+  iep?: any
+  compliance?: any
+  [key: string]: any
+}
+
+const POLLING_INTERVAL_MS = 5000 // 5 seconds
+
 export function ProcessingPage() {
   const { uploadedFile, setExtractedData, setCurrentStep, addSessionLog } = useIEP()
   const [steps, setSteps] = useState<ProcessingStep[]>([
@@ -84,12 +95,13 @@ export function ProcessingPage() {
         setSteps((prev) => prev.map((step, idx) => (idx === 1 ? { ...step, status: "processing" } : step)))
 
         // Step 2: Poll for completion
-        const pollForResult = async (): Promise<any> => {
+        const pollForResult = async (): Promise<StatusResponse | null> => {
           if (isCancelled) return null
 
           const statusResponse = await fetch(`/api/extract-iep/status/${jobId}`)
           const statusData = await statusResponse.json()
 
+          // Check if complete (Lambda may return status="complete" or success=true)
           if (statusData.status === "complete" || statusData.success) {
             return statusData
           }
@@ -99,7 +111,7 @@ export function ProcessingPage() {
           }
 
           // Still processing - wait and poll again
-          await new Promise((resolve) => setTimeout(resolve, 5000)) // 5 second intervals
+          await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL_MS))
           return pollForResult()
         }
 
@@ -109,6 +121,7 @@ export function ProcessingPage() {
 
         console.log("[v0] Full API response:", JSON.stringify(data, null, 2))
 
+        // Check if processing was successful
         if (!data.success && data.status !== "complete") {
           throw new Error(data.error || "Extraction failed")
         }

@@ -36,10 +36,12 @@ export async function GET(
     }
 
     // If complete, sanitize and return full result
+    // Note: Lambda may return either status="complete" or success=true depending on implementation
     if (result.status === "complete" || result.success) {
       console.log("[extract-iep-status] Job complete:", jobId)
       return NextResponse.json(sanitizeObject({
         status: "complete",
+        success: true,
         ...result,
       }))
     }
