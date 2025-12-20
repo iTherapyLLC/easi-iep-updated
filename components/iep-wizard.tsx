@@ -808,6 +808,7 @@ function TellUsStep({
             <input
               type="date"
               dir="ltr"
+              lang="en"
               value={iepDate}
               onChange={(e) => {
                 setIepDate(e.target.value)
