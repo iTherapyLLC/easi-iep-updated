@@ -6,11 +6,94 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Check, Loader2, ChevronRight, Edit2, ArrowLeft, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MySLPReview, type ReviewInsight } from "@/components/MySLPReview"
 
 interface ReviewStep {
   id: string
   label: string
   status: "pending" | "processing" | "complete"
+}
+
+interface ReviewResult {
+  approved: boolean
+  score?: number
+  commentary: string
+  recommendations: string[]
+  complianceChecks?: Record<string, { passed: boolean; note: string }>
+}
+
+// Helper function to format compliance check names
+function formatCheckName(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, str => str.toUpperCase())
+    .trim()
+}
+
+// Helper function to convert review result to insights
+function convertToInsights(
+  reviewResult: ReviewResult,
+  draft: any,
+  extractedData: any
+): ReviewInsight[] {
+  const insights: ReviewInsight[] = []
+  
+  // Add "what's working" insights based on IEP content
+  const goals = draft?.goals || extractedData?.goals || []
+  if (goals.length >= 3) {
+    insights.push({
+      id: "goals-complete",
+      type: "ready",
+      title: "Goals are well-defined",
+      description: `${goals.length} measurable goals with clear baselines and targets.`
+    })
+  }
+  
+  const services = draft?.services || extractedData?.services || []
+  if (services.length > 0) {
+    insights.push({
+      id: "services-complete",
+      type: "ready",
+      title: "Services are documented",
+      description: `${services.length} services with frequency and duration specified.`
+    })
+  }
+  
+  // Convert compliance checks to attention/suggestion items
+  if (reviewResult.complianceChecks) {
+    Object.entries(reviewResult.complianceChecks).forEach(([key, check]) => {
+      if (!check.passed) {
+        insights.push({
+          id: `compliance-${key}`,
+          type: "attention",
+          title: formatCheckName(key),
+          description: check.note || `${formatCheckName(key)} needs review.`
+        })
+      }
+    })
+  }
+  
+  // Convert recommendations to suggestions
+  reviewResult.recommendations?.forEach((rec, index) => {
+    insights.push({
+      id: `rec-${index}`,
+      type: "suggestion",
+      title: "Suggestion",
+      description: rec
+    })
+  })
+  
+  // Add discussion questions based on IEP content
+  if (goals.some((g: any) => g.baseline?.toLowerCase().includes("emerging"))) {
+    insights.push({
+      id: "emerging-skills",
+      type: "question",
+      title: "Discuss emerging skills with the team",
+      description: "Some goals reference 'emerging' skills. The team might want to discuss specific strategies to support skill development."
+    })
+  }
+  
+  return insights
 }
 
 export function MySLPReviewPage() {
@@ -24,13 +107,7 @@ export function MySLPReviewPage() {
   const [isComplete, setIsComplete] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [reviewResult, setReviewResult] = useState<{
-    approved: boolean
-    score?: number
-    commentary: string
-    recommendations: string[]
-    complianceChecks?: Record<string, { passed: boolean; note: string }>
-  } | null>(null)
+  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
   const hasStarted = useRef(false)
 
   const handleBack = () => {
@@ -218,104 +295,41 @@ export function MySLPReviewPage() {
         {/* Review Result */}
         {isComplete && reviewResult && (
           <div className="animate-slide-up">
-            <Card
-              className={cn(
-                "p-6 md:p-8 mb-6 transition-all hover:shadow-lg",
-                reviewResult.approved ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20",
-              )}
-            >
-              {/* Status Badge with Score */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center",
-                      reviewResult.approved
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-destructive text-destructive-foreground",
-                    )}
-                  >
-                    <Check className="w-5 h-5" />
-                  </div>
-                  <span className={cn("font-semibold", reviewResult.approved ? "text-primary" : "text-destructive")}>
-                    MySLP Review {reviewResult.approved ? "Approved" : "Needs Revision"}
-                  </span>
-                </div>
-                {reviewResult.score !== undefined && (
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">{reviewResult.score}%</p>
-                    <p className="text-xs text-muted-foreground">Compliance Score</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Commentary */}
-              <p className="text-foreground leading-relaxed mb-6">
-                {`"`}
-                {reviewResult.commentary}
-                {`"`}
-              </p>
-
-              {/* Compliance Checks */}
-              {reviewResult.complianceChecks && (
-                <div className="bg-background rounded-lg p-4 mb-4">
-                  <p className="text-sm font-medium text-foreground mb-3">Compliance Checks:</p>
-                  <div className="space-y-2">
-                    {Object.entries(reviewResult.complianceChecks).map(([key, check]) => (
-                      <div key={key} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground capitalize">
-                          {key.replace(/([A-Z])/g, " $1").trim()}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {check.passed ? (
-                            <Check className="w-4 h-4 text-primary" />
-                          ) : (
-                            <AlertTriangle className="w-4 h-4 text-destructive" />
-                          )}
-                          <span className={check.passed ? "text-primary" : "text-destructive"}>
-                            {check.passed ? "Passed" : "Failed"}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recommendations */}
-              {reviewResult.recommendations.length > 0 && (
-                <div className="bg-background rounded-lg p-4">
-                  <p className="text-sm font-medium text-foreground mb-3">Recommendations:</p>
-                  <ul className="space-y-2">
-                    {reviewResult.recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <span className="text-primary mt-1">•</span>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Card>
+            <MySLPReview
+              studentName={
+                (draft?.studentInfo?.name || extractedData?.studentInfo?.name || "Student")
+                  .split(" ")[0]
+              }
+              isReady={
+                reviewResult.approved &&
+                !Object.values(reviewResult.complianceChecks || {}).some(
+                  (check) => !check.passed
+                )
+              }
+              insights={convertToInsights(reviewResult, draft, extractedData)}
+              onDownload={() => {
+                addSessionLog("Downloaded IEP from MySLP review")
+                // TODO: Implement actual download logic
+                alert("IEP download would happen here")
+              }}
+              onBackToEdit={handleMakeChanges}
+              onAskQuestion={(question) => {
+                addSessionLog(`Asked question: ${question}`)
+                // TODO: Implement question handling
+                alert(`Question: ${question}`)
+              }}
+              reviewerName="MySLP"
+            />
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex justify-center mt-6">
               <Button
                 size="lg"
                 onClick={handleAccept}
-                className="flex-1 h-12 text-base font-medium transition-transform hover:scale-[1.02] active:scale-95"
+                className="h-12 text-base font-medium px-8 transition-transform hover:scale-[1.02] active:scale-95"
               >
                 Accept & Continue
                 <ChevronRight className="w-5 h-5 ml-1" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleMakeChanges}
-                className="flex-1 h-12 text-base font-medium bg-transparent transition-transform active:scale-95"
-              >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Make Changes
               </Button>
             </div>
           </div>
