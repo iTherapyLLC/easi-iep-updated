@@ -1755,6 +1755,54 @@ function EditIEPStep({
   const handleSaveEdit = (field: string, updateFn: (value: string) => void) => {
     updateFn(editValue)
     logEvent("FIELD_EDIT_SAVED", { field })
+    
+    // Auto-resolve corresponding issues when fields are edited
+    if (editValue && editValue.trim().length > 0) {
+      // Use the issues from remediation data (not ComplianceIssue type)
+      type RemediationIssue = NonNullable<RemediationData['issues']>[number]
+      let relatedIssue: RemediationIssue | undefined
+      
+      // Map field names to issue patterns
+      if (field === "student-name") {
+        relatedIssue = issues.find(i => 
+          i.id === "student_name_missing" || 
+          i.id?.includes("student") && i.id?.includes("name") ||
+          i.title?.toLowerCase().includes("student name")
+        )
+      } else if (field === "student-dob") {
+        relatedIssue = issues.find(i => 
+          i.id === "dob_missing" || 
+          i.id?.includes("dob") || 
+          i.id?.includes("date_of_birth") ||
+          i.title?.toLowerCase().includes("date of birth")
+        )
+      } else if (field.startsWith("plaafp-")) {
+        // Any PLAAFP field edit resolves assessment currency issues
+        relatedIssue = issues.find(i => 
+          i.id?.includes("assessment_currency") || 
+          i.title?.toLowerCase().includes("assessment") ||
+          i.title?.toLowerCase().includes("present level")
+        )
+      } else if (field.startsWith("goal-")) {
+        // Goal edits - extract goal index and find related issue
+        const goalIndexMatch = field.match(/goal-(\d+)/)
+        if (goalIndexMatch) {
+          const goalIndex = goalIndexMatch[1]
+          relatedIssue = issues.find(i => 
+            i.id?.includes(`goal_${goalIndex}`) || 
+            i.id?.includes(`goal-${goalIndex}`) ||
+            (i.id?.includes("goal") && i.title?.includes(`Goal ${parseInt(goalIndex) + 1}`))
+          )
+        }
+      }
+      
+      // Mark the issue as resolved if found
+      if (relatedIssue) {
+        setFixedIssues((prev) => new Set([...prev, relatedIssue.id]))
+        logEvent("FIX_AUTO_APPLIED", { issueId: relatedIssue.id, field, trigger: "field_edit" })
+      }
+    }
+    
     setEditingField(null)
     setEditValue("")
   }
