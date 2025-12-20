@@ -3842,10 +3842,19 @@ function IEPWizard() {
         const matchingIssue = (remediation?.issues || []).find(issue => {
           const issueId = issue.id?.toLowerCase() || ""
           const issueTitle = issue.title?.toLowerCase() || ""
-          return checkNameLower.includes(issueId) || 
-                 issueId.includes(checkNameLower.replace(/\s+/g, "_")) ||
-                 issueTitle.includes(checkNameLower) ||
-                 checkNameLower.includes(issueTitle.split(" ")[0])
+          const checkNameNormalized = checkNameLower.replace(/\s+/g, "_")
+          const issueTitleFirstWord = issueTitle.split(" ")[0] || ""
+          
+          // Only match if both strings have meaningful content (at least 3 chars)
+          if (checkNameLower.length < 3 || (issueId.length < 3 && issueTitle.length < 3)) {
+            return false
+          }
+          
+          // Check various matching patterns
+          return (issueId.length >= 3 && checkNameLower.includes(issueId)) || 
+                 (checkNameNormalized.length >= 3 && issueId.includes(checkNameNormalized)) ||
+                 (checkNameLower.length >= 3 && issueTitle.length >= 3 && issueTitle.includes(checkNameLower)) ||
+                 (issueTitleFirstWord.length >= 3 && checkNameLower.includes(issueTitleFirstWord))
         })
         
         if (matchingIssue && fixedIssues.has(matchingIssue.id)) {
