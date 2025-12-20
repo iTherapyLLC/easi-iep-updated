@@ -85,6 +85,7 @@ interface EditAndFixStepProps {
   onContinue: () => void
   onBack: () => void
   onLogEvent?: (event: string, metadata?: Record<string, unknown>) => void
+  onResolvedIssuesChange?: (resolvedIssues: Set<string>) => void
 }
 
 const IDEA_CATEGORIES = [
@@ -286,6 +287,7 @@ export function EditAndFixStep({
   onContinue,
   onBack,
   onLogEvent,
+  onResolvedIssuesChange,
 }: EditAndFixStepProps) {
   const [editedIEP, setEditedIEP] = useState<IEPData>(iepData)
   const [resolvedIssues, setResolvedIssues] = useState<Set<string>>(new Set())
@@ -296,6 +298,11 @@ export function EditAndFixStep({
   const [dismissedIssues, setDismissedIssues] = useState<Set<string>>(new Set())
 
   const issues = remediationData.issues || []
+
+  // Notify parent when resolved issues change
+  useEffect(() => {
+    onResolvedIssuesChange?.(resolvedIssues)
+  }, [resolvedIssues, onResolvedIssuesChange])
 
   // Calculate score based on resolved issues
   useEffect(() => {
