@@ -493,12 +493,16 @@ function UploadStep({
   onFilesSelected,
   onNext,
   logEvent,
+  selectedState,
+  setSelectedState,
 }: {
   files: UploadedFile[]
   onRemoveFile: (id: string) => void
   onFilesSelected: (files: File[]) => void
   onNext: () => void
   logEvent: (event: string, metadata?: Record<string, unknown>) => void
+  selectedState: string
+  setSelectedState: (state: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -507,6 +511,7 @@ function UploadStep({
   const [iconHovered, setIconHovered] = useState(false)
 
   const hasIEP = files.some((f) => f.type === "iep")
+  const canProceed = hasIEP && selectedState !== ""
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || [])
@@ -694,34 +699,84 @@ function UploadStep({
         </div>
       )}
 
+      {/* State Selection - Required */}
+      <div className="mt-6 bg-white rounded-xl border border-slate-200 p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Shield className="w-5 h-5 text-blue-600" />
+          <h3 className="font-medium text-slate-800">Select Your State</h3>
+          <span className="text-red-500 text-sm">*Required</span>
+        </div>
+        <p className="text-sm text-slate-500 mb-3">
+          Compliance requirements vary by state. Select the state where this IEP will be used.
+        </p>
+        
+        <div className="relative">
+          <select
+            value={selectedState}
+            onChange={(e) => {
+              setSelectedState(e.target.value)
+              logEvent("STATE_SELECTED", { state: e.target.value })
+            }}
+            className={`w-full px-4 py-3 bg-slate-50 border rounded-lg 
+                       text-slate-800 font-medium appearance-none cursor-pointer
+                       focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
+                       ${!selectedState ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+          >
+            <option value="" disabled>-- Select your state --</option>
+            {US_STATES.map((state) => (
+              <option key={state.code} value={state.code}>
+                {state.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+        </div>
+        
+        {selectedState && (
+          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+            We'll validate against {US_STATES.find(s => s.code === selectedState)?.name} regulations and federal IDEA
+          </p>
+        )}
+        
+        {!selectedState && (
+          <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            Please select a state to enable compliance checking
+          </p>
+        )}
+      </div>
+
       <button
         onClick={onNext}
-        disabled={!hasIEP}
+        disabled={!canProceed}
         className={`
           mt-6 w-full py-4 rounded-xl font-medium text-base
           flex items-center justify-center gap-2
           transition-all duration-300 group hover-upload-button
           ${
-            hasIEP
+            canProceed
               ? "bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200/50 hover:shadow-xl hover:-translate-y-1 active:translate-y-0 animate-gradient-shimmer"
               : "bg-slate-100 text-slate-400 cursor-not-allowed"
           }
         `}
         style={
-          hasIEP
+          canProceed
             ? {
                 backgroundSize: "200% 100%",
               }
             : undefined
         }
       >
-        {hasIEP ? (
+        {canProceed ? (
           <>
             Continue
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </>
-        ) : (
+        ) : !hasIEP ? (
           "Upload IEP to continue"
+        ) : (
+          "Select your state to continue"
         )}
       </button>
 
@@ -3382,7 +3437,7 @@ function IEPWizard() {
   const [retryCount, setRetryCount] = useState(0)
 
   // Form state
-  const [selectedState, setSelectedState] = useState("CA")
+  const [selectedState, setSelectedState] = useState("")
   const [iepDate, setIepDate] = useState(new Date().toISOString().split("T")[0])
   const [studentUpdate, setStudentUpdate] = useState("")
 
@@ -4024,6 +4079,8 @@ function IEPWizard() {
             onFilesSelected={handleFileUpload} // Pass handleFileUpload
             onNext={handleNext}
             logEvent={logEvent}
+            selectedState={selectedState}
+            setSelectedState={setSelectedState}
           />
         )}
 
